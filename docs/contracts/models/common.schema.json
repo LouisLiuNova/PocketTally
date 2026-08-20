@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/common.schema.json",
+  "title": "PocketTally Common Models",
+  "description": "Reusable scalar and embedded read-model definitions for PocketTally HTTP APIs.",
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "nullableString": {
+      "type": ["string", "null"]
+    },
+    "hexColor": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$",
+      "examples": ["#ff0000"]
+    },
+    "accountSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "name"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "type": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 }
+      }
+    },
+    "categorySummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "iconColor", "iconName"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "name": { "type": "string", "minLength": 1 },
+        "iconColor": { "$ref": "#/$defs/hexColor" },
+        "iconName": { "type": "string", "minLength": 1 }
+      }
+    },
+    "tagSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "color"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "name": { "type": "string", "minLength": 1 },
+        "color": { "$ref": "#/$defs/hexColor" }
+      }
+    },
+    "transactionSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "amount", "description", "createdAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "type": { "type": "string", "minLength": 1 },
+        "amount": { "type": "number" },
+        "description": { "$ref": "#/$defs/nullableString" },
+        "createdAt": { "$ref": "#/$defs/dateTime" }
+      }
+    }
+  }
+}

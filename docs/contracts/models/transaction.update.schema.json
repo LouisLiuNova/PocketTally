@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/transaction.update.schema.json",
+  "title": "TransactionUpdate",
+  "description": "Partial payload for updating a transaction. Relationships are represented by IDs.",
+  "type": "object",
+  "additionalProperties": false,
+  "minProperties": 1,
+  "properties": {
+    "type": { "type": "string", "minLength": 1 },
+    "sourceAccountId": { "$ref": "common.schema.json#/$defs/uuid" },
+    "destinationAccountId": {
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/uuid" },
+        { "type": "null" }
+      ]
+    },
+    "amount": { "type": "number" },
+    "description": { "$ref": "common.schema.json#/$defs/nullableString" },
+    "categoryId": { "$ref": "common.schema.json#/$defs/uuid" },
+    "tagIds": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/uuid" },
+      "uniqueItems": true
+    },
+    "isRefund": { "type": "boolean" },
+    "relatedTransactionId": {
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/uuid" },
+        { "type": "null" }
+      ]
+    }
+  }
+}

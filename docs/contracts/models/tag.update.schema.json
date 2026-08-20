@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/tag.update.schema.json",
+  "title": "TagUpdate",
+  "description": "Partial payload for updating a tag.",
+  "type": "object",
+  "additionalProperties": false,
+  "minProperties": 1,
+  "properties": {
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "$ref": "common.schema.json#/$defs/nullableString" },
+    "color": { "$ref": "common.schema.json#/$defs/hexColor" }
+  }
+}

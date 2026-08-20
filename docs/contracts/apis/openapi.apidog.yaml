@@ -1,0 +1,976 @@
+openapi: 3.1.0
+info:
+  title: PocketTally HTTP API
+  version: 0.1.0
+  description: CRUD contract skeleton for PocketTally resources.
+servers:
+  - url: /api/v1
+tags:
+  - name: Accounts
+    description: Account and balance management.
+  - name: Categories
+    description: Transaction category management.
+  - name: Tags
+    description: Transaction tag management.
+  - name: Transactions
+    description: Financial transaction management.
+paths:
+  /accounts:
+    get:
+      tags:
+        - Accounts
+      operationId: listAccounts
+      summary: List accounts
+      responses:
+        '200':
+          description: Accounts returned successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/account.read.schema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/Error'
+    post:
+      tags:
+        - Accounts
+      operationId: createAccount
+      summary: Create an account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/account.create.schema'
+      responses:
+        '201':
+          description: Account created successfully.
+          headers:
+            Location:
+              description: URL of the newly created account.
+              schema:
+                type: string
+                format: uri-reference
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/account.read.schema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/Error'
+  /accounts/{accountId}:
+    parameters:
+      - $ref: '#/components/parameters/AccountId'
+    get:
+      tags:
+        - Accounts
+      operationId: getAccount
+      summary: Get an account
+      responses:
+        '200':
+          description: Account returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/account.read.schema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Error'
+    patch:
+      tags:
+        - Accounts
+      operationId: updateAccount
+      summary: Update an account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/account.update.schema'
+      responses:
+        '200':
+          description: Account updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/account.read.schema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+        - Accounts
+      operationId: deleteAccount
+      summary: Delete an account
+      responses:
+        '204':
+          description: Account deleted successfully. No response body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Error'
+  /categories:
+    get:
+      tags:
+        - Categories
+      operationId: listCategories
+      summary: List categories
+      responses:
+        '200':
+          description: Categories returned successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/category.read.schema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/Error'
+    post:
+      tags:
+        - Categories
+      operationId: createCategory
+      summary: Create a category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/category.create.schema'
+      responses:
+        '201':
+          description: Category created successfully.
+          headers:
+            Location:
+              description: URL of the newly created category.
+              schema:
+                type: string
+                format: uri-reference
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/category.read.schema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Error'
+  /categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/CategoryId'
+    get:
+      tags:
+        - Categories
+      operationId: getCategory
+      summary: Get a category
+      responses:
+        '200':
+          description: Category returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/category.read.schema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Error'
+    patch:
+      tags:
+        - Categories
+      operationId: updateCategory
+      summary: Update a category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/category.update.schema'
+      responses:
+        '200':
+          description: Category updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/category.read.schema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+        - Categories
+      operationId: deleteCategory
+      summary: Delete a category
+      responses:
+        '204':
+          description: Category deleted successfully. No response body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Error'
+  /tags:
+    get:
+      tags:
+        - Tags
+      operationId: listTags
+      summary: List tags
+      responses:
+        '200':
+          description: Tags returned successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/tag.read.schema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/Error'
+    post:
+      tags:
+        - Tags
+      operationId: createTag
+      summary: Create a tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/tag.create.schema'
+      responses:
+        '201':
+          description: Tag created successfully.
+          headers:
+            Location:
+              description: URL of the newly created tag.
+              schema:
+                type: string
+                format: uri-reference
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tag.read.schema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/Error'
+  /tags/{tagId}:
+    parameters:
+      - $ref: '#/components/parameters/TagId'
+    get:
+      tags:
+        - Tags
+      operationId: getTag
+      summary: Get a tag
+      responses:
+        '200':
+          description: Tag returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tag.read.schema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Error'
+    patch:
+      tags:
+        - Tags
+      operationId: updateTag
+      summary: Update a tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/tag.update.schema'
+      responses:
+        '200':
+          description: Tag updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tag.read.schema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+        - Tags
+      operationId: deleteTag
+      summary: Delete a tag
+      responses:
+        '204':
+          description: Tag deleted successfully. No response body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Error'
+  /transactions:
+    get:
+      tags:
+        - Transactions
+      operationId: listTransactions
+      summary: List transactions
+      responses:
+        '200':
+          description: Transactions returned successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/transaction.read.schema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/Error'
+    post:
+      tags:
+        - Transactions
+      operationId: createTransaction
+      summary: Create a transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/transaction.create.schema'
+      responses:
+        '201':
+          description: Transaction created successfully.
+          headers:
+            Location:
+              description: URL of the newly created transaction.
+              schema:
+                type: string
+                format: uri-reference
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/transaction.read.schema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Error'
+  /transactions/{transactionId}:
+    parameters:
+      - $ref: '#/components/parameters/TransactionId'
+    get:
+      tags:
+        - Transactions
+      operationId: getTransaction
+      summary: Get a transaction
+      responses:
+        '200':
+          description: Transaction returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/transaction.read.schema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Error'
+    patch:
+      tags:
+        - Transactions
+      operationId: updateTransaction
+      summary: Update a transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/transaction.update.schema'
+      responses:
+        '200':
+          description: Transaction updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/transaction.read.schema'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+        - Transactions
+      operationId: deleteTransaction
+      summary: Delete a transaction
+      responses:
+        '204':
+          description: Transaction deleted successfully. No response body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Error'
+components:
+  parameters:
+    AccountId:
+      name: accountId
+      in: path
+      required: true
+      description: Account UUID.
+      schema:
+        type: string
+        format: uuid
+    CategoryId:
+      name: categoryId
+      in: path
+      required: true
+      description: Category UUID.
+      schema:
+        type: string
+        format: uuid
+    TagId:
+      name: tagId
+      in: path
+      required: true
+      description: Tag UUID.
+      schema:
+        type: string
+        format: uuid
+    TransactionId:
+      name: transactionId
+      in: path
+      required: true
+      description: Transaction UUID.
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1
+        details:
+          type: object
+          additionalProperties: true
+    uuid:
+      type: string
+      format: uuid
+    nullableString:
+      type:
+        - string
+        - 'null'
+    dateTime:
+      type: string
+      format: date-time
+    account.read.schema:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://schemas.pockettally.app/models/account.read.schema.json
+      title: AccountRead
+      description: Account returned by the HTTP API.
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - type
+        - name
+        - cardNumber
+        - description
+        - amount
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        type:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        cardNumber:
+          $ref: '#/components/schemas/nullableString'
+        description:
+          $ref: '#/components/schemas/nullableString'
+        amount:
+          type: number
+        createdAt:
+          $ref: '#/components/schemas/dateTime'
+        updatedAt:
+          $ref: '#/components/schemas/dateTime'
+    account.create.schema:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://schemas.pockettally.app/models/account.create.schema.json
+      title: AccountCreate
+      description: Payload for creating an account. Server-owned fields are omitted.
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - name
+      properties:
+        type:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        cardNumber:
+          $ref: '#/components/schemas/nullableString'
+        description:
+          $ref: '#/components/schemas/nullableString'
+        amount:
+          type: number
+          default: 0
+    account.update.schema:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://schemas.pockettally.app/models/account.update.schema.json
+      title: AccountUpdate
+      description: Partial payload for updating an account.
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        type:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        cardNumber:
+          $ref: '#/components/schemas/nullableString'
+        description:
+          $ref: '#/components/schemas/nullableString'
+        amount:
+          type: number
+    hexColor:
+      type: string
+      pattern: ^#[0-9A-Fa-f]{6}$
+      examples:
+        - '#ff0000'
+    categorySummary:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - iconColor
+        - iconName
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        name:
+          type: string
+          minLength: 1
+        iconColor:
+          $ref: '#/components/schemas/hexColor'
+        iconName:
+          type: string
+          minLength: 1
+    category.read.schema:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://schemas.pockettally.app/models/category.read.schema.json
+      title: CategoryRead
+      description: Category returned by the HTTP API. The parent is embedded as a bounded summary.
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - description
+        - parentCategory
+        - iconColor
+        - iconName
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        name:
+          type: string
+          minLength: 1
+        description:
+          $ref: '#/components/schemas/nullableString'
+        parentCategory:
+          oneOf:
+            - $ref: '#/components/schemas/categorySummary'
+            - type: 'null'
+        iconColor:
+          $ref: '#/components/schemas/hexColor'
+        iconName:
+          type: string
+          minLength: 1
+        createdAt:
+          $ref: '#/components/schemas/dateTime'
+        updatedAt:
+          $ref: '#/components/schemas/dateTime'
+    category.create.schema:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://schemas.pockettally.app/models/category.create.schema.json
+      title: CategoryCreate
+      description: Payload for creating a category. Relationships are represented by IDs.
+      type: object
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          $ref: '#/components/schemas/nullableString'
+        parentCategoryId:
+          oneOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        iconColor:
+          $ref: '#/components/schemas/hexColor'
+          default: '#ff0000'
+        iconName:
+          type: string
+          minLength: 1
+          default: default_icon
+    category.update.schema:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://schemas.pockettally.app/models/category.update.schema.json
+      title: CategoryUpdate
+      description: Partial payload for updating a category. Relationships are represented by IDs.
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          $ref: '#/components/schemas/nullableString'
+        parentCategoryId:
+          oneOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        iconColor:
+          $ref: '#/components/schemas/hexColor'
+        iconName:
+          type: string
+          minLength: 1
+    tag.read.schema:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://schemas.pockettally.app/models/tag.read.schema.json
+      title: TagRead
+      description: Tag returned by the HTTP API.
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - description
+        - color
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        name:
+          type: string
+          minLength: 1
+        description:
+          $ref: '#/components/schemas/nullableString'
+        color:
+          $ref: '#/components/schemas/hexColor'
+        createdAt:
+          $ref: '#/components/schemas/dateTime'
+        updatedAt:
+          $ref: '#/components/schemas/dateTime'
+    tag.create.schema:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://schemas.pockettally.app/models/tag.create.schema.json
+      title: TagCreate
+      description: Payload for creating a tag.
+      type: object
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          $ref: '#/components/schemas/nullableString'
+        color:
+          $ref: '#/components/schemas/hexColor'
+          default: '#ff0000'
+    tag.update.schema:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://schemas.pockettally.app/models/tag.update.schema.json
+      title: TagUpdate
+      description: Partial payload for updating a tag.
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          $ref: '#/components/schemas/nullableString'
+        color:
+          $ref: '#/components/schemas/hexColor'
+    accountSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - type
+        - name
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        type:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+    tagSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - color
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        name:
+          type: string
+          minLength: 1
+        color:
+          $ref: '#/components/schemas/hexColor'
+    transactionSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - type
+        - amount
+        - description
+        - createdAt
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        type:
+          type: string
+          minLength: 1
+        amount:
+          type: number
+        description:
+          $ref: '#/components/schemas/nullableString'
+        createdAt:
+          $ref: '#/components/schemas/dateTime'
+    transaction.read.schema:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://schemas.pockettally.app/models/transaction.read.schema.json
+      title: TransactionRead
+      description: Transaction returned by the HTTP API. Relationships are embedded as bounded read summaries.
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - type
+        - sourceAccount
+        - destinationAccount
+        - amount
+        - description
+        - category
+        - tags
+        - isRefund
+        - relatedTransaction
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        type:
+          type: string
+          minLength: 1
+        sourceAccount:
+          $ref: '#/components/schemas/accountSummary'
+        destinationAccount:
+          oneOf:
+            - $ref: '#/components/schemas/accountSummary'
+            - type: 'null'
+        amount:
+          type: number
+        description:
+          $ref: '#/components/schemas/nullableString'
+        category:
+          $ref: '#/components/schemas/categorySummary'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/tagSummary'
+          uniqueItems: true
+        isRefund:
+          type: boolean
+        relatedTransaction:
+          oneOf:
+            - $ref: '#/components/schemas/transactionSummary'
+            - type: 'null'
+        createdAt:
+          $ref: '#/components/schemas/dateTime'
+        updatedAt:
+          $ref: '#/components/schemas/dateTime'
+    transaction.create.schema:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://schemas.pockettally.app/models/transaction.create.schema.json
+      title: TransactionCreate
+      description: Payload for creating a transaction. Relationships are represented by IDs.
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - sourceAccountId
+        - amount
+        - categoryId
+      properties:
+        type:
+          type: string
+          minLength: 1
+        sourceAccountId:
+          $ref: '#/components/schemas/uuid'
+        destinationAccountId:
+          oneOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        amount:
+          type: number
+        description:
+          $ref: '#/components/schemas/nullableString'
+        categoryId:
+          $ref: '#/components/schemas/uuid'
+        tagIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          uniqueItems: true
+          default: []
+        isRefund:
+          type: boolean
+          default: false
+        relatedTransactionId:
+          oneOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+    transaction.update.schema:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://schemas.pockettally.app/models/transaction.update.schema.json
+      title: TransactionUpdate
+      description: Partial payload for updating a transaction. Relationships are represented by IDs.
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        type:
+          type: string
+          minLength: 1
+        sourceAccountId:
+          $ref: '#/components/schemas/uuid'
+        destinationAccountId:
+          oneOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        amount:
+          type: number
+        description:
+          $ref: '#/components/schemas/nullableString'
+        categoryId:
+          $ref: '#/components/schemas/uuid'
+        tagIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          uniqueItems: true
+        isRefund:
+          type: boolean
+        relatedTransactionId:
+          oneOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+  responses:
+    Error:
+      description: Unexpected error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: The request is invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: The requested resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: The operation conflicts with existing data or business rules.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

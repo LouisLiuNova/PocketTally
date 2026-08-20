@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/tag.create.schema.json",
+  "title": "TagCreate",
+  "description": "Payload for creating a tag.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name"],
+  "properties": {
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "$ref": "common.schema.json#/$defs/nullableString" },
+    "color": { "$ref": "common.schema.json#/$defs/hexColor", "default": "#ff0000" }
+  }
+}

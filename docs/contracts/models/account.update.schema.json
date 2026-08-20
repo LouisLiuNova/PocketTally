@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/account.update.schema.json",
+  "title": "AccountUpdate",
+  "description": "Partial payload for updating an account.",
+  "type": "object",
+  "additionalProperties": false,
+  "minProperties": 1,
+  "properties": {
+    "type": { "type": "string", "minLength": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "cardNumber": { "$ref": "common.schema.json#/$defs/nullableString" },
+    "description": { "$ref": "common.schema.json#/$defs/nullableString" },
+    "amount": { "type": "number" }
+  }
+}
