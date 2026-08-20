@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/account.create.schema.json",
+  "title": "AccountCreate",
+  "description": "Payload for creating an account. Server-owned fields are omitted.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "name"],
+  "properties": {
+    "type": { "type": "string", "minLength": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "cardNumber": { "$ref": "common.schema.json#/$defs/nullableString" },
+    "description": { "$ref": "common.schema.json#/$defs/nullableString" },
+    "amount": { "type": "number", "default": 0 }
+  }
+}

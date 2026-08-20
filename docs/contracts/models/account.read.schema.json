@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/account.read.schema.json",
+  "title": "AccountRead",
+  "description": "Account returned by the HTTP API.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "type", "name", "cardNumber", "description", "amount", "createdAt", "updatedAt"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/uuid" },
+    "type": { "type": "string", "minLength": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "cardNumber": { "$ref": "common.schema.json#/$defs/nullableString" },
+    "description": { "$ref": "common.schema.json#/$defs/nullableString" },
+    "amount": { "type": "number" },
+    "createdAt": { "$ref": "common.schema.json#/$defs/dateTime" },
+    "updatedAt": { "$ref": "common.schema.json#/$defs/dateTime" }
+  }
+}

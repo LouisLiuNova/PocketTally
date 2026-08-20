@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/transaction.create.schema.json",
+  "title": "TransactionCreate",
+  "description": "Payload for creating a transaction. Relationships are represented by IDs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "sourceAccountId", "amount", "categoryId"],
+  "properties": {
+    "type": { "type": "string", "minLength": 1 },
+    "sourceAccountId": { "$ref": "common.schema.json#/$defs/uuid" },
+    "destinationAccountId": {
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/uuid" },
+        { "type": "null" }
+      ]
+    },
+    "amount": { "type": "number" },
+    "description": { "$ref": "common.schema.json#/$defs/nullableString" },
+    "categoryId": { "$ref": "common.schema.json#/$defs/uuid" },
+    "tagIds": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/uuid" },
+      "uniqueItems": true,
+      "default": []
+    },
+    "isRefund": { "type": "boolean", "default": false },
+    "relatedTransactionId": {
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/uuid" },
+        { "type": "null" }
+      ]
+    }
+  }
+}

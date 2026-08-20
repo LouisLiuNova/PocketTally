@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/category.create.schema.json",
+  "title": "CategoryCreate",
+  "description": "Payload for creating a category. Relationships are represented by IDs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name"],
+  "properties": {
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "$ref": "common.schema.json#/$defs/nullableString" },
+    "parentCategoryId": {
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/uuid" },
+        { "type": "null" }
+      ]
+    },
+    "iconColor": { "$ref": "common.schema.json#/$defs/hexColor", "default": "#ff0000" },
+    "iconName": { "type": "string", "minLength": 1, "default": "default_icon" }
+  }
+}

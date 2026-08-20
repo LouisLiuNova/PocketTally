@@ -1,0 +1,519 @@
+openapi: 3.1.0
+info:
+  title: PocketTally HTTP API
+  version: 0.1.0
+  description: CRUD contract skeleton for PocketTally resources.
+servers:
+  - url: /api/v1
+tags:
+  - name: Accounts
+    description: Account and balance management.
+  - name: Categories
+    description: Transaction category management.
+  - name: Tags
+    description: Transaction tag management.
+  - name: Transactions
+    description: Financial transaction management.
+paths:
+  /accounts:
+    get:
+      tags: [Accounts]
+      operationId: listAccounts
+      summary: List accounts
+      responses:
+        '200':
+          description: Accounts returned successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: ../models/account.read.schema.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/Error'
+    post:
+      tags: [Accounts]
+      operationId: createAccount
+      summary: Create an account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../models/account.create.schema.json
+      responses:
+        '201':
+          description: Account created successfully.
+          headers:
+            Location:
+              description: URL of the newly created account.
+              schema:
+                type: string
+                format: uri-reference
+          content:
+            application/json:
+              schema:
+                $ref: ../models/account.read.schema.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/Error'
+
+  /accounts/{accountId}:
+    parameters:
+      - $ref: '#/components/parameters/AccountId'
+    get:
+      tags: [Accounts]
+      operationId: getAccount
+      summary: Get an account
+      responses:
+        '200':
+          description: Account returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: ../models/account.read.schema.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Error'
+    patch:
+      tags: [Accounts]
+      operationId: updateAccount
+      summary: Update an account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../models/account.update.schema.json
+      responses:
+        '200':
+          description: Account updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: ../models/account.read.schema.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Error'
+    delete:
+      tags: [Accounts]
+      operationId: deleteAccount
+      summary: Delete an account
+      responses:
+        '204':
+          description: Account deleted successfully. No response body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Error'
+
+  /categories:
+    get:
+      tags: [Categories]
+      operationId: listCategories
+      summary: List categories
+      responses:
+        '200':
+          description: Categories returned successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: ../models/category.read.schema.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/Error'
+    post:
+      tags: [Categories]
+      operationId: createCategory
+      summary: Create a category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../models/category.create.schema.json
+      responses:
+        '201':
+          description: Category created successfully.
+          headers:
+            Location:
+              description: URL of the newly created category.
+              schema:
+                type: string
+                format: uri-reference
+          content:
+            application/json:
+              schema:
+                $ref: ../models/category.read.schema.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Error'
+
+  /categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/CategoryId'
+    get:
+      tags: [Categories]
+      operationId: getCategory
+      summary: Get a category
+      responses:
+        '200':
+          description: Category returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: ../models/category.read.schema.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Error'
+    patch:
+      tags: [Categories]
+      operationId: updateCategory
+      summary: Update a category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../models/category.update.schema.json
+      responses:
+        '200':
+          description: Category updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: ../models/category.read.schema.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Error'
+    delete:
+      tags: [Categories]
+      operationId: deleteCategory
+      summary: Delete a category
+      responses:
+        '204':
+          description: Category deleted successfully. No response body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Error'
+
+  /tags:
+    get:
+      tags: [Tags]
+      operationId: listTags
+      summary: List tags
+      responses:
+        '200':
+          description: Tags returned successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: ../models/tag.read.schema.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/Error'
+    post:
+      tags: [Tags]
+      operationId: createTag
+      summary: Create a tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../models/tag.create.schema.json
+      responses:
+        '201':
+          description: Tag created successfully.
+          headers:
+            Location:
+              description: URL of the newly created tag.
+              schema:
+                type: string
+                format: uri-reference
+          content:
+            application/json:
+              schema:
+                $ref: ../models/tag.read.schema.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/Error'
+
+  /tags/{tagId}:
+    parameters:
+      - $ref: '#/components/parameters/TagId'
+    get:
+      tags: [Tags]
+      operationId: getTag
+      summary: Get a tag
+      responses:
+        '200':
+          description: Tag returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: ../models/tag.read.schema.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Error'
+    patch:
+      tags: [Tags]
+      operationId: updateTag
+      summary: Update a tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../models/tag.update.schema.json
+      responses:
+        '200':
+          description: Tag updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: ../models/tag.read.schema.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Error'
+    delete:
+      tags: [Tags]
+      operationId: deleteTag
+      summary: Delete a tag
+      responses:
+        '204':
+          description: Tag deleted successfully. No response body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Error'
+
+  /transactions:
+    get:
+      tags: [Transactions]
+      operationId: listTransactions
+      summary: List transactions
+      responses:
+        '200':
+          description: Transactions returned successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: ../models/transaction.read.schema.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/Error'
+    post:
+      tags: [Transactions]
+      operationId: createTransaction
+      summary: Create a transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../models/transaction.create.schema.json
+      responses:
+        '201':
+          description: Transaction created successfully.
+          headers:
+            Location:
+              description: URL of the newly created transaction.
+              schema:
+                type: string
+                format: uri-reference
+          content:
+            application/json:
+              schema:
+                $ref: ../models/transaction.read.schema.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Error'
+
+  /transactions/{transactionId}:
+    parameters:
+      - $ref: '#/components/parameters/TransactionId'
+    get:
+      tags: [Transactions]
+      operationId: getTransaction
+      summary: Get a transaction
+      responses:
+        '200':
+          description: Transaction returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: ../models/transaction.read.schema.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Error'
+    patch:
+      tags: [Transactions]
+      operationId: updateTransaction
+      summary: Update a transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../models/transaction.update.schema.json
+      responses:
+        '200':
+          description: Transaction updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: ../models/transaction.read.schema.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Error'
+    delete:
+      tags: [Transactions]
+      operationId: deleteTransaction
+      summary: Delete a transaction
+      responses:
+        '204':
+          description: Transaction deleted successfully. No response body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Error'
+
+components:
+  parameters:
+    AccountId:
+      name: accountId
+      in: path
+      required: true
+      description: Account UUID.
+      schema:
+        type: string
+        format: uuid
+    CategoryId:
+      name: categoryId
+      in: path
+      required: true
+      description: Category UUID.
+      schema:
+        type: string
+        format: uuid
+    TagId:
+      name: tagId
+      in: path
+      required: true
+      description: Tag UUID.
+      schema:
+        type: string
+        format: uuid
+    TransactionId:
+      name: transactionId
+      in: path
+      required: true
+      description: Transaction UUID.
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1
+        details:
+          type: object
+          additionalProperties: true
+  responses:
+    Error:
+      description: Unexpected error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: The request is invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: The requested resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: The operation conflicts with existing data or business rules.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
