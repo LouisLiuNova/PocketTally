@@ -1,4 +1,4 @@
-"""HTTP middleware shared by the application."""
+"""应用共用的 HTTP 中间件。"""
 
 from time import perf_counter
 from uuid import uuid4
@@ -8,10 +8,27 @@ from loguru import logger
 
 
 def register_middleware(app: FastAPI) -> None:
-    """Register request context and access logging middleware."""
+    """注册请求上下文和访问日志中间件。
+
+    Args:
+        app: 接收该中间件的 FastAPI 应用。
+
+    Returns:
+        无返回值。
+    """
 
     @app.middleware("http")
     async def request_context(request: Request, call_next) -> Response:
+        """附加请求标识，并记录已完成的 HTTP 请求。
+
+        Args:
+            request: 传入的 HTTP 请求。
+            call_next: 调用下一个中间件或路由的可调用对象。
+
+        Returns:
+            下游应用生成的响应。
+        """
+
         request_id = request.headers.get("X-Request-ID") or uuid4().hex
         request.state.request_id = request_id
         started = perf_counter()

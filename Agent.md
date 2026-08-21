@@ -15,7 +15,11 @@
 
 ## Python 代码
 
+- 类型注解必须遵循 Python 3.14 风格，不为旧版本 Python 添加向前兼容写法。
+- 优先使用内置泛型（如 `list[str]`、`dict[str, int]`）和联合类型运算符（如 `str | None`）；禁止使用 `typing.List`、`typing.Dict`、`typing.Optional` 和 `typing.Union` 等旧式写法。
+- 前向引用直接使用目标类型（如 `list[Transaction]`），禁止使用带引号的字符串类型注解；不得通过 `from __future__ import annotations` 保留旧版本兼容写法。
 - 所有 Python 模块、类、函数和方法都应使用 Google 风格的 docstring。
+- docstring 的说明文字必须使用简体中文；`Args`、`Returns`、`Yields`、`Raises` 等 Google 风格保留字保持英文。
 - docstring 应说明用途、参数、返回值以及可能抛出的异常；没有对应内容时可以省略相应小节。
 - Python 代码中的注释必须使用简体中文，注释应解释必要的背景、原因或非显而易见的逻辑。
 

@@ -1,4 +1,4 @@
-"""PocketTally backend package."""
+"""PocketTally 后端程序包。"""
 
 from app.main import create_app
 

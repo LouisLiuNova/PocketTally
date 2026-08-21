@@ -1,4 +1,4 @@
-"""Application startup and shutdown lifecycle."""
+"""应用启动和关闭生命周期。"""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -14,7 +14,7 @@ from app.logging import configure_logging
 
 @dataclass(slots=True)
 class AppResources:
-    """Resources created once and shared by request dependencies."""
+    """创建一次并由请求依赖共享的资源。"""
 
     started_at: datetime
     ready: bool = False
@@ -22,10 +22,17 @@ class AppResources:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Initialize and tear down all process-scoped application resources."""
+    """初始化并释放所有进程范围内的应用资源。
+
+    Args:
+        app: 接收这些资源并保存到状态中的 FastAPI 应用。
+
+    Yields:
+        启动完成后将控制权交给正在运行的应用。
+    """
 
     settings: Settings = app.state.settings
-    # Test runners own temporary output streams; avoid replacing their sinks.
+    # 测试运行器负责临时输出流，避免替换其日志接收器。
     if settings.environment != "test":
         configure_logging(settings)
     resources = AppResources(started_at=datetime.now(UTC))
@@ -33,12 +40,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     logger.info("Application startup begins")
     try:
-        # Initialize database pools, clients, and caches here.
+        # 在此初始化数据库连接池、客户端和缓存。
         resources.ready = True
         logger.info("Application startup complete")
         yield
     finally:
         resources.ready = False
         logger.info("Application shutdown begins")
-        # Close resources here in reverse initialization order.
+        # 在此按初始化的逆序关闭资源。
         logger.info("Application shutdown complete")

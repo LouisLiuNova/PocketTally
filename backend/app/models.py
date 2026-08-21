@@ -1,20 +1,28 @@
-"""SQLModel persistence models derived from ``docs/contracts/db.dbml``."""
+"""根据 ``docs/contracts/db.dbml`` 派生的 SQLModel 持久化模型。"""
 
 from datetime import datetime
-from typing import Optional
 from uuid import uuid4
 
 from sqlalchemy import Column, DateTime, Text, text
 from sqlmodel import Field, Relationship, SQLModel
 
+
 def new_id() -> str:
-    """Return the string UUID representation used by the SQLite schema."""
+    """返回 SQLite 数据库模式使用的字符串 UUID。
+
+    Returns:
+        新生成的字符串形式 UUID。
+    """
 
     return str(uuid4())
 
 
 def timestamp_column() -> Column[datetime]:
-    """Create a timestamp column with SQLite's contract-defined default."""
+    """创建使用 SQLite 约定默认值的时间戳列。
+
+    Returns:
+        一个非空的 SQLAlchemy 时间戳列，其默认值为当前时间。
+    """
 
     return Column(
         DateTime,
@@ -24,7 +32,7 @@ def timestamp_column() -> Column[datetime]:
 
 
 class Account(SQLModel, table=True):
-    """A debit card, credit card, cash account, or other money account."""
+    """借记卡、信用卡、现金账户或其他资金账户。"""
 
     __tablename__ = "accounts"
 
@@ -37,18 +45,18 @@ class Account(SQLModel, table=True):
     created_at: datetime = Field(sa_column=timestamp_column())
     updated_at: datetime = Field(sa_column=timestamp_column())
 
-    source_transactions: list["Transaction"] = Relationship(
+    source_transactions: list[Transaction] = Relationship(
         back_populates="source_account",
         sa_relationship_kwargs={"foreign_keys": "Transaction.src_account_id"},
     )
-    destination_transactions: list["Transaction"] = Relationship(
+    destination_transactions: list[Transaction] = Relationship(
         back_populates="destination_account",
         sa_relationship_kwargs={"foreign_keys": "Transaction.dest_account_id"},
     )
 
 
 class Category(SQLModel, table=True):
-    """A transaction category, optionally nested below another category."""
+    """交易分类，可选择嵌套在另一个分类下。"""
 
     __tablename__ = "categories"
 
@@ -65,16 +73,16 @@ class Category(SQLModel, table=True):
     created_at: datetime = Field(sa_column=timestamp_column())
     updated_at: datetime = Field(sa_column=timestamp_column())
 
-    parent_category: Optional["Category"] = Relationship(
+    parent_category: Category | None = Relationship(
         back_populates="child_categories",
         sa_relationship_kwargs={"remote_side": "Category.id"},
     )
-    child_categories: list["Category"] = Relationship(back_populates="parent_category")
-    transactions: list["Transaction"] = Relationship(back_populates="category_record")
+    child_categories: list[Category] = Relationship(back_populates="parent_category")
+    transactions: list[Transaction] = Relationship(back_populates="category_record")
 
 
 class Tag(SQLModel, table=True):
-    """A reusable transaction label."""
+    """可复用的交易标签。"""
 
     __tablename__ = "tags"
 
@@ -87,7 +95,7 @@ class Tag(SQLModel, table=True):
 
 
 class Transaction(SQLModel, table=True):
-    """A single income, expense, or transfer transaction."""
+    """一笔收入、支出或转账交易。"""
 
     __tablename__ = "transactions"
 
@@ -120,20 +128,20 @@ class Transaction(SQLModel, table=True):
     created_at: datetime = Field(sa_column=timestamp_column())
     updated_at: datetime = Field(sa_column=timestamp_column())
 
-    source_account: "Account" = Relationship(
+    source_account: Account = Relationship(
         back_populates="source_transactions",
         sa_relationship_kwargs={"foreign_keys": "Transaction.src_account_id"},
     )
-    destination_account: Optional["Account"] = Relationship(
+    destination_account: Account | None = Relationship(
         back_populates="destination_transactions",
         sa_relationship_kwargs={"foreign_keys": "Transaction.dest_account_id"},
     )
-    category_record: "Category" = Relationship(back_populates="transactions")
-    related_transaction: Optional["Transaction"] = Relationship(
+    category_record: Category = Relationship(back_populates="transactions")
+    related_transaction: Transaction | None = Relationship(
         back_populates="refund_transactions",
         sa_relationship_kwargs={"remote_side": "Transaction.id"},
     )
-    refund_transactions: list["Transaction"] = Relationship(
+    refund_transactions: list[Transaction] = Relationship(
         back_populates="related_transaction"
     )
 

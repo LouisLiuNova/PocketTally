@@ -1,4 +1,4 @@
-"""Application configuration loaded from environment variables."""
+"""从环境变量加载应用配置。"""
 
 from functools import lru_cache
 from typing import Literal
@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Runtime settings loaded from ``POCKET_TALLY_*`` variables."""
+    """从 ``POCKET_TALLY_*`` 环境变量加载运行时配置。"""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -31,6 +31,10 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    """Return the process-wide settings instance."""
+    """返回进程范围内的配置实例。
+
+    Returns:
+        已缓存的应用配置实例。
+    """
 
     return Settings()

@@ -1,4 +1,4 @@
-"""Loguru configuration and standard-library logging interception."""
+"""Loguru 配置和标准库日志拦截。"""
 
 import logging
 import sys
@@ -18,15 +18,31 @@ _stdlib_configured = False
 
 
 def _write_to_stderr(message: object) -> None:
-    """Resolve stderr at write time so redirected test streams are not retained."""
+    """将日志消息写入当前标准错误流。
+
+    Args:
+        message: 要写入的日志消息。
+
+    Returns:
+        无返回值。
+    """
 
     sys.stderr.write(str(message))
 
 
 class InterceptHandler(logging.Handler):
-    """Forward stdlib and Uvicorn log records to Loguru."""
+    """将标准库和 Uvicorn 日志记录转发到 Loguru。"""
 
     def emit(self, record: logging.LogRecord) -> None:
+        """将一条标准库日志记录转发到 Loguru。
+
+        Args:
+            record: 要转发的标准库日志记录。
+
+        Returns:
+            无返回值。
+        """
+
         try:
             level: str | int = logger.level(record.levelname).name
         except ValueError:
@@ -44,7 +60,14 @@ class InterceptHandler(logging.Handler):
 
 
 def configure_logging(settings: Settings) -> None:
-    """Configure console/file sinks and route stdlib logs through Loguru."""
+    """配置控制台和文件接收器，并将标准库日志转发到 Loguru。
+
+    Args:
+        settings: 控制日志级别和输出目标的应用配置。
+
+    Returns:
+        无返回值。
+    """
 
     logger.remove()
     logger.configure(extra={"request_id": "-"})
@@ -74,9 +97,8 @@ def configure_logging(settings: Settings) -> None:
         )
 
     global _stdlib_configured
-    # Pytest owns logging handlers while capturing output. Leave those handlers
-    # intact in the test environment; production and development still route
-    # stdlib/Uvicorn records through Loguru.
+    # Pytest 在捕获输出时负责日志处理器，测试环境保留这些处理器；生产和开发环境
+    # 仍将标准库及 Uvicorn 日志记录转发到 Loguru。
     if settings.environment != "test" and not _stdlib_configured:
         root_logger = logging.getLogger()
         root_logger.handlers = [InterceptHandler()]
