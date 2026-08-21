@@ -4,6 +4,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from sqlalchemy import Column, DateTime, Text, text
+from sqlalchemy.orm import relationship
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -46,12 +47,18 @@ class Account(SQLModel, table=True):
     updated_at: datetime = Field(sa_column=timestamp_column())
 
     source_transactions: list[Transaction] = Relationship(
-        back_populates="source_account",
-        sa_relationship_kwargs={"foreign_keys": "Transaction.src_account_id"},
+        sa_relationship=relationship(
+            "Transaction",
+            back_populates="source_account",
+            foreign_keys="Transaction.src_account_id",
+        ),
     )
     destination_transactions: list[Transaction] = Relationship(
-        back_populates="destination_account",
-        sa_relationship_kwargs={"foreign_keys": "Transaction.dest_account_id"},
+        sa_relationship=relationship(
+            "Transaction",
+            back_populates="destination_account",
+            foreign_keys="Transaction.dest_account_id",
+        ),
     )
 
 
@@ -74,11 +81,18 @@ class Category(SQLModel, table=True):
     updated_at: datetime = Field(sa_column=timestamp_column())
 
     parent_category: Category | None = Relationship(
-        back_populates="child_categories",
-        sa_relationship_kwargs={"remote_side": "Category.id"},
+        sa_relationship=relationship(
+            "Category",
+            back_populates="child_categories",
+            remote_side="Category.id",
+        ),
     )
-    child_categories: list[Category] = Relationship(back_populates="parent_category")
-    transactions: list[Transaction] = Relationship(back_populates="category_record")
+    child_categories: list[Category] = Relationship(
+        sa_relationship=relationship("Category", back_populates="parent_category")
+    )
+    transactions: list[Transaction] = Relationship(
+        sa_relationship=relationship("Transaction", back_populates="category_record")
+    )
 
 
 class Tag(SQLModel, table=True):
@@ -129,20 +143,33 @@ class Transaction(SQLModel, table=True):
     updated_at: datetime = Field(sa_column=timestamp_column())
 
     source_account: Account = Relationship(
-        back_populates="source_transactions",
-        sa_relationship_kwargs={"foreign_keys": "Transaction.src_account_id"},
+        sa_relationship=relationship(
+            "Account",
+            back_populates="source_transactions",
+            foreign_keys="Transaction.src_account_id",
+        ),
     )
     destination_account: Account | None = Relationship(
-        back_populates="destination_transactions",
-        sa_relationship_kwargs={"foreign_keys": "Transaction.dest_account_id"},
+        sa_relationship=relationship(
+            "Account",
+            back_populates="destination_transactions",
+            foreign_keys="Transaction.dest_account_id",
+        ),
     )
-    category_record: Category = Relationship(back_populates="transactions")
+    category_record: Category = Relationship(
+        sa_relationship=relationship("Category", back_populates="transactions")
+    )
     related_transaction: Transaction | None = Relationship(
-        back_populates="refund_transactions",
-        sa_relationship_kwargs={"remote_side": "Transaction.id"},
+        sa_relationship=relationship(
+            "Transaction",
+            back_populates="refund_transactions",
+            remote_side="Transaction.id",
+        ),
     )
     refund_transactions: list[Transaction] = Relationship(
-        back_populates="related_transaction"
+        sa_relationship=relationship(
+            "Transaction", back_populates="related_transaction"
+        )
     )
 
 
