@@ -1,0 +1,40 @@
+[project]
+name = "pocket-tally-backend"
+version = "0.1.0"
+description = "PocketTally FastAPI backend"
+authors = [
+    { name = "louisliunova", email = "louisliunova@outlook.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.116",
+    "loguru>=0.7.3",
+    "pydantic-settings>=2.10",
+    "uvicorn[standard]>=0.35",
+]
+
+[project.scripts]
+pocket-tally-backend = "app.main:main"
+
+[build-system]
+requires = ["uv_build>=0.9.18,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+# The backend service is a standalone monorepo member, so keep its import
+# package directly under this service root instead of adding another src layer.
+module-name = "app"
+module-root = ""
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28",
+    "pytest>=8.4",
+    "pytest-asyncio>=1.1",
+]
+
+[tool.pytest.ini_options]
+# Python 3.14's fd capture can fail while cleaning up anonymous temp files in
+# some WSL kernels. Python-level capture keeps the default test command stable.
+addopts = "-q --capture=sys"
+testpaths = ["tests"]
