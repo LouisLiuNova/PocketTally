@@ -1,13 +1,19 @@
 """HTTP Pydantic 模型与 SQLModel ORM 对接测试。"""
 
-import json
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
 from pydantic import ValidationError
 
-from app.models import Account, Category, Tag, Transaction, TransactionType
+from app.models import (
+    Account,
+    Category,
+    Tag,
+    Transaction,
+    TransactionTag,
+    TransactionType,
+)
 from app.schemas import (
     AccountCreate,
     AccountRead,
@@ -67,8 +73,8 @@ def test_update_models_require_a_field_and_preserve_explicit_null() -> None:
     )
     assert transaction_update.to_orm_kwargs() == {
         "dest_account_id": None,
-        "tags": "[]",
     }
+    assert transaction_update.tag_ids_for_relation() == []
 
     with pytest.raises(ValidationError):
         AccountUpdate.model_validate({"name": None})
@@ -98,6 +104,8 @@ def test_generated_json_schema_keeps_contract_object_and_array_constraints() -> 
         "balance_adjustment",
     ]
     assert transaction_read_schema["properties"]["tags"]["uniqueItems"] is True
+    assert "occurredAt" in transaction_create_schema["required"]
+    assert "occurredAt" in transaction_read_schema["required"]
 
 
 def test_write_models_convert_relationship_ids_to_orm_columns() -> None:
@@ -125,11 +133,11 @@ def test_write_models_convert_relationship_ids_to_orm_columns() -> None:
         "amount": -12.5,
         "description": None,
         "category": str(category_id),
-        "tags": json.dumps([str(tag_id)], separators=(",", ":")),
         "is_refund": False,
         "related_transaction_id": None,
         "occurred_at": occurred_at,
     }
+    assert transaction.tag_ids_for_relation() == [str(tag_id)]
 
     category = CategoryCreate.model_validate({"name": "餐饮"})
     assert category.to_orm_kwargs()["parent_category_id"] is None
@@ -214,7 +222,6 @@ def test_read_models_map_orm_fields_and_nested_relationships() -> None:
         amount=-20.0,
         description="午餐",
         category=category.id,
-        tags=json.dumps([tag.id]),
         is_refund=False,
         related_transaction_id=None,
         occurred_at=now,
@@ -225,21 +232,20 @@ def test_read_models_map_orm_fields_and_nested_relationships() -> None:
     transaction.destination_account = None
     transaction.category_record = category
     transaction.related_transaction = None
+    transaction.tags = [tag]
 
     account_response = AccountRead.from_orm_model(account)
     category_response = CategoryRead.from_orm_model(category)
     tag_response = TagRead.from_orm_model(tag)
-    transaction_response = TransactionRead.from_orm_model(
-        transaction, tag_records=[tag]
-    )
+    transaction_response = TransactionRead.from_orm_model(transaction)
 
     assert isinstance(account_response.id, UUID)
     assert account_response.model_dump(mode="json", by_alias=True)["createdAt"]
     assert category_response.parent_category is None
     assert tag_response.color == "#00ff00"
     assert transaction_response.category.id == UUID(category.id)
-    assert transaction_response.occurred_at == now
     assert transaction_response.tags[0].id == UUID(tag.id)
+    assert transaction_response.occurred_at == now
     assert transaction_response.model_dump(mode="json", by_alias=True)[
         "sourceAccount"
     ] == {
@@ -249,43 +255,10 @@ def test_read_models_map_orm_fields_and_nested_relationships() -> None:
     }
 
 
-def test_read_transaction_rejects_missing_or_invalid_tag_records() -> None:
-    """验证事务标签 JSON 和标签 ORM 映射不会静默丢数据。"""
+def test_transaction_tag_link_model_uses_composite_identity() -> None:
+    """验证标签关联模型以交易和标签 ID 共同标识一条关联。"""
 
-    now = datetime.now(UTC)
-    account = Account(
-        id=str(uuid4()),
-        type="现金",
-        name="钱包",
-        amount=0.0,
-        created_at=now,
-        updated_at=now,
-    )
-    category = Category(
-        id=str(uuid4()),
-        name="其他",
-        icon_color="#ff0000",
-        icon_name="default_icon",
-        created_at=now,
-        updated_at=now,
-    )
-    transaction = Transaction(
-        id=str(uuid4()),
-        type="income",
-        src_account_id=account.id,
-        amount=1.0,
-        category=category.id,
-        tags="not-json",
-        occurred_at=now,
-        created_at=now,
-        updated_at=now,
-    )
-    transaction.source_account = account
-    transaction.category_record = category
+    link = TransactionTag(transaction_id=str(uuid4()), tag_id=str(uuid4()))
 
-    with pytest.raises(ValueError, match="不是有效的 JSON"):
-        TransactionRead.from_orm_model(transaction)
-
-    transaction.tags = json.dumps([str(uuid4())])
-    with pytest.raises(ValueError, match="未加载的标签"):
-        TransactionRead.from_orm_model(transaction)
+    assert link.transaction_id
+    assert link.tag_id

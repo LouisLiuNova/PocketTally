@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import uuid4
 
-from sqlalchemy import Column, DateTime, Text, text
+from sqlalchemy import REAL, Boolean, Column, DateTime, Text, func, text
 from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy.orm import relationship
 from sqlmodel import Field, Relationship, SQLModel
@@ -31,6 +31,7 @@ def timestamp_column() -> Column[datetime]:
         DateTime,
         nullable=False,
         server_default=text("CURRENT_TIMESTAMP"),
+        onupdate=func.current_timestamp(),
     )
 
 
@@ -62,11 +63,16 @@ class Account(SQLModel, table=True):
     __tablename__ = "accounts"
 
     id: str = Field(default_factory=new_id, sa_column=Column(Text, primary_key=True))
-    type: str = Field(nullable=False)
-    name: str = Field(nullable=False)
-    card_number: str | None = Field(default=None)
-    description: str | None = Field(default=None)
-    amount: float = Field(default=0.0, nullable=False)
+    type: str = Field(sa_column=Column(Text, nullable=False))
+    name: str = Field(
+        sa_column=Column(Text(collation="NOCASE"), nullable=False, unique=True)
+    )
+    card_number: str | None = Field(default=None, sa_column=Column(Text))
+    description: str | None = Field(default=None, sa_column=Column(Text))
+    amount: float = Field(
+        default=0.0,
+        sa_column=Column(REAL, nullable=False, server_default=text("0.0")),
+    )
     created_at: datetime = Field(sa_column=timestamp_column())
     updated_at: datetime = Field(sa_column=timestamp_column())
 
@@ -92,15 +98,23 @@ class Category(SQLModel, table=True):
     __tablename__ = "categories"
 
     id: str = Field(default_factory=new_id, sa_column=Column(Text, primary_key=True))
-    name: str = Field(nullable=False)
-    description: str | None = Field(default=None)
+    name: str = Field(
+        sa_column=Column(Text(collation="NOCASE"), nullable=False, unique=True)
+    )
+    description: str | None = Field(default=None, sa_column=Column(Text))
     parent_category_id: str | None = Field(
         default=None,
         foreign_key="categories.id",
         index=True,
     )
-    icon_color: str = Field(default="#ff0000", nullable=False)
-    icon_name: str = Field(default="default_icon", nullable=False)
+    icon_color: str = Field(
+        default="#ff0000",
+        sa_column=Column(Text, nullable=False, server_default=text("'#ff0000'")),
+    )
+    icon_name: str = Field(
+        default="default_icon",
+        sa_column=Column(Text, nullable=False, server_default=text("'default_icon'")),
+    )
     created_at: datetime = Field(sa_column=timestamp_column())
     updated_at: datetime = Field(sa_column=timestamp_column())
 
@@ -119,17 +133,42 @@ class Category(SQLModel, table=True):
     )
 
 
+class TransactionTag(SQLModel, table=True):
+    """交易与标签之间的多对多关联记录。"""
+
+    __tablename__ = "transaction_tags"
+
+    transaction_id: str = Field(
+        foreign_key="transactions.id",
+        primary_key=True,
+    )
+    tag_id: str = Field(
+        foreign_key="tags.id",
+        primary_key=True,
+        index=True,
+    )
+
+
 class Tag(SQLModel, table=True):
     """可复用的交易标签。"""
 
     __tablename__ = "tags"
 
     id: str = Field(default_factory=new_id, sa_column=Column(Text, primary_key=True))
-    name: str = Field(nullable=False)
-    description: str | None = Field(default=None)
-    color: str = Field(default="#ff0000", nullable=False)
+    name: str = Field(
+        sa_column=Column(Text(collation="NOCASE"), nullable=False, unique=True)
+    )
+    description: str | None = Field(default=None, sa_column=Column(Text))
+    color: str = Field(
+        default="#ff0000",
+        sa_column=Column(Text, nullable=False, server_default=text("'#ff0000'")),
+    )
     created_at: datetime = Field(sa_column=timestamp_column())
     updated_at: datetime = Field(sa_column=timestamp_column())
+    transactions: list[Transaction] = Relationship(
+        back_populates="tags",
+        link_model=TransactionTag,
+    )
 
 
 class Transaction(SQLModel, table=True):
@@ -160,21 +199,23 @@ class Transaction(SQLModel, table=True):
         foreign_key="accounts.id",
         index=True,
     )
-    amount: float = Field(nullable=False)
-    description: str | None = Field(default=None)
+    amount: float = Field(sa_column=Column(REAL, nullable=False))
+    description: str | None = Field(default=None, sa_column=Column(Text))
     category: str = Field(
         foreign_key="categories.id",
         index=True,
         nullable=False,
     )
-    tags: str | None = Field(default=None)
-    is_refund: bool = Field(default=False, nullable=False)
+    is_refund: bool = Field(
+        default=False,
+        sa_column=Column(Boolean, nullable=False, server_default=text("0")),
+    )
     related_transaction_id: str | None = Field(
         default=None,
         foreign_key="transactions.id",
         index=True,
     )
-    occurred_at: datetime = Field(nullable=False)
+    occurred_at: datetime = Field(sa_column=Column(DateTime, nullable=False))
     created_at: datetime = Field(sa_column=timestamp_column())
     updated_at: datetime = Field(sa_column=timestamp_column())
 
@@ -207,6 +248,10 @@ class Transaction(SQLModel, table=True):
             "Transaction", back_populates="related_transaction"
         )
     )
+    tags: list[Tag] = Relationship(
+        back_populates="transactions",
+        link_model=TransactionTag,
+    )
 
 
 __all__ = (
@@ -214,6 +259,7 @@ __all__ = (
     "Category",
     "Tag",
     "Transaction",
+    "TransactionTag",
     "TransactionType",
     "new_id",
     "transaction_type_values",
