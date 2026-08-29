@@ -38,15 +38,16 @@ CREATE TABLE tags (
 
 CREATE TABLE transactions (
     id TEXT PRIMARY KEY NOT NULL,
-    type TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('收入', '支出', '转账', '余额调整')),
     src_account_id TEXT NOT NULL,
     dest_account_id TEXT,
-    amount REAL NOT NULL,
+    amount REAL NOT NULL CHECK (amount <> 0),
     description TEXT,
     category TEXT NOT NULL,
     tags TEXT,
     is_refund BOOLEAN NOT NULL DEFAULT 0,
     related_transaction_id TEXT,
+    occurred_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (src_account_id) REFERENCES accounts (id),

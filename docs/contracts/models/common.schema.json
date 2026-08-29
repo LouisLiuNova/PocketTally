@@ -12,6 +12,10 @@
       "type": "string",
       "format": "date-time"
     },
+    "transactionType": {
+      "type": "string",
+      "enum": ["收入", "支出", "转账", "余额调整"]
+    },
     "nullableString": {
       "type": ["string", "null"]
     },
@@ -54,12 +58,13 @@
     "transactionSummary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "type", "amount", "description", "createdAt"],
+      "required": ["id", "type", "amount", "description", "occurredAt", "createdAt"],
       "properties": {
         "id": { "$ref": "#/$defs/uuid" },
-        "type": { "type": "string", "minLength": 1 },
-        "amount": { "type": "number" },
+        "type": { "$ref": "#/$defs/transactionType" },
+        "amount": { "type": "number", "not": { "const": 0 } },
         "description": { "$ref": "#/$defs/nullableString" },
+        "occurredAt": { "$ref": "#/$defs/dateTime" },
         "createdAt": { "$ref": "#/$defs/dateTime" }
       }
     }

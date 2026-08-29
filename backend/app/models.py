@@ -1,9 +1,11 @@
 """根据 ``docs/contracts/db.dbml`` 派生的 SQLModel 持久化模型。"""
 
 from datetime import datetime
+from enum import StrEnum
 from uuid import uuid4
 
 from sqlalchemy import Column, DateTime, Text, text
+from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy.orm import relationship
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -30,6 +32,28 @@ def timestamp_column() -> Column[datetime]:
         nullable=False,
         server_default=text("CURRENT_TIMESTAMP"),
     )
+
+
+class TransactionType(StrEnum):
+    """系统支持的交易类型。"""
+
+    INCOME = "收入"
+    EXPENSE = "支出"
+    TRANSFER = "转账"
+    BALANCE_ADJUSTMENT = "余额调整"
+
+
+def transaction_type_values(enum_class: type[TransactionType]) -> list[str]:
+    """返回交易类型实际写入数据库的中文枚举值。
+
+    Args:
+        enum_class: SQLAlchemy 传入的交易类型枚举类。
+
+    Returns:
+        按枚举声明顺序排列的持久化值。
+    """
+
+    return [member.value for member in enum_class]
 
 
 class Account(SQLModel, table=True):
@@ -109,12 +133,23 @@ class Tag(SQLModel, table=True):
 
 
 class Transaction(SQLModel, table=True):
-    """一笔收入、支出或转账交易。"""
+    """一笔收入、支出、转账或余额调整交易。"""
 
     __tablename__ = "transactions"
 
     id: str = Field(default_factory=new_id, sa_column=Column(Text, primary_key=True))
-    type: str = Field(nullable=False)
+    type: TransactionType = Field(
+        sa_column=Column(
+            SQLAlchemyEnum(
+                TransactionType,
+                values_callable=transaction_type_values,
+                native_enum=False,
+                create_constraint=True,
+                name="transaction_type",
+            ),
+            nullable=False,
+        )
+    )
     src_account_id: str = Field(
         foreign_key="accounts.id",
         index=True,
@@ -139,6 +174,7 @@ class Transaction(SQLModel, table=True):
         foreign_key="transactions.id",
         index=True,
     )
+    occurred_at: datetime = Field(nullable=False)
     created_at: datetime = Field(sa_column=timestamp_column())
     updated_at: datetime = Field(sa_column=timestamp_column())
 
@@ -173,4 +209,12 @@ class Transaction(SQLModel, table=True):
     )
 
 
-__all__ = ("Account", "Category", "Tag", "Transaction", "new_id")
+__all__ = (
+    "Account",
+    "Category",
+    "Tag",
+    "Transaction",
+    "TransactionType",
+    "new_id",
+    "transaction_type_values",
+)

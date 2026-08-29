@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "minProperties": 1,
   "properties": {
-    "type": { "type": "string", "minLength": 1 },
+    "type": { "$ref": "common.schema.json#/$defs/transactionType" },
     "sourceAccountId": { "$ref": "common.schema.json#/$defs/uuid" },
     "destinationAccountId": {
       "oneOf": [
@@ -15,7 +15,7 @@
         { "type": "null" }
       ]
     },
-    "amount": { "type": "number" },
+    "amount": { "type": "number", "not": { "const": 0 } },
     "description": { "$ref": "common.schema.json#/$defs/nullableString" },
     "categoryId": { "$ref": "common.schema.json#/$defs/uuid" },
     "tagIds": {
@@ -29,6 +29,7 @@
         { "$ref": "common.schema.json#/$defs/uuid" },
         { "type": "null" }
       ]
-    }
+    },
+    "occurredAt": { "$ref": "common.schema.json#/$defs/dateTime" }
   }
 }

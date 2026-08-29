@@ -5,10 +5,10 @@
   "description": "Transaction returned by the HTTP API. Relationships are embedded as bounded read summaries.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "type", "sourceAccount", "destinationAccount", "amount", "description", "category", "tags", "isRefund", "relatedTransaction", "createdAt", "updatedAt"],
+  "required": ["id", "type", "sourceAccount", "destinationAccount", "amount", "description", "category", "tags", "isRefund", "relatedTransaction", "occurredAt", "createdAt", "updatedAt"],
   "properties": {
     "id": { "$ref": "common.schema.json#/$defs/uuid" },
-    "type": { "type": "string", "minLength": 1 },
+    "type": { "$ref": "common.schema.json#/$defs/transactionType" },
     "sourceAccount": { "$ref": "common.schema.json#/$defs/accountSummary" },
     "destinationAccount": {
       "oneOf": [
@@ -16,7 +16,7 @@
         { "type": "null" }
       ]
     },
-    "amount": { "type": "number" },
+    "amount": { "type": "number", "not": { "const": 0 } },
     "description": { "$ref": "common.schema.json#/$defs/nullableString" },
     "category": { "$ref": "common.schema.json#/$defs/categorySummary" },
     "tags": {
@@ -31,6 +31,7 @@
         { "type": "null" }
       ]
     },
+    "occurredAt": { "$ref": "common.schema.json#/$defs/dateTime" },
     "createdAt": { "$ref": "common.schema.json#/$defs/dateTime" },
     "updatedAt": { "$ref": "common.schema.json#/$defs/dateTime" }
   }

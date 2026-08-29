@@ -36,7 +36,6 @@ class AccountUpdate(UpdateModel):
     name: str = Field(default=None, min_length=1)
     card_number: str | None = None
     description: str | None = None
-    amount: float = None
 
     def to_orm_kwargs(self) -> dict[str, Any]:
         """将已提交字段转换为 ``Account`` 的更新字段。

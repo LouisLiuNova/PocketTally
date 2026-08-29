@@ -8,7 +8,7 @@ from uuid import UUID
 
 from pydantic import Field, field_validator
 
-from app.models import Tag, Transaction
+from app.models import Tag, Transaction, TransactionType
 from app.schemas.account import AccountSummary
 from app.schemas.base import ContractModel, UpdateModel
 from app.schemas.category import CategorySummary
@@ -57,13 +57,31 @@ def _decode_tag_ids(raw_tags: str | None) -> list[str]:
     return decoded
 
 
+def _require_non_zero_amount(value: float) -> float:
+    """拒绝金额为零的交易。
+
+    Args:
+        value: 待校验的交易金额。
+
+    Returns:
+        非零交易金额。
+
+    Raises:
+        ValueError: 交易金额为零时抛出。
+    """
+
+    if value == 0:
+        raise ValueError("交易金额不能为 0")
+    return value
+
+
 class TransactionCreate(ContractModel):
     """创建交易的请求模型。"""
 
-    type: str = Field(min_length=1)
+    type: TransactionType
     source_account_id: UUID
     destination_account_id: UUID | None = None
-    amount: float
+    amount: float = Field(json_schema_extra={"not": {"const": 0}})
     description: str | None = None
     category_id: UUID
     tag_ids: list[UUID] = Field(
@@ -72,6 +90,14 @@ class TransactionCreate(ContractModel):
     )
     is_refund: bool = False
     related_transaction_id: UUID | None = None
+    occurred_at: datetime
+
+    @field_validator("amount")
+    @classmethod
+    def require_non_zero_amount(cls, value: float) -> float:
+        """确保新建交易的金额不为零。"""
+
+        return _require_non_zero_amount(value)
 
     @field_validator("tag_ids")
     @classmethod
@@ -109,16 +135,17 @@ class TransactionCreate(ContractModel):
             "tags": _encode_tag_ids(self.tag_ids),
             "is_refund": self.is_refund,
             "related_transaction_id": _uuid_to_string(self.related_transaction_id),
+            "occurred_at": self.occurred_at,
         }
 
 
 class TransactionUpdate(UpdateModel):
     """部分更新交易的请求模型。"""
 
-    type: str = Field(default=None, min_length=1)
+    type: TransactionType = None
     source_account_id: UUID = None
     destination_account_id: UUID | None = None
-    amount: float = None
+    amount: float = Field(default=None, json_schema_extra={"not": {"const": 0}})
     description: str | None = None
     category_id: UUID = None
     tag_ids: list[UUID] = Field(
@@ -127,6 +154,14 @@ class TransactionUpdate(UpdateModel):
     )
     is_refund: bool = None
     related_transaction_id: UUID | None = None
+    occurred_at: datetime = None
+
+    @field_validator("amount")
+    @classmethod
+    def require_non_zero_amount(cls, value: float) -> float:
+        """确保更新后的交易金额不为零。"""
+
+        return _require_non_zero_amount(value)
 
     @field_validator("tag_ids")
     @classmethod
@@ -178,9 +213,10 @@ class TransactionSummary(ContractModel):
     """退款关联交易中嵌入的有界摘要。"""
 
     id: UUID
-    type: str = Field(min_length=1)
-    amount: float
+    type: TransactionType
+    amount: float = Field(json_schema_extra={"not": {"const": 0}})
     description: str | None
+    occurred_at: datetime
     created_at: datetime
 
     @classmethod
@@ -201,15 +237,16 @@ class TransactionRead(ContractModel):
     """交易响应模型，关系以有界摘要嵌入。"""
 
     id: UUID
-    type: str = Field(min_length=1)
+    type: TransactionType
     source_account: AccountSummary
     destination_account: AccountSummary | None
-    amount: float
+    amount: float = Field(json_schema_extra={"not": {"const": 0}})
     description: str | None
     category: CategorySummary
     tags: list[TagSummary] = Field(json_schema_extra={"uniqueItems": True})
     is_refund: bool
     related_transaction: TransactionSummary | None
+    occurred_at: datetime
     created_at: datetime
     updated_at: datetime
 
@@ -256,6 +293,7 @@ class TransactionRead(ContractModel):
                 "tags": [tags_by_id[tag_id] for tag_id in tag_ids],
                 "is_refund": transaction.is_refund,
                 "related_transaction": transaction.related_transaction,
+                "occurred_at": transaction.occurred_at,
                 "created_at": transaction.created_at,
                 "updated_at": transaction.updated_at,
             }

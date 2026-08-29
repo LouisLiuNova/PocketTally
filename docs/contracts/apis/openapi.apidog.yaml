@@ -516,6 +516,13 @@ components:
     dateTime:
       type: string
       format: date-time
+    transactionType:
+      type: string
+      enum:
+        - 收入
+        - 支出
+        - 转账
+        - 余额调整
     account.read.schema:
       $schema: https://json-schema.org/draft/2020-12/schema
       $id: https://schemas.pockettally.app/models/account.read.schema.json
@@ -594,8 +601,6 @@ components:
           $ref: '#/components/schemas/nullableString'
         description:
           $ref: '#/components/schemas/nullableString'
-        amount:
-          type: number
     hexColor:
       type: string
       pattern: ^#[0-9A-Fa-f]{6}$
@@ -807,17 +812,21 @@ components:
         - type
         - amount
         - description
+        - occurredAt
         - createdAt
       properties:
         id:
           $ref: '#/components/schemas/uuid'
         type:
-          type: string
-          minLength: 1
+          $ref: '#/components/schemas/transactionType'
         amount:
           type: number
+          not:
+            const: 0
         description:
           $ref: '#/components/schemas/nullableString'
+        occurredAt:
+          $ref: '#/components/schemas/dateTime'
         createdAt:
           $ref: '#/components/schemas/dateTime'
     transaction.read.schema:
@@ -838,14 +847,14 @@ components:
         - tags
         - isRefund
         - relatedTransaction
+        - occurredAt
         - createdAt
         - updatedAt
       properties:
         id:
           $ref: '#/components/schemas/uuid'
         type:
-          type: string
-          minLength: 1
+          $ref: '#/components/schemas/transactionType'
         sourceAccount:
           $ref: '#/components/schemas/accountSummary'
         destinationAccount:
@@ -854,6 +863,8 @@ components:
             - type: 'null'
         amount:
           type: number
+          not:
+            const: 0
         description:
           $ref: '#/components/schemas/nullableString'
         category:
@@ -869,6 +880,8 @@ components:
           oneOf:
             - $ref: '#/components/schemas/transactionSummary'
             - type: 'null'
+        occurredAt:
+          $ref: '#/components/schemas/dateTime'
         createdAt:
           $ref: '#/components/schemas/dateTime'
         updatedAt:
@@ -885,10 +898,10 @@ components:
         - sourceAccountId
         - amount
         - categoryId
+        - occurredAt
       properties:
         type:
-          type: string
-          minLength: 1
+          $ref: '#/components/schemas/transactionType'
         sourceAccountId:
           $ref: '#/components/schemas/uuid'
         destinationAccountId:
@@ -897,6 +910,8 @@ components:
             - type: 'null'
         amount:
           type: number
+          not:
+            const: 0
         description:
           $ref: '#/components/schemas/nullableString'
         categoryId:
@@ -914,6 +929,8 @@ components:
           oneOf:
             - $ref: '#/components/schemas/uuid'
             - type: 'null'
+        occurredAt:
+          $ref: '#/components/schemas/dateTime'
     transaction.update.schema:
       $schema: https://json-schema.org/draft/2020-12/schema
       $id: https://schemas.pockettally.app/models/transaction.update.schema.json
@@ -924,8 +941,7 @@ components:
       minProperties: 1
       properties:
         type:
-          type: string
-          minLength: 1
+          $ref: '#/components/schemas/transactionType'
         sourceAccountId:
           $ref: '#/components/schemas/uuid'
         destinationAccountId:
@@ -934,6 +950,8 @@ components:
             - type: 'null'
         amount:
           type: number
+          not:
+            const: 0
         description:
           $ref: '#/components/schemas/nullableString'
         categoryId:
@@ -949,6 +967,8 @@ components:
           oneOf:
             - $ref: '#/components/schemas/uuid'
             - type: 'null'
+        occurredAt:
+          $ref: '#/components/schemas/dateTime'
   responses:
     Error:
       description: Unexpected error.
