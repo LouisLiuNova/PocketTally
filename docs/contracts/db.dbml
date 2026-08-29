@@ -13,7 +13,7 @@ Table accounts{
 
 Table transactions{
     id TEXT [pk,note:'UUID']
-    type TEXT [notnull,note:'交易类型枚举: 收入 支出 转账 余额调整']
+    type TEXT [notnull,note:'交易类型枚举: income expense transfer balance_adjustment']
     src_account_id TEXT [notnull,note:'交易来源账户ID']
     dest_account_id TEXT [note:'交易目标账户ID'] // dest_account_id can be null for income and expense transactions
     amount REAL [notnull,note:'非零交易金额'] // positive for income, negative for expense. Always positive for transfer transactions, with the direction determined by src_account_id and dest_account_id

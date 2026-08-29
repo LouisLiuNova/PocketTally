@@ -519,10 +519,10 @@ components:
     transactionType:
       type: string
       enum:
-        - 收入
-        - 支出
-        - 转账
-        - 余额调整
+        - income
+        - expense
+        - transfer
+        - balance_adjustment
     account.read.schema:
       $schema: https://json-schema.org/draft/2020-12/schema
       $id: https://schemas.pockettally.app/models/account.read.schema.json

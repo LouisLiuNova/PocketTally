@@ -38,7 +38,7 @@ CREATE TABLE tags (
 
 CREATE TABLE transactions (
     id TEXT PRIMARY KEY NOT NULL,
-    type TEXT NOT NULL CHECK (type IN ('收入', '支出', '转账', '余额调整')),
+    type TEXT NOT NULL CHECK (type IN ('income', 'expense', 'transfer', 'balance_adjustment')),
     src_account_id TEXT NOT NULL,
     dest_account_id TEXT,
     amount REAL NOT NULL CHECK (amount <> 0),

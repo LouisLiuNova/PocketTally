@@ -37,14 +37,14 @@ def timestamp_column() -> Column[datetime]:
 class TransactionType(StrEnum):
     """系统支持的交易类型。"""
 
-    INCOME = "收入"
-    EXPENSE = "支出"
-    TRANSFER = "转账"
-    BALANCE_ADJUSTMENT = "余额调整"
+    INCOME = "income"
+    EXPENSE = "expense"
+    TRANSFER = "transfer"
+    BALANCE_ADJUSTMENT = "balance_adjustment"
 
 
 def transaction_type_values(enum_class: type[TransactionType]) -> list[str]:
-    """返回交易类型实际写入数据库的中文枚举值。
+    """返回交易类型实际写入数据库的英文枚举值。
 
     Args:
         enum_class: SQLAlchemy 传入的交易类型枚举类。

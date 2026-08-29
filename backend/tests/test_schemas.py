@@ -92,10 +92,10 @@ def test_generated_json_schema_keeps_contract_object_and_array_constraints() -> 
     assert transaction_create_schema["properties"]["tagIds"]["uniqueItems"] is True
     assert transaction_create_schema["properties"]["amount"]["not"] == {"const": 0}
     assert transaction_create_schema["$defs"]["TransactionType"]["enum"] == [
-        "收入",
-        "支出",
-        "转账",
-        "余额调整",
+        "income",
+        "expense",
+        "transfer",
+        "balance_adjustment",
     ]
     assert transaction_read_schema["properties"]["tags"]["uniqueItems"] is True
 
@@ -109,7 +109,7 @@ def test_write_models_convert_relationship_ids_to_orm_columns() -> None:
     occurred_at = datetime.now(UTC)
     transaction = TransactionCreate.model_validate(
         {
-            "type": "支出",
+            "type": "expense",
             "sourceAccountId": str(source_id),
             "amount": -12.5,
             "categoryId": str(category_id),
@@ -119,7 +119,7 @@ def test_write_models_convert_relationship_ids_to_orm_columns() -> None:
     )
 
     assert transaction.to_orm_kwargs() == {
-        "type": "支出",
+        "type": "expense",
         "src_account_id": str(source_id),
         "dest_account_id": None,
         "amount": -12.5,
@@ -137,7 +137,7 @@ def test_write_models_convert_relationship_ids_to_orm_columns() -> None:
     with pytest.raises(ValidationError):
         TransactionCreate.model_validate(
             {
-                "type": "支出",
+                "type": "expense",
                 "sourceAccountId": str(source_id),
                 "amount": 1,
                 "categoryId": str(category_id),
@@ -161,10 +161,10 @@ def test_transaction_type_and_amount_constraints() -> None:
     adjustment = TransactionCreate.model_validate(payload)
     assert adjustment.type is TransactionType.BALANCE_ADJUSTMENT
     assert Transaction.__table__.c.type.type.enums == [
-        "收入",
-        "支出",
-        "转账",
-        "余额调整",
+        "income",
+        "expense",
+        "transfer",
+        "balance_adjustment",
     ]
 
     with pytest.raises(ValidationError):
@@ -208,7 +208,7 @@ def test_read_models_map_orm_fields_and_nested_relationships() -> None:
     )
     transaction = Transaction(
         id=str(uuid4()),
-        type="支出",
+        type="expense",
         src_account_id=account.id,
         dest_account_id=None,
         amount=-20.0,
@@ -271,7 +271,7 @@ def test_read_transaction_rejects_missing_or_invalid_tag_records() -> None:
     )
     transaction = Transaction(
         id=str(uuid4()),
-        type="收入",
+        type="income",
         src_account_id=account.id,
         amount=1.0,
         category=category.id,
