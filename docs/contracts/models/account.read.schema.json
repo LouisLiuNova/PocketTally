@@ -6,9 +6,15 @@
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "type", "name", "cardNumber", "description", "amount", "createdAt", "updatedAt"],
+  "allOf": [
+    {
+      "if": { "properties": { "type": { "const": "debit" } } },
+      "then": { "properties": { "amount": { "minimum": 0 } } }
+    }
+  ],
   "properties": {
     "id": { "$ref": "common.schema.json#/$defs/uuid" },
-    "type": { "type": "string", "minLength": 1 },
+    "type": { "$ref": "common.schema.json#/$defs/accountType" },
     "name": { "type": "string", "minLength": 1 },
     "cardNumber": { "$ref": "common.schema.json#/$defs/nullableString" },
     "description": { "$ref": "common.schema.json#/$defs/nullableString" },

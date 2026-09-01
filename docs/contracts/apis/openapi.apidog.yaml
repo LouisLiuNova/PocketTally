@@ -523,6 +523,11 @@ components:
         - expense
         - transfer
         - balance_adjustment
+    accountType:
+      type: string
+      enum:
+        - debit
+        - credit
     account.read.schema:
       $schema: https://json-schema.org/draft/2020-12/schema
       $id: https://schemas.pockettally.app/models/account.read.schema.json
@@ -530,6 +535,15 @@ components:
       description: Account returned by the HTTP API.
       type: object
       additionalProperties: false
+      allOf:
+        - if:
+            properties:
+              type:
+                const: debit
+          then:
+            properties:
+              amount:
+                minimum: 0
       required:
         - id
         - type
@@ -543,8 +557,7 @@ components:
         id:
           $ref: '#/components/schemas/uuid'
         type:
-          type: string
-          minLength: 1
+          $ref: '#/components/schemas/accountType'
         name:
           type: string
           minLength: 1
@@ -565,13 +578,21 @@ components:
       description: Payload for creating an account. Server-owned fields are omitted.
       type: object
       additionalProperties: false
+      allOf:
+        - if:
+            properties:
+              type:
+                const: debit
+          then:
+            properties:
+              amount:
+                minimum: 0
       required:
         - type
         - name
       properties:
         type:
-          type: string
-          minLength: 1
+          $ref: '#/components/schemas/accountType'
         name:
           type: string
           minLength: 1
@@ -592,8 +613,7 @@ components:
       minProperties: 1
       properties:
         type:
-          type: string
-          minLength: 1
+          $ref: '#/components/schemas/accountType'
         name:
           type: string
           minLength: 1

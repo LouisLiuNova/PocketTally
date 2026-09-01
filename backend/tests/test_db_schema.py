@@ -30,11 +30,11 @@ def test_schema_normalizes_tags_and_enforces_unique_names() -> None:
     connection = create_connection()
     try:
         connection.execute(
-            "INSERT INTO accounts (id, type, name) VALUES ('account-1', 'cash', 'Wallet')"
+            "INSERT INTO accounts (id, type, name) VALUES ('account-1', 'debit', 'Wallet')"
         )
         with pytest.raises(sqlite3.IntegrityError):
             connection.execute(
-                "INSERT INTO accounts (id, type, name) VALUES ('account-2', 'cash', 'wallet')"
+                "INSERT INTO accounts (id, type, name) VALUES ('account-2', 'debit', 'wallet')"
             )
 
         connection.execute("INSERT INTO categories (id, name) VALUES ('category-1', '餐饮')")
@@ -82,7 +82,7 @@ def test_schema_rejects_unknown_types_and_non_positive_amounts() -> None:
     connection = create_connection()
     try:
         connection.execute(
-            "INSERT INTO accounts (id, type, name) VALUES ('account-1', 'cash', 'Wallet')"
+            "INSERT INTO accounts (id, type, name) VALUES ('account-1', 'debit', 'Wallet')"
         )
         connection.execute(
             "INSERT INTO categories (id, name) VALUES ('category-1', '餐饮')"
@@ -110,6 +110,21 @@ def test_schema_rejects_unknown_types_and_non_positive_amounts() -> None:
                 "(id, type, src_account_id, amount, category, occurred_at) "
                 f"VALUES ({base_values.replace(', 1,', ', -1,')})"
             )
+
+        with pytest.raises(sqlite3.IntegrityError):
+            connection.execute(
+                "INSERT INTO accounts (id, type, name, amount) "
+                "VALUES ('debit-negative', 'debit', 'Negative debit', -1)"
+            )
+        connection.execute(
+            "INSERT INTO accounts (id, type, name, amount) "
+            "VALUES ('credit-negative', 'credit', 'Negative credit', -1)"
+        )
+        with pytest.raises(sqlite3.IntegrityError):
+            connection.execute(
+                "INSERT INTO accounts (id, type, name) "
+                "VALUES ('unknown-type', 'cash', 'Unknown type')"
+            )
     finally:
         connection.close()
 
@@ -122,7 +137,7 @@ def test_schema_server_defaults_and_triggers_keep_audit_values_current() -> None
         connection.execute(
             """
             INSERT INTO accounts (id, type, name, updated_at)
-            VALUES ('account-1', 'cash', 'Wallet', '2000-01-01 00:00:00')
+            VALUES ('account-1', 'debit', 'Wallet', '2000-01-01 00:00:00')
             """
         )
         connection.execute("UPDATE accounts SET name = 'Wallet 2' WHERE id = 'account-1'")
@@ -156,10 +171,16 @@ def test_sqlmodel_declares_database_defaults_and_normalized_tag_link() -> None:
 
     assert account_columns["amount"] == "0.0"
     assert transaction_columns["is_refund"] == "0"
+    assert app.models.Account.__table__.c.type.type.enums == ["debit", "credit"]
     assert any(
         isinstance(constraint, CheckConstraint)
         and str(constraint.sqltext) == "amount > 0"
         for constraint in app.models.Transaction.__table__.constraints
+    )
+    assert any(
+        isinstance(constraint, CheckConstraint)
+        and str(constraint.sqltext) == "type = 'credit' OR amount >= 0"
+        for constraint in app.models.Account.__table__.constraints
     )
     assert {row[1] for row in transaction_tag_columns} == {
         "transaction_id",

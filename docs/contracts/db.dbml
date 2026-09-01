@@ -4,11 +4,11 @@
 
 Table accounts{
     id TEXT [pk,note:'UUID']
-    type TEXT [notnull,note:'账户类型,i.e. 借记卡 信用卡']
+    type TEXT [notnull,note:'账户类型枚举: debit 借记账户, credit 信用账户']
     name TEXT [notnull,unique,note:'账户名称，按 SQLite NOCASE 规则全局唯一']
     card_number TEXT [note:'银行卡号']
     description TEXT [note:'账户描述']
-    amount REAL [notnull,default:0.0,note:'账户余额']
+    amount REAL [notnull,default:0.0,note:'账户余额；debit 不得小于 0，credit 可为负数']
     created_at DATETIME [notnull,default: 'CURRENT_TIMESTAMP',note:'账户创建时间']
     updated_at DATETIME [notnull,default: 'CURRENT_TIMESTAMP',note:'账户更新时间']
   }

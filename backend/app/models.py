@@ -53,11 +53,18 @@ class TransactionType(StrEnum):
     BALANCE_ADJUSTMENT = "balance_adjustment"
 
 
-def transaction_type_values(enum_class: type[TransactionType]) -> list[str]:
-    """返回交易类型实际写入数据库的英文枚举值。
+class AccountType(StrEnum):
+    """系统支持的账户类型。"""
+
+    DEBIT = "debit"
+    CREDIT = "credit"
+
+
+def enum_values(enum_class: type[StrEnum]) -> list[str]:
+    """返回枚举实际写入数据库的值。
 
     Args:
-        enum_class: SQLAlchemy 传入的交易类型枚举类。
+        enum_class: SQLAlchemy 传入的字符串枚举类。
 
     Returns:
         按枚举声明顺序排列的持久化值。
@@ -67,12 +74,30 @@ def transaction_type_values(enum_class: type[TransactionType]) -> list[str]:
 
 
 class Account(SQLModel, table=True):
-    """借记卡、信用卡、现金账户或其他资金账户。"""
+    """借记账户或信用账户。"""
 
     __tablename__ = "accounts"
+    __table_args__ = (
+        CheckConstraint(
+            "type = 'credit' OR amount >= 0",
+            name="ck_accounts_debit_amount_nonnegative",
+        ),
+    )
 
-    id: str = Field(default_factory=new_id, sa_column=Column(Text, primary_key=True))
-    type: str = Field(sa_column=Column(Text, nullable=False))
+    id: str = Field(default_factory=new_id,
+                    sa_column=Column(Text, primary_key=True))
+    type: AccountType = Field(
+        sa_column=Column(
+            SQLAlchemyEnum(
+                AccountType,
+                values_callable=enum_values,
+                native_enum=False,
+                create_constraint=True,
+                name="account_type",
+            ),
+            nullable=False,
+        )
+    )
     name: str = Field(
         sa_column=Column(Text(collation="NOCASE"), nullable=False, unique=True)
     )
@@ -106,7 +131,8 @@ class Category(SQLModel, table=True):
 
     __tablename__ = "categories"
 
-    id: str = Field(default_factory=new_id, sa_column=Column(Text, primary_key=True))
+    id: str = Field(default_factory=new_id,
+                    sa_column=Column(Text, primary_key=True))
     name: str = Field(
         sa_column=Column(Text(collation="NOCASE"), nullable=False, unique=True)
     )
@@ -118,11 +144,13 @@ class Category(SQLModel, table=True):
     )
     icon_color: str = Field(
         default="#ff0000",
-        sa_column=Column(Text, nullable=False, server_default=text("'#ff0000'")),
+        sa_column=Column(Text, nullable=False,
+                         server_default=text("'#ff0000'")),
     )
     icon_name: str = Field(
         default="default_icon",
-        sa_column=Column(Text, nullable=False, server_default=text("'default_icon'")),
+        sa_column=Column(Text, nullable=False,
+                         server_default=text("'default_icon'")),
     )
     created_at: datetime = Field(sa_column=timestamp_column())
     updated_at: datetime = Field(sa_column=timestamp_column())
@@ -135,10 +163,12 @@ class Category(SQLModel, table=True):
         ),
     )
     child_categories: list[Category] = Relationship(
-        sa_relationship=relationship("Category", back_populates="parent_category")
+        sa_relationship=relationship(
+            "Category", back_populates="parent_category")
     )
     transactions: list[Transaction] = Relationship(
-        sa_relationship=relationship("Transaction", back_populates="category_record")
+        sa_relationship=relationship(
+            "Transaction", back_populates="category_record")
     )
 
 
@@ -163,14 +193,16 @@ class Tag(SQLModel, table=True):
 
     __tablename__ = "tags"
 
-    id: str = Field(default_factory=new_id, sa_column=Column(Text, primary_key=True))
+    id: str = Field(default_factory=new_id,
+                    sa_column=Column(Text, primary_key=True))
     name: str = Field(
         sa_column=Column(Text(collation="NOCASE"), nullable=False, unique=True)
     )
     description: str | None = Field(default=None, sa_column=Column(Text))
     color: str = Field(
         default="#ff0000",
-        sa_column=Column(Text, nullable=False, server_default=text("'#ff0000'")),
+        sa_column=Column(Text, nullable=False,
+                         server_default=text("'#ff0000'")),
     )
     created_at: datetime = Field(sa_column=timestamp_column())
     updated_at: datetime = Field(sa_column=timestamp_column())
@@ -188,12 +220,13 @@ class Transaction(SQLModel, table=True):
         CheckConstraint("amount > 0", name="ck_transactions_amount_positive"),
     )
 
-    id: str = Field(default_factory=new_id, sa_column=Column(Text, primary_key=True))
+    id: str = Field(default_factory=new_id,
+                    sa_column=Column(Text, primary_key=True))
     type: TransactionType = Field(
         sa_column=Column(
             SQLAlchemyEnum(
                 TransactionType,
-                values_callable=transaction_type_values,
+                values_callable=enum_values,
                 native_enum=False,
                 create_constraint=True,
                 name="transaction_type",
@@ -268,11 +301,12 @@ class Transaction(SQLModel, table=True):
 
 __all__ = (
     "Account",
+    "AccountType",
     "Category",
     "Tag",
     "Transaction",
     "TransactionTag",
     "TransactionType",
+    "enum_values",
     "new_id",
-    "transaction_type_values",
 )

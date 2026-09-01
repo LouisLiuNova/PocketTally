@@ -16,6 +16,10 @@
       "type": "string",
       "enum": ["income", "expense", "transfer", "balance_adjustment"]
     },
+    "accountType": {
+      "type": "string",
+      "enum": ["debit", "credit"]
+    },
     "nullableString": {
       "type": ["string", "null"]
     },
@@ -30,7 +34,7 @@
       "required": ["id", "type", "name"],
       "properties": {
         "id": { "$ref": "#/$defs/uuid" },
-        "type": { "type": "string", "minLength": 1 },
+        "type": { "$ref": "#/$defs/accountType" },
         "name": { "type": "string", "minLength": 1 }
       }
     },

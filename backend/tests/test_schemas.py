@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from app.models import (
     Account,
+    AccountType,
     Category,
     Tag,
     Transaction,
@@ -33,10 +34,10 @@ def test_create_models_use_camel_case_and_reject_unknown_fields() -> None:
     """验证请求模型的别名、默认值、去空白和未知字段策略。"""
 
     account = AccountCreate.model_validate(
-        {"type": "  现金 ", "name": " 钱包 ", "cardNumber": None}
+        {"type": " debit ", "name": " 钱包 ", "cardNumber": None}
     )
 
-    assert account.type == "现金"
+    assert account.type is AccountType.DEBIT
     assert account.name == "钱包"
     assert account.amount == 0.0
     assert set(account.model_dump(by_alias=True)) == {
@@ -49,7 +50,7 @@ def test_create_models_use_camel_case_and_reject_unknown_fields() -> None:
 
     with pytest.raises(ValidationError):
         AccountCreate.model_validate(
-            {"type": "现金", "name": "钱包", "serverOwned": "no"}
+            {"type": "debit", "name": "钱包", "serverOwned": "no"}
         )
 
 
@@ -93,7 +94,14 @@ def test_generated_json_schema_keeps_contract_object_and_array_constraints() -> 
 
     assert account_update_schema["minProperties"] == 1
     assert account_update_schema["additionalProperties"] is False
-    assert account_update_schema["properties"]["type"]["type"] == "string"
+    assert account_update_schema["properties"]["type"]["$ref"].endswith("AccountType")
+    assert account_update_schema["$defs"]["AccountType"]["enum"] == [
+        "debit",
+        "credit",
+    ]
+    assert AccountCreate.model_json_schema()["allOf"][0]["then"]["properties"][
+        "amount"
+    ]["minimum"] == 0
     assert "anyOf" in account_update_schema["properties"]["description"]
     assert transaction_create_schema["properties"]["tagIds"]["uniqueItems"] is True
     assert transaction_create_schema["properties"]["amount"]["exclusiveMinimum"] == 0
@@ -155,6 +163,28 @@ def test_write_models_convert_relationship_ids_to_orm_columns() -> None:
         )
 
 
+def test_account_type_and_debit_amount_constraints() -> None:
+    """验证账户类型封闭集合以及借记账户余额不能为负。"""
+
+    debit = AccountCreate.model_validate({"type": "debit", "name": "钱包"})
+    assert debit.type is AccountType.DEBIT
+
+    credit = AccountCreate.model_validate(
+        {"type": "credit", "name": "信用卡", "amount": -100}
+    )
+    assert credit.type is AccountType.CREDIT
+    assert credit.amount == -100
+
+    with pytest.raises(ValidationError):
+        AccountCreate.model_validate({"type": "cash", "name": "现金"})
+    with pytest.raises(ValidationError, match="不能小于 0"):
+        AccountCreate.model_validate(
+            {"type": "debit", "name": "负余额借记卡", "amount": -1}
+        )
+    with pytest.raises(ValidationError):
+        AccountUpdate.model_validate({"type": "cash"})
+
+
 def test_transaction_type_and_amount_constraints() -> None:
     """验证交易类型枚举和有限正金额约束。"""
 
@@ -193,7 +223,7 @@ def test_read_models_map_orm_fields_and_nested_relationships() -> None:
     now = datetime.now(UTC)
     account = Account(
         id=str(uuid4()),
-        type="现金",
+        type=AccountType.DEBIT,
         name="钱包",
         card_number=None,
         description=None,
@@ -254,7 +284,7 @@ def test_read_models_map_orm_fields_and_nested_relationships() -> None:
         "sourceAccount"
     ] == {
         "id": account.id,
-        "type": "现金",
+        "type": "debit",
         "name": "钱包",
     }
 

@@ -18,11 +18,13 @@ CREATE TABLE categories (
 
 CREATE TABLE accounts (
     id TEXT PRIMARY KEY NOT NULL,
-    type TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('debit', 'credit')),
     name TEXT COLLATE NOCASE NOT NULL UNIQUE,
     card_number TEXT,
     description TEXT,
-    amount REAL NOT NULL DEFAULT 0.0,
+    amount REAL NOT NULL DEFAULT 0.0
+        CONSTRAINT ck_accounts_debit_amount_nonnegative
+        CHECK (type = 'credit' OR amount >= 0),
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
