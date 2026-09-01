@@ -22,8 +22,8 @@
 | `related_transaction_id` | `relatedTransaction` | `relatedTransactionId` |
 | `parent_category_id` | `parentCategory` | `parentCategoryId` |
 
-交易类型使用 `income`、`expense`、`transfer` 和 `balance_adjustment` 枚举；余额变更必须通过交易记录表达，账户更新接口不接受 `amount`。交易金额必须非零。账户类型的封闭集合将在账户业务规则确定后补充。
+交易类型使用 `income`、`expense`、`transfer` 和 `balance_adjustment` 枚举；余额变更必须通过交易记录表达，账户更新接口不接受 `amount`。交易金额必须为有限正数，资金方向由应用层按交易类型处理。账户类型的封闭集合将在账户业务规则确定后补充。
 
 `occurredAt` 表示交易实际发生时间，`createdAt` 表示服务器录入时间。货币值仍保持为 JSON 数字，以匹配当前 SQLite 的 `REAL` 列；如果需要精确的十进制定点运算，应同时迁移存储方式和契约。
 
-账户、分类和标签名称在单个账本内按 SQLite `NOCASE` 规则全局唯一；重复名称由数据库拒绝。`occurredAt` 表示业务实际发生时间，区别于服务器维护的 `createdAt` 与 `updatedAt`。货币值仍保持为 JSON 数字，以匹配当前 SQLite 的 `REAL` 列；如果需要精确的十进制定点运算，应同时迁移存储方式和契约。
+账户、分类和标签名称在单个账本内按 SQLite `NOCASE` 规则全局唯一；重复名称由数据库拒绝。`updatedAt` 由 DDL 触发器在业务字段或交易标签关系变化时维护。

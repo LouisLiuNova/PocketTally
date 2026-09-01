@@ -1,6 +1,7 @@
 """交易 HTTP 请求与响应模型。"""
 
 from datetime import datetime
+from math import isfinite
 from typing import Any, Self
 from uuid import UUID
 
@@ -19,21 +20,21 @@ def _uuid_to_string(value: UUID | None) -> str | None:
     return str(value) if value is not None else None
 
 
-def _require_non_zero_amount(value: float) -> float:
-    """拒绝金额为零的交易。
+def _require_positive_amount(value: float) -> float:
+    """拒绝非有限或非正的交易金额。
 
     Args:
         value: 待校验的交易金额。
 
     Returns:
-        非零交易金额。
+        有限正交易金额。
 
     Raises:
-        ValueError: 交易金额为零时抛出。
+        ValueError: 交易金额不是有限正数时抛出。
     """
 
-    if value == 0:
-        raise ValueError("交易金额不能为 0")
+    if not isfinite(value) or value <= 0:
+        raise ValueError("交易金额必须为有限正数")
     return value
 
 
@@ -43,7 +44,7 @@ class TransactionCreate(ContractModel):
     type: TransactionType
     source_account_id: UUID
     destination_account_id: UUID | None = None
-    amount: float = Field(json_schema_extra={"not": {"const": 0}})
+    amount: float = Field(json_schema_extra={"exclusiveMinimum": 0})
     description: str | None = None
     category_id: UUID
     tag_ids: list[UUID] = Field(
@@ -55,10 +56,10 @@ class TransactionCreate(ContractModel):
     occurred_at: datetime
     @field_validator("amount")
     @classmethod
-    def require_non_zero_amount(cls, value: float) -> float:
-        """确保新建交易的金额不为零。"""
+    def require_positive_amount(cls, value: float) -> float:
+        """确保新建交易的金额为有限正数。"""
 
-        return _require_non_zero_amount(value)
+        return _require_positive_amount(value)
 
     @field_validator("tag_ids")
     @classmethod
@@ -115,7 +116,10 @@ class TransactionUpdate(UpdateModel):
     type: TransactionType = None
     source_account_id: UUID = None
     destination_account_id: UUID | None = None
-    amount: float = Field(default=None, json_schema_extra={"not": {"const": 0}})
+    amount: float = Field(
+        default=None,
+        json_schema_extra={"exclusiveMinimum": 0},
+    )
     description: str | None = None
     category_id: UUID = None
     tag_ids: list[UUID] = Field(
@@ -127,10 +131,10 @@ class TransactionUpdate(UpdateModel):
     occurred_at: datetime = None
     @field_validator("amount")
     @classmethod
-    def require_non_zero_amount(cls, value: float) -> float:
-        """确保更新后的交易金额不为零。"""
+    def require_positive_amount(cls, value: float) -> float:
+        """确保更新后的交易金额为有限正数。"""
 
-        return _require_non_zero_amount(value)
+        return _require_positive_amount(value)
 
     @field_validator("tag_ids")
     @classmethod
@@ -193,7 +197,7 @@ class TransactionSummary(ContractModel):
 
     id: UUID
     type: TransactionType
-    amount: float = Field(json_schema_extra={"not": {"const": 0}})
+    amount: float = Field(gt=0)
     description: str | None
     occurred_at: datetime
     created_at: datetime
@@ -219,7 +223,7 @@ class TransactionRead(ContractModel):
     type: TransactionType
     source_account: AccountSummary
     destination_account: AccountSummary | None
-    amount: float = Field(json_schema_extra={"not": {"const": 0}})
+    amount: float = Field(gt=0)
     description: str | None
     category: CategorySummary
     tags: list[TagSummary] = Field(json_schema_extra={"uniqueItems": True})

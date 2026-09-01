@@ -96,7 +96,7 @@ def test_generated_json_schema_keeps_contract_object_and_array_constraints() -> 
     assert account_update_schema["properties"]["type"]["type"] == "string"
     assert "anyOf" in account_update_schema["properties"]["description"]
     assert transaction_create_schema["properties"]["tagIds"]["uniqueItems"] is True
-    assert transaction_create_schema["properties"]["amount"]["not"] == {"const": 0}
+    assert transaction_create_schema["properties"]["amount"]["exclusiveMinimum"] == 0
     assert transaction_create_schema["$defs"]["TransactionType"]["enum"] == [
         "income",
         "expense",
@@ -119,7 +119,7 @@ def test_write_models_convert_relationship_ids_to_orm_columns() -> None:
         {
             "type": "expense",
             "sourceAccountId": str(source_id),
-            "amount": -12.5,
+            "amount": 12.5,
             "categoryId": str(category_id),
             "tagIds": [str(tag_id)],
             "occurredAt": occurred_at.isoformat(),
@@ -130,7 +130,7 @@ def test_write_models_convert_relationship_ids_to_orm_columns() -> None:
         "type": "expense",
         "src_account_id": str(source_id),
         "dest_account_id": None,
-        "amount": -12.5,
+        "amount": 12.5,
         "description": None,
         "category": str(category_id),
         "is_refund": False,
@@ -156,7 +156,7 @@ def test_write_models_convert_relationship_ids_to_orm_columns() -> None:
 
 
 def test_transaction_type_and_amount_constraints() -> None:
-    """验证交易类型枚举和非零金额约束。"""
+    """验证交易类型枚举和有限正金额约束。"""
 
     payload = {
         "type": TransactionType.BALANCE_ADJUSTMENT,
@@ -177,9 +177,13 @@ def test_transaction_type_and_amount_constraints() -> None:
 
     with pytest.raises(ValidationError):
         TransactionCreate.model_validate({**payload, "type": "未知类型"})
-    with pytest.raises(ValidationError, match="不能为 0"):
+    with pytest.raises(ValidationError, match="有限正数"):
         TransactionCreate.model_validate({**payload, "amount": 0})
-    with pytest.raises(ValidationError, match="不能为 0"):
+    with pytest.raises(ValidationError, match="有限正数"):
+        TransactionCreate.model_validate({**payload, "amount": -1})
+    with pytest.raises(ValidationError, match="有限正数"):
+        TransactionCreate.model_validate({**payload, "amount": float("inf")})
+    with pytest.raises(ValidationError, match="有限正数"):
         TransactionUpdate.model_validate({"amount": 0})
 
 
@@ -219,7 +223,7 @@ def test_read_models_map_orm_fields_and_nested_relationships() -> None:
         type="expense",
         src_account_id=account.id,
         dest_account_id=None,
-        amount=-20.0,
+        amount=20.0,
         description="午餐",
         category=category.id,
         is_refund=False,

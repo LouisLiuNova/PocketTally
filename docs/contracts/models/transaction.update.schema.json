@@ -15,7 +15,7 @@
         { "type": "null" }
       ]
     },
-    "amount": { "type": "number", "not": { "const": 0 } },
+    "amount": { "type": "number", "exclusiveMinimum": 0 },
     "description": { "$ref": "common.schema.json#/$defs/nullableString" },
     "categoryId": { "$ref": "common.schema.json#/$defs/uuid" },
     "tagIds": {

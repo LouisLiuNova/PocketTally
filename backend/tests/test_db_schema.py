@@ -4,10 +4,10 @@ import sqlite3
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import CheckConstraint, create_engine
 from sqlmodel import SQLModel
 
-import app.models  # noqa: F401
+import app.models
 
 SCHEMA_PATH = Path(__file__).parents[1] / "db" / "schema.sql"
 
@@ -51,7 +51,7 @@ def test_schema_normalizes_tags_and_enforces_unique_names() -> None:
             """
             INSERT INTO transactions (
                 id, type, src_account_id, amount, category, occurred_at
-            ) VALUES ('transaction-1', 'expense', 'account-1', -1200, 'category-1',
+            ) VALUES ('transaction-1', 'expense', 'account-1', 1200, 'category-1',
                       '2026-08-24 12:00:00')
             """
         )
@@ -72,6 +72,44 @@ def test_schema_normalizes_tags_and_enforces_unique_names() -> None:
         }
         assert "tags" not in transaction_columns
         assert "occurred_at" in transaction_columns
+    finally:
+        connection.close()
+
+
+def test_schema_rejects_unknown_types_and_non_positive_amounts() -> None:
+    """验证 SQLite DDL 拒绝未知交易类型和非正金额。"""
+
+    connection = create_connection()
+    try:
+        connection.execute(
+            "INSERT INTO accounts (id, type, name) VALUES ('account-1', 'cash', 'Wallet')"
+        )
+        connection.execute(
+            "INSERT INTO categories (id, name) VALUES ('category-1', '餐饮')"
+        )
+
+        base_values = (
+            "'transaction-1', 'expense', 'account-1', 1, 'category-1', "
+            "'2026-08-24 12:00:00'"
+        )
+        with pytest.raises(sqlite3.IntegrityError):
+            connection.execute(
+                "INSERT INTO transactions "
+                "(id, type, src_account_id, amount, category, occurred_at) "
+                f"VALUES ({base_values.replace("'expense'", "'unknown'")})"
+            )
+        with pytest.raises(sqlite3.IntegrityError):
+            connection.execute(
+                "INSERT INTO transactions "
+                "(id, type, src_account_id, amount, category, occurred_at) "
+                f"VALUES ({base_values.replace(', 1,', ', 0,')})"
+            )
+        with pytest.raises(sqlite3.IntegrityError):
+            connection.execute(
+                "INSERT INTO transactions "
+                "(id, type, src_account_id, amount, category, occurred_at) "
+                f"VALUES ({base_values.replace(', 1,', ', -1,')})"
+            )
     finally:
         connection.close()
 
@@ -118,6 +156,11 @@ def test_sqlmodel_declares_database_defaults_and_normalized_tag_link() -> None:
 
     assert account_columns["amount"] == "0.0"
     assert transaction_columns["is_refund"] == "0"
+    assert any(
+        isinstance(constraint, CheckConstraint)
+        and str(constraint.sqltext) == "amount > 0"
+        for constraint in app.models.Transaction.__table__.constraints
+    )
     assert {row[1] for row in transaction_tag_columns} == {
         "transaction_id",
         "tag_id",

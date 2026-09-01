@@ -4,7 +4,16 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import uuid4
 
-from sqlalchemy import REAL, Boolean, Column, DateTime, Text, func, text
+from sqlalchemy import (
+    REAL,
+    Boolean,
+    CheckConstraint,
+    Column,
+    DateTime,
+    Text,
+    func,
+    text,
+)
 from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy.orm import relationship
 from sqlmodel import Field, Relationship, SQLModel
@@ -175,6 +184,9 @@ class Transaction(SQLModel, table=True):
     """一笔收入、支出、转账或余额调整交易。"""
 
     __tablename__ = "transactions"
+    __table_args__ = (
+        CheckConstraint("amount > 0", name="ck_transactions_amount_positive"),
+    )
 
     id: str = Field(default_factory=new_id, sa_column=Column(Text, primary_key=True))
     type: TransactionType = Field(

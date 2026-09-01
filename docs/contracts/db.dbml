@@ -1,4 +1,6 @@
-// Used for sqlite3 schema generation
+// DBML 仅描述表、列、主键和外键等结构。
+// SQLite 的 CHECK、COLLATE、索引、触发器及连接级 PRAGMA 以
+// backend/db/schema.sql 为准；本文件不能独立生成完整 SQLite 约束。
 
 Table accounts{
     id TEXT [pk,note:'UUID']
@@ -15,8 +17,8 @@ Table transactions{
     id TEXT [pk,note:'UUID']
     type TEXT [notnull,note:'交易类型枚举: income expense transfer balance_adjustment']
     src_account_id TEXT [notnull,note:'交易来源账户ID']
-    dest_account_id TEXT [note:'交易目标账户ID'] // dest_account_id can be null for income and expense transactions
-    amount REAL [notnull,note:'非零交易金额'] // positive for income, negative for expense. Always positive for transfer transactions, with the direction determined by src_account_id and dest_account_id
+    dest_account_id TEXT [note:'交易目标账户ID，是否使用由应用层按交易类型校验']
+    amount REAL [notnull,note:'严格为有限正数，资金方向由应用层按交易类型处理']
     description TEXT [note:'交易描述']
     category TEXT [notnull,note:'交易分类']
     is_refund BOOLEAN [notnull,default: false,note:'是否为退款交易']

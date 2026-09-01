@@ -1,4 +1,4 @@
--- SQLite DDL generated from docs/contracts/db.dbml.
+-- SQLite authoritative DDL for the structure described in docs/contracts/db.dbml.
 -- Foreign-key enforcement must be enabled per SQLite connection:
 --   PRAGMA foreign_keys = ON;
 
@@ -41,7 +41,7 @@ CREATE TABLE transactions (
     type TEXT NOT NULL CHECK (type IN ('income', 'expense', 'transfer', 'balance_adjustment')),
     src_account_id TEXT NOT NULL,
     dest_account_id TEXT,
-    amount REAL NOT NULL CHECK (amount <> 0),
+    amount REAL NOT NULL CONSTRAINT ck_transactions_amount_positive CHECK (amount > 0),
     description TEXT,
     category TEXT NOT NULL,
     is_refund BOOLEAN NOT NULL DEFAULT 0,

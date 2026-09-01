@@ -62,7 +62,7 @@
       "properties": {
         "id": { "$ref": "#/$defs/uuid" },
         "type": { "$ref": "#/$defs/transactionType" },
-        "amount": { "type": "number", "not": { "const": 0 } },
+        "amount": { "type": "number", "exclusiveMinimum": 0 },
         "description": { "$ref": "#/$defs/nullableString" },
         "occurredAt": { "$ref": "#/$defs/dateTime" },
         "createdAt": { "$ref": "#/$defs/dateTime" }

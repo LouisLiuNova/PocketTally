@@ -821,8 +821,7 @@ components:
           $ref: '#/components/schemas/transactionType'
         amount:
           type: number
-          not:
-            const: 0
+          exclusiveMinimum: 0
         description:
           $ref: '#/components/schemas/nullableString'
         occurredAt:
@@ -863,8 +862,7 @@ components:
             - type: 'null'
         amount:
           type: number
-          not:
-            const: 0
+          exclusiveMinimum: 0
         description:
           $ref: '#/components/schemas/nullableString'
         category:
@@ -910,8 +908,7 @@ components:
             - type: 'null'
         amount:
           type: number
-          not:
-            const: 0
+          exclusiveMinimum: 0
         description:
           $ref: '#/components/schemas/nullableString'
         categoryId:
@@ -950,8 +947,7 @@ components:
             - type: 'null'
         amount:
           type: number
-          not:
-            const: 0
+          exclusiveMinimum: 0
         description:
           $ref: '#/components/schemas/nullableString'
         categoryId:
