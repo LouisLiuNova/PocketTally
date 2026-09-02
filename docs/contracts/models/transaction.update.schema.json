@@ -34,6 +34,13 @@
         { "type": "null" }
       ]
     },
+    "balanceAdjustmentDirection": {
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/balanceAdjustmentDirection" },
+        { "type": "null" }
+      ],
+      "description": "余额调整必须指定 increase 或 decrease；其他交易必须为空。"
+    },
     "occurredAt": { "$ref": "common.schema.json#/$defs/dateTime" }
   }
 }

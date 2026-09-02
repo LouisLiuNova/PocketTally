@@ -15,6 +15,7 @@ from app.schemas.category import (
 )
 from app.schemas.tag import TagCreate, TagRead, TagSummary, TagUpdate
 from app.schemas.transaction import (
+    BalanceAdjustmentCreate,
     TransactionCreate,
     TransactionRead,
     TransactionSummary,
@@ -26,6 +27,7 @@ __all__ = (
     "AccountRead",
     "AccountSummary",
     "AccountUpdate",
+    "BalanceAdjustmentCreate",
     "CategoryCreate",
     "CategoryRead",
     "CategorySummary",

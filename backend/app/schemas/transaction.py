@@ -5,9 +5,13 @@ from decimal import Decimal
 from typing import Any, Self
 from uuid import UUID
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
-from app.models import Transaction, TransactionType
+from app.models import (
+    BalanceAdjustmentDirection,
+    Transaction,
+    TransactionType,
+)
 from app.money import MoneyAmount, amount_to_minor, minor_to_amount, parse_amount
 from app.schemas.account import AccountSummary
 from app.schemas.base import ContractModel, UpdateModel
@@ -58,6 +62,7 @@ class TransactionCreate(ContractModel):
     )
     is_refund: bool = False
     related_transaction_id: UUID | None = None
+    balance_adjustment_direction: BalanceAdjustmentDirection | None = None
     occurred_at: datetime
     @field_validator("amount", mode="before")
     @classmethod
@@ -85,6 +90,17 @@ class TransactionCreate(ContractModel):
             raise ValueError("tagIds 中的 UUID 必须唯一")
         return value
 
+    @model_validator(mode="after")
+    def validate_balance_adjustment_direction(self) -> Self:
+        """确保余额调整明确方向，普通交易不携带余额调整方向。"""
+
+        has_direction = self.balance_adjustment_direction is not None
+        if self.type is TransactionType.BALANCE_ADJUSTMENT and not has_direction:
+            raise ValueError("余额调整必须指定增加或减少方向")
+        if self.type is not TransactionType.BALANCE_ADJUSTMENT and has_direction:
+            raise ValueError("只有余额调整交易可以指定余额调整方向")
+        return self
+
     def to_orm_kwargs(self) -> dict[str, Any]:
         """转换为 ``Transaction`` 构造函数可接受的数据库字段。
 
@@ -102,6 +118,7 @@ class TransactionCreate(ContractModel):
             "category": str(self.category_id),
             "is_refund": self.is_refund,
             "related_transaction_id": _uuid_to_string(self.related_transaction_id),
+            "balance_adjustment_direction": self.balance_adjustment_direction,
             "occurred_at": self.occurred_at,
         }
 
@@ -113,6 +130,43 @@ class TransactionCreate(ContractModel):
         """
 
         return [str(tag_id) for tag_id in self.tag_ids]
+
+
+class BalanceAdjustmentCreate(ContractModel):
+    """余额调整请求模型。"""
+
+    account_id: UUID
+    direction: BalanceAdjustmentDirection
+    amount: MoneyAmount = Field(json_schema_extra={"exclusiveMinimum": 0})
+    description: str | None = None
+    occurred_at: datetime
+
+    @field_validator("amount", mode="before")
+    @classmethod
+    def require_positive_amount(cls, value: object) -> Decimal:
+        """确保余额调整金额为有限正数。"""
+
+        return _require_positive_amount(value)
+
+    def to_orm_kwargs(self) -> dict[str, Any]:
+        """转换为余额调整交易的 ORM 字段。
+
+        Returns:
+            使用数据库列名和字符串 UUID 的余额调整交易字段。
+        """
+
+        return {
+            "type": TransactionType.BALANCE_ADJUSTMENT,
+            "src_account_id": str(self.account_id),
+            "dest_account_id": None,
+            "amount_minor": amount_to_minor(self.amount),
+            "description": self.description,
+            "category": None,
+            "is_refund": False,
+            "related_transaction_id": None,
+            "balance_adjustment_direction": self.direction,
+            "occurred_at": self.occurred_at,
+        }
 
 
 class TransactionUpdate(UpdateModel):
@@ -133,6 +187,7 @@ class TransactionUpdate(UpdateModel):
     )
     is_refund: bool = None
     related_transaction_id: UUID | None = None
+    balance_adjustment_direction: BalanceAdjustmentDirection | None = None
     occurred_at: datetime = None
     @field_validator("amount", mode="before")
     @classmethod
@@ -238,14 +293,16 @@ class TransactionRead(ContractModel):
 
     id: UUID
     type: TransactionType
-    source_account: AccountSummary
+    source_account: AccountSummary | None
     destination_account: AccountSummary | None
     amount: MoneyAmount = Field(json_schema_extra={"exclusiveMinimum": 0})
     description: str | None
-    category: CategorySummary
+    category: CategorySummary | None
     tags: list[TagSummary] = Field(json_schema_extra={"uniqueItems": True})
     is_refund: bool
     related_transaction: TransactionSummary | None
+    balance_adjustment_direction: BalanceAdjustmentDirection | None
+    voided_at: datetime | None
     occurred_at: datetime
     created_at: datetime
     updated_at: datetime
@@ -279,6 +336,8 @@ class TransactionRead(ContractModel):
                 "tags": transaction.tags,
                 "is_refund": transaction.is_refund,
                 "related_transaction": transaction.related_transaction,
+                "balance_adjustment_direction": transaction.balance_adjustment_direction,
+                "voided_at": transaction.voided_at,
                 "occurred_at": transaction.occurred_at,
                 "created_at": transaction.created_at,
                 "updated_at": transaction.updated_at,
@@ -287,6 +346,7 @@ class TransactionRead(ContractModel):
 
 
 __all__ = (
+    "BalanceAdjustmentCreate",
     "TransactionCreate",
     "TransactionRead",
     "TransactionSummary",

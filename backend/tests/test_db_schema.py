@@ -30,7 +30,7 @@ def test_schema_normalizes_tags_and_enforces_unique_names() -> None:
     connection = create_connection()
     try:
         connection.execute(
-            "INSERT INTO accounts (id, type, name) VALUES ('account-1', 'debit', 'Wallet')"
+            "INSERT INTO accounts (id, type, name) VALUES ('account-1', 'credit', 'Wallet')"
         )
         with pytest.raises(sqlite3.IntegrityError):
             connection.execute(
@@ -154,6 +154,53 @@ def test_schema_server_defaults_and_triggers_keep_audit_values_current() -> None
 
         assert amount_minor == 0
         assert updated_at != "2000-01-01 00:00:00"
+    finally:
+        connection.close()
+
+
+def test_schema_rebuilds_balance_projection_from_transactions() -> None:
+    """验证余额调整、作废和直接余额改写都以交易记录为准。"""
+
+    connection = create_connection()
+    try:
+        connection.execute(
+            "INSERT INTO accounts (id, type, name) VALUES ('account-1', 'credit', 'Wallet')"
+        )
+        connection.execute(
+            """
+            INSERT INTO transactions (
+                id, type, src_account_id, amount_minor,
+                balance_adjustment_direction, occurred_at
+            ) VALUES ('adjustment-1', 'balance_adjustment', 'account-1', 250,
+                      'increase', '2026-08-24 12:00:00')
+            """
+        )
+        assert connection.execute(
+            "SELECT amount_minor FROM accounts WHERE id = 'account-1'"
+        ).fetchone()[0] == 250
+
+        connection.execute(
+            "UPDATE transactions SET voided_at = '2026-08-25 12:00:00' "
+            "WHERE id = 'adjustment-1'"
+        )
+        assert connection.execute(
+            "SELECT amount_minor FROM accounts WHERE id = 'account-1'"
+        ).fetchone()[0] == 0
+
+        connection.execute(
+            "UPDATE accounts SET amount_minor = 999 WHERE id = 'account-1'"
+        )
+        assert connection.execute(
+            "SELECT amount_minor FROM accounts WHERE id = 'account-1'"
+        ).fetchone()[0] == 0
+
+        with pytest.raises(sqlite3.IntegrityError):
+            connection.execute(
+                "INSERT INTO transactions "
+                "(id, type, src_account_id, amount_minor, occurred_at) "
+                "VALUES ('invalid-adjustment', 'balance_adjustment', 'account-1', "
+                "100, '2026-08-24 12:00:00')"
+            )
     finally:
         connection.close()
 

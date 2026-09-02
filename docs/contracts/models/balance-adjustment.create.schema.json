@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/balance-adjustment.create.schema.json",
+  "title": "BalanceAdjustmentCreate",
+  "description": "Request for recording a balance adjustment as a real transaction.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["accountId", "direction", "amount", "occurredAt"],
+  "properties": {
+    "accountId": { "$ref": "common.schema.json#/$defs/uuid" },
+    "direction": { "$ref": "common.schema.json#/$defs/balanceAdjustmentDirection" },
+    "amount": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "CNY 金额；按 ROUND_HALF_UP 舍入到分后必须仍为正数。"
+    },
+    "description": { "$ref": "common.schema.json#/$defs/nullableString" },
+    "occurredAt": { "$ref": "common.schema.json#/$defs/dateTime" }
+  }
+}

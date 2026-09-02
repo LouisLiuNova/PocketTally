@@ -16,6 +16,10 @@
       "type": "string",
       "enum": ["income", "expense", "transfer", "balance_adjustment"]
     },
+    "balanceAdjustmentDirection": {
+      "type": "string",
+      "enum": ["increase", "decrease"]
+    },
     "accountType": {
       "type": "string",
       "enum": ["debit", "credit"]

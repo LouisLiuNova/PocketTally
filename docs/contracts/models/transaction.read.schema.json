@@ -5,11 +5,16 @@
   "description": "Transaction returned by the HTTP API. Relationships are embedded as bounded read summaries.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "type", "sourceAccount", "destinationAccount", "amount", "description", "category", "tags", "isRefund", "relatedTransaction", "occurredAt", "createdAt", "updatedAt"],
+  "required": ["id", "type", "sourceAccount", "destinationAccount", "amount", "description", "category", "tags", "isRefund", "relatedTransaction", "balanceAdjustmentDirection", "voidedAt", "occurredAt", "createdAt", "updatedAt"],
   "properties": {
     "id": { "$ref": "common.schema.json#/$defs/uuid" },
     "type": { "$ref": "common.schema.json#/$defs/transactionType" },
-    "sourceAccount": { "$ref": "common.schema.json#/$defs/accountSummary" },
+    "sourceAccount": {
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/accountSummary" },
+        { "type": "null" }
+      ]
+    },
     "destinationAccount": {
       "oneOf": [
         { "$ref": "common.schema.json#/$defs/accountSummary" },
@@ -22,7 +27,12 @@
       "description": "CNY 金额；服务端内部以整数分存储。"
     },
     "description": { "$ref": "common.schema.json#/$defs/nullableString" },
-    "category": { "$ref": "common.schema.json#/$defs/categorySummary" },
+    "category": {
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/categorySummary" },
+        { "type": "null" }
+      ]
+    },
     "tags": {
       "type": "array",
       "items": { "$ref": "common.schema.json#/$defs/tagSummary" },
@@ -32,6 +42,18 @@
     "relatedTransaction": {
       "oneOf": [
         { "$ref": "common.schema.json#/$defs/transactionSummary" },
+        { "type": "null" }
+      ]
+    },
+    "balanceAdjustmentDirection": {
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/balanceAdjustmentDirection" },
+        { "type": "null" }
+      ]
+    },
+    "voidedAt": {
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/dateTime" },
         { "type": "null" }
       ]
     },

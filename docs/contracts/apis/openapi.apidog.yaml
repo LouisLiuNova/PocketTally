@@ -523,6 +523,11 @@ components:
         - expense
         - transfer
         - balance_adjustment
+    balanceAdjustmentDirection:
+      type: string
+      enum:
+        - increase
+        - decrease
     accountType:
       type: string
       enum:
@@ -576,18 +581,9 @@ components:
       $schema: https://json-schema.org/draft/2020-12/schema
       $id: https://schemas.pockettally.app/models/account.create.schema.json
       title: AccountCreate
-      description: Payload for creating an account. Server-owned fields are omitted.
+      description: New accounts always start with a zero balance. Server-owned fields are omitted.
       type: object
       additionalProperties: false
-      allOf:
-        - if:
-            properties:
-              type:
-                const: debit
-          then:
-            properties:
-              amount:
-                minimum: 0
       required:
         - type
         - name
@@ -601,10 +597,6 @@ components:
           $ref: '#/components/schemas/nullableString'
         description:
           $ref: '#/components/schemas/nullableString'
-        amount:
-          type: number
-          default: 0.0
-          description: CNY 金额；服务端按 ROUND_HALF_UP 舍入到分。
     account.update.schema:
       $schema: https://json-schema.org/draft/2020-12/schema
       $id: https://schemas.pockettally.app/models/account.update.schema.json
@@ -869,6 +861,8 @@ components:
         - tags
         - isRefund
         - relatedTransaction
+        - balanceAdjustmentDirection
+        - voidedAt
         - occurredAt
         - createdAt
         - updatedAt
@@ -878,7 +872,9 @@ components:
         type:
           $ref: '#/components/schemas/transactionType'
         sourceAccount:
-          $ref: '#/components/schemas/accountSummary'
+          oneOf:
+            - $ref: '#/components/schemas/accountSummary'
+            - type: 'null'
         destinationAccount:
           oneOf:
             - $ref: '#/components/schemas/accountSummary'
@@ -890,7 +886,9 @@ components:
         description:
           $ref: '#/components/schemas/nullableString'
         category:
-          $ref: '#/components/schemas/categorySummary'
+          oneOf:
+            - $ref: '#/components/schemas/categorySummary'
+            - type: 'null'
         tags:
           type: array
           items:
@@ -902,11 +900,44 @@ components:
           oneOf:
             - $ref: '#/components/schemas/transactionSummary'
             - type: 'null'
+        balanceAdjustmentDirection:
+          oneOf:
+            - $ref: '#/components/schemas/balanceAdjustmentDirection'
+            - type: 'null'
+        voidedAt:
+          oneOf:
+            - $ref: '#/components/schemas/dateTime'
+            - type: 'null'
         occurredAt:
           $ref: '#/components/schemas/dateTime'
         createdAt:
           $ref: '#/components/schemas/dateTime'
         updatedAt:
+          $ref: '#/components/schemas/dateTime'
+    balance-adjustment.create.schema:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://schemas.pockettally.app/models/balance-adjustment.create.schema.json
+      title: BalanceAdjustmentCreate
+      description: Request for recording a balance adjustment as a real transaction.
+      type: object
+      additionalProperties: false
+      required:
+        - accountId
+        - direction
+        - amount
+        - occurredAt
+      properties:
+        accountId:
+          $ref: '#/components/schemas/uuid'
+        direction:
+          $ref: '#/components/schemas/balanceAdjustmentDirection'
+        amount:
+          type: number
+          exclusiveMinimum: 0
+          description: CNY 金额；按 ROUND_HALF_UP 舍入到分后必须仍为正数。
+        description:
+          $ref: '#/components/schemas/nullableString'
+        occurredAt:
           $ref: '#/components/schemas/dateTime'
     transaction.create.schema:
       $schema: https://json-schema.org/draft/2020-12/schema
@@ -951,6 +982,11 @@ components:
           oneOf:
             - $ref: '#/components/schemas/uuid'
             - type: 'null'
+        balanceAdjustmentDirection:
+          oneOf:
+            - $ref: '#/components/schemas/balanceAdjustmentDirection'
+            - type: 'null'
+          description: 余额调整必须指定 increase 或 decrease；其他交易必须为空。
         occurredAt:
           $ref: '#/components/schemas/dateTime'
     transaction.update.schema:
@@ -989,6 +1025,11 @@ components:
           oneOf:
             - $ref: '#/components/schemas/uuid'
             - type: 'null'
+        balanceAdjustmentDirection:
+          oneOf:
+            - $ref: '#/components/schemas/balanceAdjustmentDirection'
+            - type: 'null'
+          description: 余额调整必须指定 increase 或 decrease；其他交易必须为空。
         occurredAt:
           $ref: '#/components/schemas/dateTime'
   responses:

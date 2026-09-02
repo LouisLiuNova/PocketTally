@@ -20,6 +20,7 @@ from app.schemas import (
     AccountCreate,
     AccountRead,
     AccountUpdate,
+    BalanceAdjustmentCreate,
     CategoryCreate,
     CategoryRead,
     CategoryUpdate,
@@ -40,13 +41,11 @@ def test_create_models_use_camel_case_and_reject_unknown_fields() -> None:
 
     assert account.type is AccountType.DEBIT
     assert account.name == "钱包"
-    assert account.amount == Decimal("0.00")
     assert set(account.model_dump(by_alias=True)) == {
         "type",
         "name",
         "cardNumber",
         "description",
-        "amount",
     }
 
     with pytest.raises(ValidationError):
@@ -100,9 +99,7 @@ def test_generated_json_schema_keeps_contract_object_and_array_constraints() -> 
         "debit",
         "credit",
     ]
-    assert AccountCreate.model_json_schema()["allOf"][0]["then"]["properties"][
-        "amount"
-    ]["minimum"] == 0
+    assert "amount" not in AccountCreate.model_json_schema()["properties"]
     assert "anyOf" in account_update_schema["properties"]["description"]
     assert transaction_create_schema["properties"]["tagIds"]["uniqueItems"] is True
     assert transaction_create_schema["properties"]["amount"]["exclusiveMinimum"] == 0
@@ -145,6 +142,7 @@ def test_write_models_convert_relationship_ids_to_orm_columns() -> None:
         "category": str(category_id),
         "is_refund": False,
         "related_transaction_id": None,
+        "balance_adjustment_direction": None,
         "occurred_at": occurred_at,
     }
     assert transaction.tag_ids_for_relation() == [str(tag_id)]
@@ -168,9 +166,6 @@ def test_write_models_convert_relationship_ids_to_orm_columns() -> None:
 def test_money_uses_decimal_rounding_and_integer_minor_units() -> None:
     """验证浮点输入只作为传输格式，并统一按半入舍入到 CNY 分。"""
 
-    account = AccountCreate.model_validate(
-        {"type": "debit", "name": "精度账户", "amount": 1.005}
-    )
     transaction = TransactionCreate.model_validate(
         {
             "type": "expense",
@@ -181,12 +176,9 @@ def test_money_uses_decimal_rounding_and_integer_minor_units() -> None:
         }
     )
 
-    assert account.amount == Decimal("1.01")
-    assert account.to_orm_kwargs()["amount_minor"] == 101
     assert transaction.amount == Decimal("2.68")
     assert transaction.to_orm_kwargs()["amount_minor"] == 268
     assert transaction.model_dump(mode="json")["amount"] == 2.68
-    assert "currency" not in account.model_dump()
     assert "currency" not in transaction.model_dump()
 
     with pytest.raises(ValidationError, match="有限正数"):
@@ -207,17 +199,14 @@ def test_account_type_and_debit_amount_constraints() -> None:
     debit = AccountCreate.model_validate({"type": "debit", "name": "钱包"})
     assert debit.type is AccountType.DEBIT
 
-    credit = AccountCreate.model_validate(
-        {"type": "credit", "name": "信用卡", "amount": -100}
-    )
+    credit = AccountCreate.model_validate({"type": "credit", "name": "信用卡"})
     assert credit.type is AccountType.CREDIT
-    assert credit.amount == Decimal("-100.00")
 
     with pytest.raises(ValidationError):
         AccountCreate.model_validate({"type": "cash", "name": "现金"})
-    with pytest.raises(ValidationError, match="不能小于 0"):
+    with pytest.raises(ValidationError):
         AccountCreate.model_validate(
-            {"type": "debit", "name": "负余额借记卡", "amount": -1}
+            {"type": "debit", "name": "带初始余额", "amount": 1}
         )
     with pytest.raises(ValidationError):
         AccountUpdate.model_validate({"type": "cash"})
@@ -231,6 +220,7 @@ def test_transaction_type_and_amount_constraints() -> None:
         "sourceAccountId": str(uuid4()),
         "amount": 1,
         "categoryId": str(uuid4()),
+        "balanceAdjustmentDirection": "increase",
         "occurredAt": datetime.now(UTC).isoformat(),
     }
 
@@ -245,6 +235,8 @@ def test_transaction_type_and_amount_constraints() -> None:
 
     with pytest.raises(ValidationError):
         TransactionCreate.model_validate({**payload, "type": "未知类型"})
+    with pytest.raises(ValidationError, match="必须指定增加或减少方向"):
+        TransactionCreate.model_validate({**payload, "balanceAdjustmentDirection": None})
     with pytest.raises(ValidationError, match="有限正数"):
         TransactionCreate.model_validate({**payload, "amount": 0})
     with pytest.raises(ValidationError, match="有限正数"):
@@ -253,6 +245,33 @@ def test_transaction_type_and_amount_constraints() -> None:
         TransactionCreate.model_validate({**payload, "amount": float("inf")})
     with pytest.raises(ValidationError, match="有限正数"):
         TransactionUpdate.model_validate({"amount": 0})
+
+
+def test_balance_adjustment_request_has_explicit_direction_and_no_initial_balance() -> None:
+    """验证余额调整请求是带方向的真实交易输入。"""
+
+    account_id = uuid4()
+    request = BalanceAdjustmentCreate.model_validate(
+        {
+            "accountId": str(account_id),
+            "direction": "increase",
+            "amount": 1.005,
+            "occurredAt": datetime.now(UTC).isoformat(),
+        }
+    )
+
+    assert request.to_orm_kwargs() == {
+        "type": TransactionType.BALANCE_ADJUSTMENT,
+        "src_account_id": str(account_id),
+        "dest_account_id": None,
+        "amount_minor": 101,
+        "description": None,
+        "category": None,
+        "is_refund": False,
+        "related_transaction_id": None,
+        "balance_adjustment_direction": "increase",
+        "occurred_at": request.occurred_at,
+    }
 
 
 def test_read_models_map_orm_fields_and_nested_relationships() -> None:

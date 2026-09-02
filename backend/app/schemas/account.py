@@ -1,43 +1,23 @@
 """账户 HTTP 请求与响应模型。"""
 
 from datetime import datetime
-from decimal import Decimal
 from typing import Any, Self
 from uuid import UUID
 
 from pydantic import ConfigDict, Field, field_validator, model_validator
 
 from app.models import Account, AccountType
-from app.money import MoneyAmount, amount_to_minor, minor_to_amount, parse_amount
+from app.money import MoneyAmount, minor_to_amount
 from app.schemas.base import ContractModel, UpdateModel
 
 
 class AccountCreate(ContractModel):
     """创建账户的请求模型。"""
 
-    model_config = ConfigDict(
-        json_schema_extra={
-            "allOf": [
-                {
-                    "if": {"properties": {"type": {"const": "debit"}}},
-                    "then": {"properties": {"amount": {"minimum": 0}}},
-                }
-            ]
-        }
-    )
-
     type: AccountType
     name: str = Field(min_length=1)
     card_number: str | None = None
     description: str | None = None
-    amount: MoneyAmount = Field(default=0.0, validate_default=True)
-
-    @field_validator("amount", mode="before")
-    @classmethod
-    def round_amount(cls, value: object) -> Decimal:
-        """将账户金额转换为按分舍入的 Decimal。"""
-
-        return parse_amount(value)
 
     @field_validator("type", mode="before")
     @classmethod
@@ -46,14 +26,6 @@ class AccountCreate(ContractModel):
 
         return value.strip() if isinstance(value, str) else value
 
-    @model_validator(mode="after")
-    def validate_debit_amount(self) -> Self:
-        """拒绝借记账户的负余额。"""
-
-        if self.type is AccountType.DEBIT and self.amount < 0:
-            raise ValueError("debit 账户余额不能小于 0")
-        return self
-
     def to_orm_kwargs(self) -> dict[str, Any]:
         """转换为 ``Account`` 构造函数可接受的字段。
 
@@ -61,9 +33,7 @@ class AccountCreate(ContractModel):
             使用数据库列名且不包含服务器维护字段的字典。
         """
 
-        values = self.model_dump(exclude_unset=False, by_alias=False)
-        values["amount_minor"] = amount_to_minor(values.pop("amount"))
-        return values
+        return self.model_dump(exclude_unset=False, by_alias=False)
 
 
 class AccountUpdate(UpdateModel):

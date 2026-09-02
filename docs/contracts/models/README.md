@@ -23,7 +23,7 @@
 | `related_transaction_id` | `relatedTransaction` | `relatedTransactionId` |
 | `parent_category_id` | `parentCategory` | `parentCategoryId` |
 
-交易类型使用 `income`、`expense`、`transfer` 和 `balance_adjustment` 枚举；余额变更必须通过交易记录表达，账户更新接口不接受 `amount`。交易金额必须为有限正数，资金方向由应用层按交易类型处理。账户类型仅允许 `debit` 和 `credit`；`debit` 账户余额不得小于 0，`credit` 账户允许负余额。
+交易类型使用 `income`、`expense`、`transfer` 和 `balance_adjustment` 枚举；新建账户余额固定为 0，不设置初始余额字段；余额变更必须通过交易记录表达，账户更新接口不接受 `amount`。交易金额必须为有限正数，资金方向由应用层按交易类型处理。账户类型仅允许 `debit` 和 `credit`；`debit` 账户余额不得小于 0，`credit` 账户允许负余额。
 
 `occurredAt` 表示交易实际发生时间，`createdAt` 表示服务器录入时间。金额使用 JSON 数字传输，服务端收到后立即转换为 `Decimal`，统一按 `ROUND_HALF_UP` 舍入到 CNY 分，并以 `INTEGER` 最小单位存储。系统固定使用 CNY，不在账户、交易或 HTTP 契约中保留 `currency` 字段；金额不会以 Python `float` 参与持久化或账务计算。
 

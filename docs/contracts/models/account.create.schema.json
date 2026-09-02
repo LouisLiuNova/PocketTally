@@ -2,25 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.pockettally.app/models/account.create.schema.json",
   "title": "AccountCreate",
-  "description": "Payload for creating an account. Server-owned fields are omitted.",
+  "description": "Payload for creating an account. New accounts always start with a zero balance; server-owned fields are omitted.",
   "type": "object",
   "additionalProperties": false,
   "required": ["type", "name"],
-  "allOf": [
-    {
-      "if": { "properties": { "type": { "const": "debit" } } },
-      "then": { "properties": { "amount": { "minimum": 0 } } }
-    }
-  ],
   "properties": {
     "type": { "$ref": "common.schema.json#/$defs/accountType" },
     "name": { "type": "string", "minLength": 1 },
     "cardNumber": { "$ref": "common.schema.json#/$defs/nullableString" },
-    "description": { "$ref": "common.schema.json#/$defs/nullableString" },
-    "amount": {
-      "type": "number",
-      "default": 0.0,
-      "description": "CNY 金额；服务端按 ROUND_HALF_UP 舍入到分。"
-    }
+    "description": { "$ref": "common.schema.json#/$defs/nullableString" }
   }
 }

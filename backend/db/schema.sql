@@ -43,19 +43,30 @@ CREATE TABLE tags (
 CREATE TABLE transactions (
     id TEXT PRIMARY KEY NOT NULL,
     type TEXT NOT NULL CHECK (type IN ('income', 'expense', 'transfer', 'balance_adjustment')),
-    src_account_id TEXT NOT NULL,
+    src_account_id TEXT,
     dest_account_id TEXT,
     amount_minor INTEGER NOT NULL
         CONSTRAINT ck_transactions_amount_positive CHECK (amount_minor > 0)
         CONSTRAINT ck_transactions_amount_minor_integer
         CHECK (typeof(amount_minor) = 'integer'),
     description TEXT,
-    category TEXT NOT NULL,
+    category TEXT,
     is_refund BOOLEAN NOT NULL DEFAULT 0,
     related_transaction_id TEXT,
+    balance_adjustment_direction TEXT
+        CHECK (balance_adjustment_direction IN ('increase', 'decrease')),
+    voided_at DATETIME,
     occurred_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT ck_transactions_balance_adjustment_direction CHECK (
+        (type = 'balance_adjustment'
+            AND balance_adjustment_direction IS NOT NULL
+            AND balance_adjustment_direction IN ('increase', 'decrease'))
+        OR
+        (type <> 'balance_adjustment'
+            AND balance_adjustment_direction IS NULL)
+    ),
     FOREIGN KEY (src_account_id) REFERENCES accounts (id),
     FOREIGN KEY (dest_account_id) REFERENCES accounts (id),
     FOREIGN KEY (related_transaction_id) REFERENCES transactions (id),
@@ -108,10 +119,136 @@ END;
 
 CREATE TRIGGER tr_transactions_updated_at
 AFTER UPDATE OF type, src_account_id, dest_account_id, amount_minor, description, category,
-                is_refund, related_transaction_id, occurred_at ON transactions
+                is_refund, related_transaction_id, balance_adjustment_direction,
+                voided_at, occurred_at ON transactions
 FOR EACH ROW
 BEGIN
     UPDATE transactions SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+
+-- 余额是有效交易的可重建投影。交易写入后统一重算，避免只更新转账一侧。
+CREATE TRIGGER tr_transactions_sync_account_balances_insert
+AFTER INSERT ON transactions
+FOR EACH ROW
+BEGIN
+    UPDATE accounts
+    SET amount_minor = COALESCE((
+        SELECT SUM(CASE
+            WHEN t.type = 'income' AND t.dest_account_id = accounts.id
+                THEN t.amount_minor
+            WHEN t.type = 'expense' AND t.src_account_id = accounts.id
+                THEN -t.amount_minor
+            WHEN t.type = 'transfer' AND t.src_account_id = accounts.id
+                THEN -t.amount_minor
+            WHEN t.type = 'transfer' AND t.dest_account_id = accounts.id
+                THEN t.amount_minor
+            WHEN t.type = 'balance_adjustment'
+                 AND t.src_account_id = accounts.id
+                 AND t.balance_adjustment_direction = 'increase'
+                THEN t.amount_minor
+            WHEN t.type = 'balance_adjustment'
+                 AND t.src_account_id = accounts.id
+                 AND t.balance_adjustment_direction = 'decrease'
+                THEN -t.amount_minor
+            ELSE 0
+        END)
+        FROM transactions AS t
+        WHERE t.voided_at IS NULL
+    ), 0);
+END;
+
+CREATE TRIGGER tr_transactions_sync_account_balances_update
+AFTER UPDATE OF type, src_account_id, dest_account_id, amount_minor, is_refund,
+                related_transaction_id, balance_adjustment_direction, voided_at
+                ON transactions
+FOR EACH ROW
+BEGIN
+    UPDATE accounts
+    SET amount_minor = COALESCE((
+        SELECT SUM(CASE
+            WHEN t.type = 'income' AND t.dest_account_id = accounts.id
+                THEN t.amount_minor
+            WHEN t.type = 'expense' AND t.src_account_id = accounts.id
+                THEN -t.amount_minor
+            WHEN t.type = 'transfer' AND t.src_account_id = accounts.id
+                THEN -t.amount_minor
+            WHEN t.type = 'transfer' AND t.dest_account_id = accounts.id
+                THEN t.amount_minor
+            WHEN t.type = 'balance_adjustment'
+                 AND t.src_account_id = accounts.id
+                 AND t.balance_adjustment_direction = 'increase'
+                THEN t.amount_minor
+            WHEN t.type = 'balance_adjustment'
+                 AND t.src_account_id = accounts.id
+                 AND t.balance_adjustment_direction = 'decrease'
+                THEN -t.amount_minor
+            ELSE 0
+        END)
+        FROM transactions AS t
+        WHERE t.voided_at IS NULL
+    ), 0);
+END;
+
+CREATE TRIGGER tr_transactions_sync_account_balances_delete
+AFTER DELETE ON transactions
+FOR EACH ROW
+BEGIN
+    UPDATE accounts
+    SET amount_minor = COALESCE((
+        SELECT SUM(CASE
+            WHEN t.type = 'income' AND t.dest_account_id = accounts.id
+                THEN t.amount_minor
+            WHEN t.type = 'expense' AND t.src_account_id = accounts.id
+                THEN -t.amount_minor
+            WHEN t.type = 'transfer' AND t.src_account_id = accounts.id
+                THEN -t.amount_minor
+            WHEN t.type = 'transfer' AND t.dest_account_id = accounts.id
+                THEN t.amount_minor
+            WHEN t.type = 'balance_adjustment'
+                 AND t.src_account_id = accounts.id
+                 AND t.balance_adjustment_direction = 'increase'
+                THEN t.amount_minor
+            WHEN t.type = 'balance_adjustment'
+                 AND t.src_account_id = accounts.id
+                 AND t.balance_adjustment_direction = 'decrease'
+                THEN -t.amount_minor
+            ELSE 0
+        END)
+        FROM transactions AS t
+        WHERE t.voided_at IS NULL
+    ), 0);
+END;
+
+-- 直接改写余额列只能得到可重建投影，不能改变账本事实。
+CREATE TRIGGER tr_accounts_rebuild_amount_projection
+AFTER UPDATE OF amount_minor ON accounts
+FOR EACH ROW
+BEGIN
+    UPDATE accounts
+    SET amount_minor = COALESCE((
+        SELECT SUM(CASE
+            WHEN t.type = 'income' AND t.dest_account_id = NEW.id
+                THEN t.amount_minor
+            WHEN t.type = 'expense' AND t.src_account_id = NEW.id
+                THEN -t.amount_minor
+            WHEN t.type = 'transfer' AND t.src_account_id = NEW.id
+                THEN -t.amount_minor
+            WHEN t.type = 'transfer' AND t.dest_account_id = NEW.id
+                THEN t.amount_minor
+            WHEN t.type = 'balance_adjustment'
+                 AND t.src_account_id = NEW.id
+                 AND t.balance_adjustment_direction = 'increase'
+                THEN t.amount_minor
+            WHEN t.type = 'balance_adjustment'
+                 AND t.src_account_id = NEW.id
+                 AND t.balance_adjustment_direction = 'decrease'
+                THEN -t.amount_minor
+            ELSE 0
+        END)
+        FROM transactions AS t
+        WHERE t.voided_at IS NULL
+    ), 0)
+    WHERE id = NEW.id;
 END;
 
 CREATE TRIGGER tr_transaction_tags_insert_updated_at

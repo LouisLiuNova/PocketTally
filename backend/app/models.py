@@ -1,5 +1,7 @@
 """根据 ``docs/contracts/db.dbml`` 派生的 SQLModel 持久化模型。"""
 
+# SQLModel 关系字段需要直接使用尚未声明的模型类型；运行时由关系配置解析。
+
 from datetime import datetime
 from enum import StrEnum
 from uuid import uuid4
@@ -58,6 +60,13 @@ class AccountType(StrEnum):
 
     DEBIT = "debit"
     CREDIT = "credit"
+
+
+class BalanceAdjustmentDirection(StrEnum):
+    """余额调整的资金方向。"""
+
+    INCREASE = "increase"
+    DECREASE = "decrease"
 
 
 def enum_values(enum_class: type[StrEnum]) -> list[str]:
@@ -229,6 +238,14 @@ class Transaction(SQLModel, table=True):
             "typeof(amount_minor) = 'integer'",
             name="ck_transactions_amount_minor_integer",
         ),
+        CheckConstraint(
+            "(type = 'balance_adjustment' AND "
+            "balance_adjustment_direction IS NOT NULL AND "
+            "balance_adjustment_direction IN ('increase', 'decrease')) OR "
+            "(type <> 'balance_adjustment' AND "
+            "balance_adjustment_direction IS NULL)",
+            name="ck_transactions_balance_adjustment_direction",
+        ),
     )
 
     id: str = Field(default_factory=new_id,
@@ -245,10 +262,9 @@ class Transaction(SQLModel, table=True):
             nullable=False,
         )
     )
-    src_account_id: str = Field(
+    src_account_id: str | None = Field(
         foreign_key="accounts.id",
         index=True,
-        nullable=False,
     )
     dest_account_id: str | None = Field(
         default=None,
@@ -257,10 +273,9 @@ class Transaction(SQLModel, table=True):
     )
     amount_minor: int = Field(sa_column=Column(Integer, nullable=False))
     description: str | None = Field(default=None, sa_column=Column(Text))
-    category: str = Field(
+    category: str | None = Field(
         foreign_key="categories.id",
         index=True,
-        nullable=False,
     )
     is_refund: bool = Field(
         default=False,
@@ -271,11 +286,27 @@ class Transaction(SQLModel, table=True):
         foreign_key="transactions.id",
         index=True,
     )
+    balance_adjustment_direction: BalanceAdjustmentDirection | None = Field(
+        default=None,
+        sa_column=Column(
+            SQLAlchemyEnum(
+                BalanceAdjustmentDirection,
+                values_callable=enum_values,
+                native_enum=False,
+                create_constraint=True,
+                name="balance_adjustment_direction",
+            )
+        ),
+    )
+    voided_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime),
+    )
     occurred_at: datetime = Field(sa_column=Column(DateTime, nullable=False))
     created_at: datetime = Field(sa_column=timestamp_column())
     updated_at: datetime = Field(sa_column=timestamp_column())
 
-    source_account: Account = Relationship(
+    source_account: Account | None = Relationship(
         sa_relationship=relationship(
             "Account",
             back_populates="source_transactions",
@@ -289,7 +320,7 @@ class Transaction(SQLModel, table=True):
             foreign_keys="Transaction.dest_account_id",
         ),
     )
-    category_record: Category = Relationship(
+    category_record: Category | None = Relationship(
         sa_relationship=relationship("Category", back_populates="transactions")
     )
     related_transaction: Transaction | None = Relationship(
@@ -313,6 +344,7 @@ class Transaction(SQLModel, table=True):
 __all__ = (
     "Account",
     "AccountType",
+    "BalanceAdjustmentDirection",
     "Category",
     "Tag",
     "Transaction",
