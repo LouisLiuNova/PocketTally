@@ -27,9 +27,9 @@
 
 ### P1：收敛当前实现
 
-- [ ] 移除 SQLite 中负责跨表余额同步和拦截直接余额写入的业务触发器，只保留服务层维护 `accounts.amount_minor` 可重建投影；同步调整 DDL、测试和业务规则说明。
-- [ ] 建立最小运行时数据库连接与请求级 Session，并确保每个 SQLite 连接启用 `PRAGMA foreign_keys = ON`。
-- [ ] 实现账户、分类、标签和交易的基础 CRUD 路由，使现有 Pydantic Schema 和账本服务形成可实际调用的闭环。
+- [ ] 按 Issue #11 移除 SQLite 跨表余额业务触发器，收敛到服务层维护 `accounts.amount_minor` 投影，并建立运行时数据库连接、请求级 Session 和连接级外键。
+- [ ] 按 Issue #12 实现账户、分类、标签 CRUD 与交易读取 API，使现有 ORM、Pydantic Schema 和数据库依赖形成可实际调用的基础闭环。
+- [ ] 交易创建、PATCH、作废和余额调整写入统一归入 Issue #4，不在基础资源 API 中重复实现。
 
 ### P1：核心账本规则
 
