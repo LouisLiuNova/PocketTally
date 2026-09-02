@@ -5,11 +5,11 @@ from enum import StrEnum
 from uuid import uuid4
 
 from sqlalchemy import (
-    REAL,
     Boolean,
     CheckConstraint,
     Column,
     DateTime,
+    Integer,
     Text,
     func,
     text,
@@ -79,8 +79,12 @@ class Account(SQLModel, table=True):
     __tablename__ = "accounts"
     __table_args__ = (
         CheckConstraint(
-            "type = 'credit' OR amount >= 0",
+            "type = 'credit' OR amount_minor >= 0",
             name="ck_accounts_debit_amount_nonnegative",
+        ),
+        CheckConstraint(
+            "typeof(amount_minor) = 'integer'",
+            name="ck_accounts_amount_minor_integer",
         ),
     )
 
@@ -103,9 +107,9 @@ class Account(SQLModel, table=True):
     )
     card_number: str | None = Field(default=None, sa_column=Column(Text))
     description: str | None = Field(default=None, sa_column=Column(Text))
-    amount: float = Field(
-        default=0.0,
-        sa_column=Column(REAL, nullable=False, server_default=text("0.0")),
+    amount_minor: int = Field(
+        default=0,
+        sa_column=Column(Integer, nullable=False, server_default=text("0")),
     )
     created_at: datetime = Field(sa_column=timestamp_column())
     updated_at: datetime = Field(sa_column=timestamp_column())
@@ -217,7 +221,14 @@ class Transaction(SQLModel, table=True):
 
     __tablename__ = "transactions"
     __table_args__ = (
-        CheckConstraint("amount > 0", name="ck_transactions_amount_positive"),
+        CheckConstraint(
+            "amount_minor > 0",
+            name="ck_transactions_amount_positive",
+        ),
+        CheckConstraint(
+            "typeof(amount_minor) = 'integer'",
+            name="ck_transactions_amount_minor_integer",
+        ),
     )
 
     id: str = Field(default_factory=new_id,
@@ -244,7 +255,7 @@ class Transaction(SQLModel, table=True):
         foreign_key="accounts.id",
         index=True,
     )
-    amount: float = Field(sa_column=Column(REAL, nullable=False))
+    amount_minor: int = Field(sa_column=Column(Integer, nullable=False))
     description: str | None = Field(default=None, sa_column=Column(Text))
     category: str = Field(
         foreign_key="categories.id",

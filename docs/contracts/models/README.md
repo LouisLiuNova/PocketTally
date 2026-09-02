@@ -17,6 +17,7 @@
 | --- | --- | --- |
 | `src_account_id` | `sourceAccount` | `sourceAccountId` |
 | `dest_account_id` | `destinationAccount` | `destinationAccountId` |
+| `amount_minor` | `amount`（CNY 元） | `amount`（CNY 元） |
 | `category` | `category` | `categoryId` |
 | `transaction_tags` 关联表 | `tags` | `tagIds` |
 | `related_transaction_id` | `relatedTransaction` | `relatedTransactionId` |
@@ -24,6 +25,6 @@
 
 交易类型使用 `income`、`expense`、`transfer` 和 `balance_adjustment` 枚举；余额变更必须通过交易记录表达，账户更新接口不接受 `amount`。交易金额必须为有限正数，资金方向由应用层按交易类型处理。账户类型仅允许 `debit` 和 `credit`；`debit` 账户余额不得小于 0，`credit` 账户允许负余额。
 
-`occurredAt` 表示交易实际发生时间，`createdAt` 表示服务器录入时间。货币值仍保持为 JSON 数字，以匹配当前 SQLite 的 `REAL` 列；如果需要精确的十进制定点运算，应同时迁移存储方式和契约。
+`occurredAt` 表示交易实际发生时间，`createdAt` 表示服务器录入时间。金额使用 JSON 数字传输，服务端收到后立即转换为 `Decimal`，统一按 `ROUND_HALF_UP` 舍入到 CNY 分，并以 `INTEGER` 最小单位存储。系统固定使用 CNY，不在账户、交易或 HTTP 契约中保留 `currency` 字段；金额不会以 Python `float` 参与持久化或账务计算。
 
 账户、分类和标签名称在单个账本内按 SQLite `NOCASE` 规则全局唯一；重复名称由数据库拒绝。`updatedAt` 由 DDL 触发器在业务字段或交易标签关系变化时维护。

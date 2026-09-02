@@ -22,9 +22,11 @@ CREATE TABLE accounts (
     name TEXT COLLATE NOCASE NOT NULL UNIQUE,
     card_number TEXT,
     description TEXT,
-    amount REAL NOT NULL DEFAULT 0.0
+    amount_minor INTEGER NOT NULL DEFAULT 0
         CONSTRAINT ck_accounts_debit_amount_nonnegative
-        CHECK (type = 'credit' OR amount >= 0),
+        CHECK (type = 'credit' OR amount_minor >= 0)
+        CONSTRAINT ck_accounts_amount_minor_integer
+        CHECK (typeof(amount_minor) = 'integer'),
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -43,7 +45,10 @@ CREATE TABLE transactions (
     type TEXT NOT NULL CHECK (type IN ('income', 'expense', 'transfer', 'balance_adjustment')),
     src_account_id TEXT NOT NULL,
     dest_account_id TEXT,
-    amount REAL NOT NULL CONSTRAINT ck_transactions_amount_positive CHECK (amount > 0),
+    amount_minor INTEGER NOT NULL
+        CONSTRAINT ck_transactions_amount_positive CHECK (amount_minor > 0)
+        CONSTRAINT ck_transactions_amount_minor_integer
+        CHECK (typeof(amount_minor) = 'integer'),
     description TEXT,
     category TEXT NOT NULL,
     is_refund BOOLEAN NOT NULL DEFAULT 0,
@@ -81,7 +86,7 @@ CREATE INDEX ix_transaction_tags_tag_id
 -- SQLite has no ON UPDATE clause for column defaults. Keep response/audit
 -- timestamps authoritative even when data is changed outside the ORM.
 CREATE TRIGGER tr_accounts_updated_at
-AFTER UPDATE OF type, name, card_number, description, amount ON accounts
+AFTER UPDATE OF type, name, card_number, description, amount_minor ON accounts
 FOR EACH ROW
 BEGIN
     UPDATE accounts SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
@@ -102,7 +107,7 @@ BEGIN
 END;
 
 CREATE TRIGGER tr_transactions_updated_at
-AFTER UPDATE OF type, src_account_id, dest_account_id, amount, description, category,
+AFTER UPDATE OF type, src_account_id, dest_account_id, amount_minor, description, category,
                 is_refund, related_transaction_id, occurred_at ON transactions
 FOR EACH ROW
 BEGIN

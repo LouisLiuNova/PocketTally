@@ -1,13 +1,14 @@
 """交易 HTTP 请求与响应模型。"""
 
 from datetime import datetime
-from math import isfinite
+from decimal import Decimal
 from typing import Any, Self
 from uuid import UUID
 
 from pydantic import Field, field_validator
 
 from app.models import Transaction, TransactionType
+from app.money import MoneyAmount, amount_to_minor, minor_to_amount, parse_amount
 from app.schemas.account import AccountSummary
 from app.schemas.base import ContractModel, UpdateModel
 from app.schemas.category import CategorySummary
@@ -20,22 +21,26 @@ def _uuid_to_string(value: UUID | None) -> str | None:
     return str(value) if value is not None else None
 
 
-def _require_positive_amount(value: float) -> float:
-    """拒绝非有限或非正的交易金额。
+def _require_positive_amount(value: object) -> Decimal:
+    """舍入并拒绝非正的交易金额。
 
     Args:
-        value: 待校验的交易金额。
+        value: 待校验的十进制金额。
 
     Returns:
-        有限正交易金额。
+        按分舍入后的有限正交易金额。
 
     Raises:
         ValueError: 交易金额不是有限正数时抛出。
     """
 
-    if not isfinite(value) or value <= 0:
+    try:
+        amount = parse_amount(value)
+    except (TypeError, ValueError) as error:
+        raise ValueError("交易金额必须为有限正数") from error
+    if amount <= 0:
         raise ValueError("交易金额必须为有限正数")
-    return value
+    return amount
 
 
 class TransactionCreate(ContractModel):
@@ -44,7 +49,7 @@ class TransactionCreate(ContractModel):
     type: TransactionType
     source_account_id: UUID
     destination_account_id: UUID | None = None
-    amount: float = Field(json_schema_extra={"exclusiveMinimum": 0})
+    amount: MoneyAmount = Field(json_schema_extra={"exclusiveMinimum": 0})
     description: str | None = None
     category_id: UUID
     tag_ids: list[UUID] = Field(
@@ -54,9 +59,9 @@ class TransactionCreate(ContractModel):
     is_refund: bool = False
     related_transaction_id: UUID | None = None
     occurred_at: datetime
-    @field_validator("amount")
+    @field_validator("amount", mode="before")
     @classmethod
-    def require_positive_amount(cls, value: float) -> float:
+    def require_positive_amount(cls, value: object) -> Decimal:
         """确保新建交易的金额为有限正数。"""
 
         return _require_positive_amount(value)
@@ -92,7 +97,7 @@ class TransactionCreate(ContractModel):
             "type": self.type,
             "src_account_id": str(self.source_account_id),
             "dest_account_id": _uuid_to_string(self.destination_account_id),
-            "amount": self.amount,
+            "amount_minor": amount_to_minor(self.amount),
             "description": self.description,
             "category": str(self.category_id),
             "is_refund": self.is_refund,
@@ -116,7 +121,7 @@ class TransactionUpdate(UpdateModel):
     type: TransactionType = None
     source_account_id: UUID = None
     destination_account_id: UUID | None = None
-    amount: float = Field(
+    amount: MoneyAmount = Field(
         default=None,
         json_schema_extra={"exclusiveMinimum": 0},
     )
@@ -129,9 +134,9 @@ class TransactionUpdate(UpdateModel):
     is_refund: bool = None
     related_transaction_id: UUID | None = None
     occurred_at: datetime = None
-    @field_validator("amount")
+    @field_validator("amount", mode="before")
     @classmethod
-    def require_positive_amount(cls, value: float) -> float:
+    def require_positive_amount(cls, value: object) -> Decimal:
         """确保更新后的交易金额为有限正数。"""
 
         return _require_positive_amount(value)
@@ -174,6 +179,9 @@ class TransactionUpdate(UpdateModel):
             if field_name == "tag_ids":
                 continue
             orm_name = mapping.get(field_name, field_name)
+            if field_name == "amount":
+                result["amount_minor"] = amount_to_minor(value)
+                continue
             if field_name.endswith("_id"):
                 result[orm_name] = _uuid_to_string(value)
             else:
@@ -197,7 +205,7 @@ class TransactionSummary(ContractModel):
 
     id: UUID
     type: TransactionType
-    amount: float = Field(gt=0)
+    amount: MoneyAmount = Field(json_schema_extra={"exclusiveMinimum": 0})
     description: str | None
     occurred_at: datetime
     created_at: datetime
@@ -213,7 +221,16 @@ class TransactionSummary(ContractModel):
             交易摘要模型。
         """
 
-        return cls.model_validate(transaction)
+        return cls.model_validate(
+            {
+                "id": transaction.id,
+                "type": transaction.type,
+                "amount": minor_to_amount(transaction.amount_minor),
+                "description": transaction.description,
+                "occurred_at": transaction.occurred_at,
+                "created_at": transaction.created_at,
+            }
+        )
 
 
 class TransactionRead(ContractModel):
@@ -223,7 +240,7 @@ class TransactionRead(ContractModel):
     type: TransactionType
     source_account: AccountSummary
     destination_account: AccountSummary | None
-    amount: float = Field(gt=0)
+    amount: MoneyAmount = Field(json_schema_extra={"exclusiveMinimum": 0})
     description: str | None
     category: CategorySummary
     tags: list[TagSummary] = Field(json_schema_extra={"uniqueItems": True})
@@ -256,7 +273,7 @@ class TransactionRead(ContractModel):
                 "type": transaction.type,
                 "source_account": transaction.source_account,
                 "destination_account": transaction.destination_account,
-                "amount": transaction.amount,
+                "amount": minor_to_amount(transaction.amount_minor),
                 "description": transaction.description,
                 "category": transaction.category_record,
                 "tags": transaction.tags,

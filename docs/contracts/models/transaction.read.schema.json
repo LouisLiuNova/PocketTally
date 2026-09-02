@@ -16,7 +16,11 @@
         { "type": "null" }
       ]
     },
-    "amount": { "type": "number", "exclusiveMinimum": 0 },
+    "amount": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "CNY 金额；服务端内部以整数分存储。"
+    },
     "description": { "$ref": "common.schema.json#/$defs/nullableString" },
     "category": { "$ref": "common.schema.json#/$defs/categorySummary" },
     "tags": {

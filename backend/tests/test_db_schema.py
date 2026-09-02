@@ -50,7 +50,7 @@ def test_schema_normalizes_tags_and_enforces_unique_names() -> None:
         connection.execute(
             """
             INSERT INTO transactions (
-                id, type, src_account_id, amount, category, occurred_at
+                id, type, src_account_id, amount_minor, category, occurred_at
             ) VALUES ('transaction-1', 'expense', 'account-1', 1200, 'category-1',
                       '2026-08-24 12:00:00')
             """
@@ -71,6 +71,8 @@ def test_schema_normalizes_tags_and_enforces_unique_names() -> None:
             row[1] for row in connection.execute("PRAGMA table_info(transactions)")
         }
         assert "tags" not in transaction_columns
+        assert "amount" not in transaction_columns
+        assert "amount_minor" in transaction_columns
         assert "occurred_at" in transaction_columns
     finally:
         connection.close()
@@ -95,29 +97,34 @@ def test_schema_rejects_unknown_types_and_non_positive_amounts() -> None:
         with pytest.raises(sqlite3.IntegrityError):
             connection.execute(
                 "INSERT INTO transactions "
-                "(id, type, src_account_id, amount, category, occurred_at) "
+                "(id, type, src_account_id, amount_minor, category, occurred_at) "
                 f"VALUES ({base_values.replace("'expense'", "'unknown'")})"
             )
         with pytest.raises(sqlite3.IntegrityError):
             connection.execute(
                 "INSERT INTO transactions "
-                "(id, type, src_account_id, amount, category, occurred_at) "
+                "(id, type, src_account_id, amount_minor, category, occurred_at) "
                 f"VALUES ({base_values.replace(', 1,', ', 0,')})"
             )
         with pytest.raises(sqlite3.IntegrityError):
             connection.execute(
                 "INSERT INTO transactions "
-                "(id, type, src_account_id, amount, category, occurred_at) "
+                "(id, type, src_account_id, amount_minor, category, occurred_at) "
                 f"VALUES ({base_values.replace(', 1,', ', -1,')})"
             )
 
         with pytest.raises(sqlite3.IntegrityError):
             connection.execute(
-                "INSERT INTO accounts (id, type, name, amount) "
+                "INSERT INTO accounts (id, type, name, amount_minor) "
                 "VALUES ('debit-negative', 'debit', 'Negative debit', -1)"
             )
+        with pytest.raises(sqlite3.IntegrityError):
+            connection.execute(
+                "INSERT INTO accounts (id, type, name, amount_minor) "
+                "VALUES ('fractional-minor', 'debit', 'Fractional minor', 1.5)"
+            )
         connection.execute(
-            "INSERT INTO accounts (id, type, name, amount) "
+                "INSERT INTO accounts (id, type, name, amount_minor) "
             "VALUES ('credit-negative', 'credit', 'Negative credit', -1)"
         )
         with pytest.raises(sqlite3.IntegrityError):
@@ -141,11 +148,11 @@ def test_schema_server_defaults_and_triggers_keep_audit_values_current() -> None
             """
         )
         connection.execute("UPDATE accounts SET name = 'Wallet 2' WHERE id = 'account-1'")
-        amount, updated_at = connection.execute(
-            "SELECT amount, updated_at FROM accounts WHERE id = 'account-1'"
+        amount_minor, updated_at = connection.execute(
+            "SELECT amount_minor, updated_at FROM accounts WHERE id = 'account-1'"
         ).fetchone()
 
-        assert amount == 0.0
+        assert amount_minor == 0
         assert updated_at != "2000-01-01 00:00:00"
     finally:
         connection.close()
@@ -169,17 +176,17 @@ def test_sqlmodel_declares_database_defaults_and_normalized_tag_link() -> None:
             "PRAGMA table_info(transaction_tags)"
         ).fetchall()
 
-    assert account_columns["amount"] == "0.0"
+    assert account_columns["amount_minor"] == "0"
     assert transaction_columns["is_refund"] == "0"
     assert app.models.Account.__table__.c.type.type.enums == ["debit", "credit"]
     assert any(
         isinstance(constraint, CheckConstraint)
-        and str(constraint.sqltext) == "amount > 0"
+        and str(constraint.sqltext) == "amount_minor > 0"
         for constraint in app.models.Transaction.__table__.constraints
     )
     assert any(
         isinstance(constraint, CheckConstraint)
-        and str(constraint.sqltext) == "type = 'credit' OR amount >= 0"
+        and str(constraint.sqltext) == "type = 'credit' OR amount_minor >= 0"
         for constraint in app.models.Account.__table__.constraints
     )
     assert {row[1] for row in transaction_tag_columns} == {

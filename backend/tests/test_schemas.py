@@ -1,6 +1,7 @@
 """HTTP Pydantic 模型与 SQLModel ORM 对接测试。"""
 
 from datetime import UTC, datetime
+from decimal import Decimal
 from uuid import UUID, uuid4
 
 import pytest
@@ -39,7 +40,7 @@ def test_create_models_use_camel_case_and_reject_unknown_fields() -> None:
 
     assert account.type is AccountType.DEBIT
     assert account.name == "钱包"
-    assert account.amount == 0.0
+    assert account.amount == Decimal("0.00")
     assert set(account.model_dump(by_alias=True)) == {
         "type",
         "name",
@@ -105,6 +106,7 @@ def test_generated_json_schema_keeps_contract_object_and_array_constraints() -> 
     assert "anyOf" in account_update_schema["properties"]["description"]
     assert transaction_create_schema["properties"]["tagIds"]["uniqueItems"] is True
     assert transaction_create_schema["properties"]["amount"]["exclusiveMinimum"] == 0
+    assert transaction_create_schema["properties"]["amount"]["type"] == "number"
     assert transaction_create_schema["$defs"]["TransactionType"]["enum"] == [
         "income",
         "expense",
@@ -138,7 +140,7 @@ def test_write_models_convert_relationship_ids_to_orm_columns() -> None:
         "type": "expense",
         "src_account_id": str(source_id),
         "dest_account_id": None,
-        "amount": 12.5,
+        "amount_minor": 1250,
         "description": None,
         "category": str(category_id),
         "is_refund": False,
@@ -163,6 +165,42 @@ def test_write_models_convert_relationship_ids_to_orm_columns() -> None:
         )
 
 
+def test_money_uses_decimal_rounding_and_integer_minor_units() -> None:
+    """验证浮点输入只作为传输格式，并统一按半入舍入到 CNY 分。"""
+
+    account = AccountCreate.model_validate(
+        {"type": "debit", "name": "精度账户", "amount": 1.005}
+    )
+    transaction = TransactionCreate.model_validate(
+        {
+            "type": "expense",
+            "sourceAccountId": str(uuid4()),
+            "amount": 2.675,
+            "categoryId": str(uuid4()),
+            "occurredAt": datetime.now(UTC).isoformat(),
+        }
+    )
+
+    assert account.amount == Decimal("1.01")
+    assert account.to_orm_kwargs()["amount_minor"] == 101
+    assert transaction.amount == Decimal("2.68")
+    assert transaction.to_orm_kwargs()["amount_minor"] == 268
+    assert transaction.model_dump(mode="json")["amount"] == 2.68
+    assert "currency" not in account.model_dump()
+    assert "currency" not in transaction.model_dump()
+
+    with pytest.raises(ValidationError, match="有限正数"):
+        TransactionCreate.model_validate(
+            {
+                "type": "expense",
+                "sourceAccountId": str(uuid4()),
+                "amount": 0.004,
+                "categoryId": str(uuid4()),
+                "occurredAt": datetime.now(UTC).isoformat(),
+            }
+        )
+
+
 def test_account_type_and_debit_amount_constraints() -> None:
     """验证账户类型封闭集合以及借记账户余额不能为负。"""
 
@@ -173,7 +211,7 @@ def test_account_type_and_debit_amount_constraints() -> None:
         {"type": "credit", "name": "信用卡", "amount": -100}
     )
     assert credit.type is AccountType.CREDIT
-    assert credit.amount == -100
+    assert credit.amount == Decimal("-100.00")
 
     with pytest.raises(ValidationError):
         AccountCreate.model_validate({"type": "cash", "name": "现金"})
@@ -227,7 +265,7 @@ def test_read_models_map_orm_fields_and_nested_relationships() -> None:
         name="钱包",
         card_number=None,
         description=None,
-        amount=100.0,
+        amount_minor=10000,
         created_at=now,
         updated_at=now,
     )
@@ -253,7 +291,7 @@ def test_read_models_map_orm_fields_and_nested_relationships() -> None:
         type="expense",
         src_account_id=account.id,
         dest_account_id=None,
-        amount=20.0,
+        amount_minor=2000,
         description="午餐",
         category=category.id,
         is_refund=False,
@@ -280,6 +318,8 @@ def test_read_models_map_orm_fields_and_nested_relationships() -> None:
     assert transaction_response.category.id == UUID(category.id)
     assert transaction_response.tags[0].id == UUID(tag.id)
     assert transaction_response.occurred_at == now
+    assert account_response.amount == Decimal("100.00")
+    assert transaction_response.amount == Decimal("20.00")
     assert transaction_response.model_dump(mode="json", by_alias=True)[
         "sourceAccount"
     ] == {

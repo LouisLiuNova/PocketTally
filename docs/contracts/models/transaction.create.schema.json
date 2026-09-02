@@ -15,7 +15,11 @@
         { "type": "null" }
       ]
     },
-    "amount": { "type": "number", "exclusiveMinimum": 0 },
+    "amount": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "CNY 金额；按 ROUND_HALF_UP 舍入到分后必须仍为正数。"
+    },
     "description": { "$ref": "common.schema.json#/$defs/nullableString" },
     "categoryId": { "$ref": "common.schema.json#/$defs/uuid" },
     "tagIds": {

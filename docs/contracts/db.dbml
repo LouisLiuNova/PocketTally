@@ -8,7 +8,7 @@ Table accounts{
     name TEXT [notnull,unique,note:'账户名称，按 SQLite NOCASE 规则全局唯一']
     card_number TEXT [note:'银行卡号']
     description TEXT [note:'账户描述']
-    amount REAL [notnull,default:0.0,note:'账户余额；debit 不得小于 0，credit 可为负数']
+    amount_minor INTEGER [notnull,default:0,note:'账户余额的 CNY 分数；debit 不得小于 0，credit 可为负数']
     created_at DATETIME [notnull,default: 'CURRENT_TIMESTAMP',note:'账户创建时间']
     updated_at DATETIME [notnull,default: 'CURRENT_TIMESTAMP',note:'账户更新时间']
   }
@@ -18,7 +18,7 @@ Table transactions{
     type TEXT [notnull,note:'交易类型枚举: income expense transfer balance_adjustment']
     src_account_id TEXT [notnull,note:'交易来源账户ID']
     dest_account_id TEXT [note:'交易目标账户ID，是否使用由应用层按交易类型校验']
-    amount REAL [notnull,note:'严格为有限正数，资金方向由应用层按交易类型处理']
+    amount_minor INTEGER [notnull,note:'CNY 分数，严格为正整数；资金方向由应用层按交易类型处理']
     description TEXT [note:'交易描述']
     category TEXT [notnull,note:'交易分类']
     is_refund BOOLEAN [notnull,default: false,note:'是否为退款交易']

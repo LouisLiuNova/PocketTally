@@ -1,12 +1,14 @@
 """账户 HTTP 请求与响应模型。"""
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Any, Self
 from uuid import UUID
 
 from pydantic import ConfigDict, Field, field_validator, model_validator
 
 from app.models import Account, AccountType
+from app.money import MoneyAmount, amount_to_minor, minor_to_amount, parse_amount
 from app.schemas.base import ContractModel, UpdateModel
 
 
@@ -28,7 +30,14 @@ class AccountCreate(ContractModel):
     name: str = Field(min_length=1)
     card_number: str | None = None
     description: str | None = None
-    amount: float = 0.0
+    amount: MoneyAmount = Field(default=0.0, validate_default=True)
+
+    @field_validator("amount", mode="before")
+    @classmethod
+    def round_amount(cls, value: object) -> Decimal:
+        """将账户金额转换为按分舍入的 Decimal。"""
+
+        return parse_amount(value)
 
     @field_validator("type", mode="before")
     @classmethod
@@ -52,7 +61,9 @@ class AccountCreate(ContractModel):
             使用数据库列名且不包含服务器维护字段的字典。
         """
 
-        return self.model_dump(exclude_unset=False, by_alias=False)
+        values = self.model_dump(exclude_unset=False, by_alias=False)
+        values["amount_minor"] = amount_to_minor(values.pop("amount"))
+        return values
 
 
 class AccountUpdate(UpdateModel):
@@ -99,7 +110,7 @@ class AccountRead(ContractModel):
     name: str = Field(min_length=1)
     card_number: str | None
     description: str | None
-    amount: float
+    amount: MoneyAmount
     created_at: datetime
     updated_at: datetime
 
@@ -122,7 +133,18 @@ class AccountRead(ContractModel):
             账户响应模型。
         """
 
-        return cls.model_validate(account)
+        return cls.model_validate(
+            {
+                "id": account.id,
+                "type": account.type,
+                "name": account.name,
+                "card_number": account.card_number,
+                "description": account.description,
+                "amount": minor_to_amount(account.amount_minor),
+                "created_at": account.created_at,
+                "updated_at": account.updated_at,
+            }
+        )
 
 
 class AccountSummary(ContractModel):

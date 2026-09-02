@@ -567,6 +567,7 @@ components:
           $ref: '#/components/schemas/nullableString'
         amount:
           type: number
+          description: CNY 金额；服务端内部以整数分存储。
         createdAt:
           $ref: '#/components/schemas/dateTime'
         updatedAt:
@@ -602,7 +603,8 @@ components:
           $ref: '#/components/schemas/nullableString'
         amount:
           type: number
-          default: 0
+          default: 0.0
+          description: CNY 金额；服务端按 ROUND_HALF_UP 舍入到分。
     account.update.schema:
       $schema: https://json-schema.org/draft/2020-12/schema
       $id: https://schemas.pockettally.app/models/account.update.schema.json
@@ -842,6 +844,7 @@ components:
         amount:
           type: number
           exclusiveMinimum: 0
+          description: CNY 金额；服务端内部以整数分存储。
         description:
           $ref: '#/components/schemas/nullableString'
         occurredAt:
@@ -883,6 +886,7 @@ components:
         amount:
           type: number
           exclusiveMinimum: 0
+          description: CNY 金额；按 ROUND_HALF_UP 舍入到分后必须仍为正数。
         description:
           $ref: '#/components/schemas/nullableString'
         category:
@@ -929,6 +933,7 @@ components:
         amount:
           type: number
           exclusiveMinimum: 0
+          description: CNY 金额；按 ROUND_HALF_UP 舍入到分后必须仍为正数。
         description:
           $ref: '#/components/schemas/nullableString'
         categoryId:
@@ -968,6 +973,7 @@ components:
         amount:
           type: number
           exclusiveMinimum: 0
+          description: CNY 金额；按 ROUND_HALF_UP 舍入到分后必须仍为正数。
         description:
           $ref: '#/components/schemas/nullableString'
         categoryId:

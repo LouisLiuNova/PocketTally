@@ -17,6 +17,10 @@
     "name": { "type": "string", "minLength": 1 },
     "cardNumber": { "$ref": "common.schema.json#/$defs/nullableString" },
     "description": { "$ref": "common.schema.json#/$defs/nullableString" },
-    "amount": { "type": "number", "default": 0 }
+    "amount": {
+      "type": "number",
+      "default": 0.0,
+      "description": "CNY 金额；服务端按 ROUND_HALF_UP 舍入到分。"
+    }
   }
 }
