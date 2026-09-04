@@ -1,6 +1,7 @@
 """从环境变量加载应用配置。"""
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -27,6 +28,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_json: bool = False
     log_file: str | None = None
+    database_path: Path = Path("data/pocket-tally.sqlite3")
 
 
 @lru_cache

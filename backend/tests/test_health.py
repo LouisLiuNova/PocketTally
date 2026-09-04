@@ -1,5 +1,7 @@
 """应用生命周期和依赖集成测试。"""
 
+from pathlib import Path
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -8,10 +10,18 @@ from app.main import create_app
 
 
 @pytest.mark.asyncio
-async def test_health_uses_lifespan_resources_and_dependencies() -> None:
+async def test_health_uses_lifespan_resources_and_dependencies(
+    tmp_path: Path,
+) -> None:
     """验证健康检查端点暴露生命周期资源和请求依赖。"""
 
-    app = create_app(Settings(environment="test", log_level="WARNING"))
+    app = create_app(
+        Settings(
+            environment="test",
+            log_level="WARNING",
+            database_path=tmp_path / "health.sqlite3",
+        )
+    )
 
     async with (
         app.router.lifespan_context(app),
@@ -36,10 +46,12 @@ async def test_health_uses_lifespan_resources_and_dependencies() -> None:
 
 
 @pytest.mark.asyncio
-async def test_openapi_is_available() -> None:
+async def test_openapi_is_available(tmp_path: Path) -> None:
     """验证应用暴露 OpenAPI 文档和健康检查路由。"""
 
-    app = create_app(Settings(environment="test", log_level="WARNING"))
+    app = create_app(
+        Settings(environment="test", database_path=tmp_path / "openapi.sqlite3")
+    )
 
     async with (
         app.router.lifespan_context(app),

@@ -1,12 +1,15 @@
 """账本余额重算、余额调整和事务边界测试。"""
 
 from datetime import UTC, datetime
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import create_engine, func
-from sqlmodel import Session, SQLModel, select
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session, select
 
+from app.database import create_database_engine, initialize_database
 from app.ledger import (
     LedgerError,
     calculate_balances,
@@ -25,11 +28,11 @@ from app.models import (
 from app.schemas.transaction import BalanceAdjustmentCreate
 
 
-def make_engine():
-    """创建账本测试使用的内存数据库。"""
+def make_engine(database_path: Path):
+    """创建账本测试使用的临时运行时数据库。"""
 
-    engine = create_engine("sqlite://")
-    SQLModel.metadata.create_all(engine)
+    engine = create_database_engine(database_path)
+    initialize_database(engine)
     return engine
 
 
@@ -95,10 +98,12 @@ def test_calculate_balances_uses_zero_baseline_and_transaction_direction() -> No
     assert calculate_balances(transactions) == {first: 500, second: 350}
 
 
-def test_balance_adjustment_is_a_real_transaction_and_can_be_voided() -> None:
+def test_balance_adjustment_is_a_real_transaction_and_can_be_voided(
+    tmp_path: Path,
+) -> None:
     """验证余额调整写入交易，作废后余额可重算恢复。"""
 
-    engine = make_engine()
+    engine = make_engine(tmp_path / "adjustment.sqlite3")
     account = Account(type=AccountType.CREDIT, name="信用账户")
     with Session(engine, expire_on_commit=False) as session:
         session.add(account)
@@ -138,10 +143,10 @@ def test_balance_adjustment_is_a_real_transaction_and_can_be_voided() -> None:
         assert session.get(Transaction, transaction.id).voided_at is not None
 
 
-def test_transfer_updates_both_accounts_atomically() -> None:
+def test_transfer_updates_both_accounts_atomically(tmp_path: Path) -> None:
     """验证转账同时影响两个账户且总余额不变。"""
 
-    engine = make_engine()
+    engine = make_engine(tmp_path / "transfer.sqlite3")
     source = Account(type=AccountType.CREDIT, name="转出账户")
     destination = Account(type=AccountType.CREDIT, name="转入账户")
     with Session(engine, expire_on_commit=False) as session:
@@ -185,10 +190,12 @@ def test_transfer_updates_both_accounts_atomically() -> None:
         assert sum(balances.values()) == 1200
 
 
-def test_failed_atomic_post_does_not_leave_transaction_or_balance_change() -> None:
+def test_failed_atomic_post_does_not_leave_transaction_or_balance_change(
+    tmp_path: Path,
+) -> None:
     """验证同一事务失败时交易和余额一起回滚。"""
 
-    engine = make_engine()
+    engine = make_engine(tmp_path / "atomic.sqlite3")
     account = Account(type=AccountType.CREDIT, name="回滚账户")
     with Session(engine, expire_on_commit=False) as session:
         session.add(account)
@@ -219,10 +226,43 @@ def test_failed_atomic_post_does_not_leave_transaction_or_balance_change() -> No
         assert session.exec(select(func.count()).select_from(Transaction)).one() == 0
 
 
-def test_ledger_writes_require_an_explicit_transaction() -> None:
+def test_debit_overdraft_rolls_back_transaction_and_balance(tmp_path: Path) -> None:
+    """验证借记账户余额不足时交易与余额投影一起回滚。"""
+
+    engine = make_engine(tmp_path / "overdraft.sqlite3")
+    account = Account(type=AccountType.DEBIT, name="借记账户")
+    with Session(engine, expire_on_commit=False) as session:
+        session.add(account)
+        session.commit()
+        with session.begin():
+            post_balance_adjustment(
+                session,
+                adjustment_request(
+                    account.id,
+                    BalanceAdjustmentDirection.INCREASE,
+                    amount=1,
+                ),
+            )
+
+        expense = Transaction(
+            type=TransactionType.EXPENSE,
+            src_account_id=account.id,
+            amount_minor=200,
+            occurred_at=datetime.now(UTC),
+        )
+        with pytest.raises(IntegrityError), session.begin():
+            post_transaction(session, expense)
+
+        refreshed_account = session.get(Account, account.id)
+        assert refreshed_account is not None
+        assert refreshed_account.amount_minor == 100
+        assert session.exec(select(func.count()).select_from(Transaction)).one() == 1
+
+
+def test_ledger_writes_require_an_explicit_transaction(tmp_path: Path) -> None:
     """验证账本服务不会在缺少事务边界时写入半成品。"""
 
-    engine = make_engine()
+    engine = make_engine(tmp_path / "explicit.sqlite3")
     account = Account(type=AccountType.CREDIT, name="事务边界账户")
     with Session(engine, expire_on_commit=False) as session:
         session.add(account)

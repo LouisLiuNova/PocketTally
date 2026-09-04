@@ -7,8 +7,10 @@ from datetime import UTC, datetime
 
 from fastapi import FastAPI
 from loguru import logger
+from sqlalchemy import Engine
 
 from app.config import Settings
+from app.database import create_database_engine, initialize_database
 from app.logging import configure_logging
 
 
@@ -17,6 +19,7 @@ class AppResources:
     """创建一次并由请求依赖共享的资源。"""
 
     started_at: datetime
+    engine: Engine
     ready: bool = False
 
 
@@ -35,17 +38,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # 测试运行器负责临时输出流，避免替换其日志接收器。
     if settings.environment != "test":
         configure_logging(settings)
-    resources = AppResources(started_at=datetime.now(UTC))
+    engine = create_database_engine(settings.database_path)
+    resources = AppResources(started_at=datetime.now(UTC), engine=engine)
     app.state.resources = resources
 
     logger.info("Application startup begins")
     try:
-        # 在此初始化数据库连接池、客户端和缓存。
+        initialize_database(engine)
         resources.ready = True
         logger.info("Application startup complete")
         yield
     finally:
         resources.ready = False
         logger.info("Application shutdown begins")
-        # 在此按初始化的逆序关闭资源。
+        engine.dispose()
         logger.info("Application shutdown complete")

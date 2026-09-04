@@ -158,8 +158,8 @@ def test_schema_server_defaults_and_triggers_keep_audit_values_current() -> None
         connection.close()
 
 
-def test_schema_rebuilds_balance_projection_from_transactions() -> None:
-    """验证余额调整、作废和直接余额改写都以交易记录为准。"""
+def test_schema_leaves_balance_projection_to_ledger_service() -> None:
+    """验证 DDL 不通过跨表触发器维护余额投影。"""
 
     connection = create_connection()
     try:
@@ -177,18 +177,11 @@ def test_schema_rebuilds_balance_projection_from_transactions() -> None:
         )
         assert connection.execute(
             "SELECT amount_minor FROM accounts WHERE id = 'account-1'"
-        ).fetchone()[0] == 250
+        ).fetchone()[0] == 0
 
         connection.execute(
             "UPDATE transactions SET voided_at = '2026-08-25 12:00:00' "
             "WHERE id = 'adjustment-1'"
-        )
-        assert connection.execute(
-            "SELECT amount_minor FROM accounts WHERE id = 'account-1'"
-        ).fetchone()[0] == 0
-
-        connection.execute(
-            "UPDATE accounts SET amount_minor = 999 WHERE id = 'account-1'"
         )
         assert connection.execute(
             "SELECT amount_minor FROM accounts WHERE id = 'account-1'"
@@ -201,6 +194,21 @@ def test_schema_rebuilds_balance_projection_from_transactions() -> None:
                 "VALUES ('invalid-adjustment', 'balance_adjustment', 'account-1', "
                 "100, '2026-08-24 12:00:00')"
             )
+
+        trigger_names = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'trigger'"
+            )
+        }
+        assert trigger_names.isdisjoint(
+            {
+                "tr_transactions_sync_account_balances_insert",
+                "tr_transactions_sync_account_balances_update",
+                "tr_transactions_sync_account_balances_delete",
+                "tr_accounts_rebuild_amount_projection",
+            }
+        )
     finally:
         connection.close()
 

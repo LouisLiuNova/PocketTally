@@ -1,9 +1,11 @@
 """可复用的 FastAPI 依赖及其类型别名。"""
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Annotated
 
 from fastapi import Depends, Request
+from sqlmodel import Session
 
 from app.config import Settings, get_settings
 from app.lifespan import AppResources
@@ -30,6 +32,26 @@ def get_resources(request: Request) -> AppResources:
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 ResourcesDep = Annotated[AppResources, Depends(get_resources)]
+
+
+def get_session(resources: ResourcesDep) -> Iterator[Session]:
+    """提供提交或回滚由请求结果决定的数据库会话。
+
+    Args:
+        resources: 包含共享数据库 Engine 的应用资源。
+
+    Yields:
+        当前请求独占的数据库 Session。
+    """
+
+    with (
+        Session(resources.engine, expire_on_commit=False) as session,
+        session.begin(),
+    ):
+        yield session
+
+
+SessionDep = Annotated[Session, Depends(get_session, scope="function")]
 
 
 @dataclass(frozen=True, slots=True)

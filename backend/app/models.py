@@ -31,18 +31,22 @@ def new_id() -> str:
     return str(uuid4())
 
 
-def timestamp_column() -> Column[datetime]:
+def timestamp_column(*, update_on_change: bool = False) -> Column[datetime]:
     """创建使用 SQLite 约定默认值的时间戳列。
+
+    Args:
+        update_on_change: 是否在 ORM 更新记录时生成新的时间戳。
 
     Returns:
         一个非空的 SQLAlchemy 时间戳列，其默认值为当前时间。
     """
 
+    options = {"onupdate": func.current_timestamp()} if update_on_change else {}
     return Column(
         DateTime,
         nullable=False,
         server_default=text("CURRENT_TIMESTAMP"),
-        onupdate=func.current_timestamp(),
+        **options,
     )
 
 
@@ -121,7 +125,7 @@ class Account(SQLModel, table=True):
         sa_column=Column(Integer, nullable=False, server_default=text("0")),
     )
     created_at: datetime = Field(sa_column=timestamp_column())
-    updated_at: datetime = Field(sa_column=timestamp_column())
+    updated_at: datetime = Field(sa_column=timestamp_column(update_on_change=True))
 
     source_transactions: list[Transaction] = Relationship(
         sa_relationship=relationship(
@@ -166,7 +170,7 @@ class Category(SQLModel, table=True):
                          server_default=text("'default_icon'")),
     )
     created_at: datetime = Field(sa_column=timestamp_column())
-    updated_at: datetime = Field(sa_column=timestamp_column())
+    updated_at: datetime = Field(sa_column=timestamp_column(update_on_change=True))
 
     parent_category: Category | None = Relationship(
         sa_relationship=relationship(
@@ -218,7 +222,7 @@ class Tag(SQLModel, table=True):
                          server_default=text("'#ff0000'")),
     )
     created_at: datetime = Field(sa_column=timestamp_column())
-    updated_at: datetime = Field(sa_column=timestamp_column())
+    updated_at: datetime = Field(sa_column=timestamp_column(update_on_change=True))
     transactions: list[Transaction] = Relationship(
         back_populates="tags",
         link_model=TransactionTag,
@@ -304,7 +308,7 @@ class Transaction(SQLModel, table=True):
     )
     occurred_at: datetime = Field(sa_column=Column(DateTime, nullable=False))
     created_at: datetime = Field(sa_column=timestamp_column())
-    updated_at: datetime = Field(sa_column=timestamp_column())
+    updated_at: datetime = Field(sa_column=timestamp_column(update_on_change=True))
 
     source_account: Account | None = Relationship(
         sa_relationship=relationship(
