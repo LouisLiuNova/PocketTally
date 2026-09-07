@@ -66,6 +66,13 @@ class AccountType(StrEnum):
     CREDIT = "credit"
 
 
+class CategoryPurpose(StrEnum):
+    """分类可用于的交易用途。"""
+
+    INCOME = "income"
+    EXPENSE = "expense"
+
+
 class BalanceAdjustmentDirection(StrEnum):
     """余额调整的资金方向。"""
 
@@ -152,6 +159,18 @@ class Category(SQLModel, table=True):
                     sa_column=Column(Text, primary_key=True))
     name: str = Field(
         sa_column=Column(Text(collation="NOCASE"), nullable=False, unique=True)
+    )
+    purpose: CategoryPurpose = Field(
+        sa_column=Column(
+            SQLAlchemyEnum(
+                CategoryPurpose,
+                values_callable=enum_values,
+                native_enum=False,
+                create_constraint=True,
+                name="category_purpose",
+            ),
+            nullable=False,
+        )
     )
     description: str | None = Field(default=None, sa_column=Column(Text))
     parent_category_id: str | None = Field(
@@ -350,6 +369,7 @@ __all__ = (
     "AccountType",
     "BalanceAdjustmentDirection",
     "Category",
+    "CategoryPurpose",
     "Tag",
     "Transaction",
     "TransactionTag",

@@ -38,6 +38,7 @@ Table transactions{
 Table categories{
     id TEXT [pk,note:'UUID']
     name TEXT [notnull,unique,note:'分类名称，按 SQLite NOCASE 规则全局唯一']
+    purpose TEXT [notnull,note:'分类用途枚举: income 收入分类, expense 支出分类；创建后不可修改']
     description TEXT [note:'分类描述']
     parent_category_id TEXT [note:'父分类ID,用于构建分类树结构.如果为空,则表示该分类为顶级分类']
     icon_color TEXT [notnull,default: '#ff0000',note:'分类图标颜色,使用HEX颜色值表示']

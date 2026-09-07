@@ -24,6 +24,10 @@
       "type": "string",
       "enum": ["debit", "credit"]
     },
+    "categoryPurpose": {
+      "type": "string",
+      "enum": ["income", "expense"]
+    },
     "nullableString": {
       "type": ["string", "null"]
     },
@@ -45,10 +49,11 @@
     "categorySummary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "name", "iconColor", "iconName"],
+      "required": ["id", "name", "purpose", "iconColor", "iconName"],
       "properties": {
         "id": { "$ref": "#/$defs/uuid" },
         "name": { "type": "string", "minLength": 1 },
+        "purpose": { "$ref": "#/$defs/categoryPurpose" },
         "iconColor": { "$ref": "#/$defs/hexColor" },
         "iconName": { "type": "string", "minLength": 1 }
       }

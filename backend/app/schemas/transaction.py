@@ -51,11 +51,14 @@ class TransactionCreate(ContractModel):
     """创建交易的请求模型。"""
 
     type: TransactionType
-    source_account_id: UUID
+    source_account_id: UUID | None = None
     destination_account_id: UUID | None = None
     amount: MoneyAmount = Field(json_schema_extra={"exclusiveMinimum": 0})
     description: str | None = None
-    category_id: UUID
+    category_id: UUID | None = Field(
+        default=None,
+        description="普通收入和支出必填；转账和余额调整必须为空。",
+    )
     tag_ids: list[UUID] = Field(
         default_factory=list,
         json_schema_extra={"uniqueItems": True},
@@ -91,14 +94,19 @@ class TransactionCreate(ContractModel):
         return value
 
     @model_validator(mode="after")
-    def validate_balance_adjustment_direction(self) -> Self:
-        """确保余额调整明确方向，普通交易不携带余额调整方向。"""
+    def validate_type_specific_fields(self) -> Self:
+        """确保余额调整方向和分类符合交易类型的请求形状。"""
 
         has_direction = self.balance_adjustment_direction is not None
         if self.type is TransactionType.BALANCE_ADJUSTMENT and not has_direction:
             raise ValueError("余额调整必须指定增加或减少方向")
         if self.type is not TransactionType.BALANCE_ADJUSTMENT and has_direction:
             raise ValueError("只有余额调整交易可以指定余额调整方向")
+        uses_category = self.type in {TransactionType.INCOME, TransactionType.EXPENSE}
+        if uses_category and self.category_id is None:
+            raise ValueError("普通收入和支出交易必须指定分类")
+        if not uses_category and self.category_id is not None:
+            raise ValueError("转账和余额调整不能指定分类")
         return self
 
     def to_orm_kwargs(self) -> dict[str, Any]:
@@ -115,7 +123,7 @@ class TransactionCreate(ContractModel):
             "dest_account_id": _uuid_to_string(self.destination_account_id),
             "amount_minor": amount_to_minor(self.amount),
             "description": self.description,
-            "category": str(self.category_id),
+            "category": _uuid_to_string(self.category_id),
             "is_refund": self.is_refund,
             "related_transaction_id": _uuid_to_string(self.related_transaction_id),
             "balance_adjustment_direction": self.balance_adjustment_direction,
@@ -173,14 +181,17 @@ class TransactionUpdate(UpdateModel):
     """部分更新交易的请求模型。"""
 
     type: TransactionType = None
-    source_account_id: UUID = None
+    source_account_id: UUID | None = None
     destination_account_id: UUID | None = None
     amount: MoneyAmount = Field(
         default=None,
         json_schema_extra={"exclusiveMinimum": 0},
     )
     description: str | None = None
-    category_id: UUID = None
+    category_id: UUID | None = Field(
+        default=None,
+        description="合并完整状态后，普通收入和支出必填；转账和余额调整必须为空。",
+    )
     tag_ids: list[UUID] = Field(
         default=None,
         json_schema_extra={"uniqueItems": True},

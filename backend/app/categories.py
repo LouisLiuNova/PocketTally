@@ -2,9 +2,9 @@
 
 from enum import StrEnum
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
-from app.models import Category
+from app.models import Category, CategoryPurpose
 
 
 class CategoryHierarchyErrorCode(StrEnum):
@@ -13,12 +13,16 @@ class CategoryHierarchyErrorCode(StrEnum):
     PARENT_NOT_FOUND = "category_parent_not_found"
     SELF_PARENT = "category_self_parent"
     CYCLE_DETECTED = "category_cycle_detected"
+    PURPOSE_IMMUTABLE = "category_purpose_immutable"
+    PURPOSE_MISMATCH = "category_purpose_mismatch"
+    SUBTREE_MOVE_CONFIRMATION_REQUIRED = "category_subtree_move_confirmation_required"
+    SUBTREE_PURPOSE_MISMATCH = "category_subtree_purpose_mismatch"
     UNSUPPORTED_FIELD = "category_unsupported_field"
     TRANSACTION_REQUIRED = "category_transaction_required"
 
 
 class CategoryHierarchyError(ValueError):
-    """分类父子关系不符合树结构约束。"""
+    """分类写入不符合树结构或用途约束。"""
 
     def __init__(self, code: CategoryHierarchyErrorCode, message: str) -> None:
         """初始化带稳定错误码的分类层级异常。
@@ -113,6 +117,80 @@ def validate_category_hierarchy(
         current_id = current.parent_category_id
 
 
+def _validate_parent_purpose(
+    session: Session,
+    *,
+    purpose: CategoryPurpose,
+    parent_category_id: str | None,
+) -> None:
+    """验证父分类存在且用途与当前分类一致。
+
+    Args:
+        session: 当前数据库会话。
+        purpose: 当前分类的不可变用途。
+        parent_category_id: 候选父分类 ID。
+
+    Raises:
+        CategoryHierarchyError: 父分类不存在或用途不一致时抛出。
+    """
+
+    if parent_category_id is None:
+        return
+    parent = session.get(Category, parent_category_id)
+    if parent is None:
+        raise CategoryHierarchyError(
+            CategoryHierarchyErrorCode.PARENT_NOT_FOUND,
+            f"父分类不存在: {parent_category_id}",
+        )
+    if parent.purpose != purpose:
+        raise CategoryHierarchyError(
+            CategoryHierarchyErrorCode.PURPOSE_MISMATCH,
+            "父分类和子分类的用途必须相同",
+        )
+
+
+def _validate_subtree_purpose(session: Session, category: Category) -> bool:
+    """验证分类子树用途一致，并返回该节点是否包含子分类。
+
+    Args:
+        session: 当前数据库会话。
+        category: 待检查子树的根分类。
+
+    Returns:
+        子树根节点是否至少包含一个直接子分类。
+
+    Raises:
+        CategoryHierarchyError: 子树包含循环或用途不一致时抛出。
+    """
+
+    visited_ids = {category.id}
+    pending_ids = [category.id]
+    has_children = False
+    while pending_ids:
+        parent_id = pending_ids.pop()
+        children = list(
+            session.exec(
+                select(Category).where(Category.parent_category_id == parent_id)
+            )
+        )
+        if parent_id == category.id and children:
+            has_children = True
+        for child in children:
+            if child.id in visited_ids:
+                raise CategoryHierarchyError(
+                    CategoryHierarchyErrorCode.CYCLE_DETECTED,
+                    "现有分类子树包含循环引用",
+                )
+            visited_ids.add(child.id)
+            if child.purpose != category.purpose:
+                raise CategoryHierarchyError(
+                    CategoryHierarchyErrorCode.SUBTREE_PURPOSE_MISMATCH,
+                    "现有分类子树内部用途不一致",
+                )
+            pending_ids.append(child.id)
+    return has_children
+
+
 def create_category(session: Session, category: Category) -> Category:
     """校验并写入一个分类。
 
@@ -136,6 +214,11 @@ def create_category(session: Session, category: Category) -> Category:
         category_id=category.id,
         parent_category_id=category.parent_category_id,
     )
+    _validate_parent_purpose(
+        session,
+        purpose=category.purpose,
+        parent_category_id=category.parent_category_id,
+    )
     session.add(category)
     session.flush()
     return category
@@ -144,6 +227,8 @@ def create_category(session: Session, category: Category) -> Category:
 def update_category(
     session: Session,
     category: Category,
+    *,
+    confirm_subtree_move: bool = False,
     **changes: object,
 ) -> Category:
     """校验分类的完整候选状态并更新分类。
@@ -154,16 +239,22 @@ def update_category(
     Args:
         session: 当前数据库会话。
         category: 已加载的待更新分类。
+        confirm_subtree_move: 含子分类节点移动时的显式确认标记。
         **changes: 要更新的分类字段。
 
     Returns:
         已更新并刷新的分类实例。
 
     Raises:
-        CategoryHierarchyError: 缺少事务、字段不支持或候选层级不合法时抛出。
+        CategoryHierarchyError: 缺少事务、用途变更、移动未确认或候选层级不合法时抛出。
     """
 
     _require_transaction(session)
+    if "purpose" in changes:
+        raise CategoryHierarchyError(
+            CategoryHierarchyErrorCode.PURPOSE_IMMUTABLE,
+            "分类用途创建后不可修改",
+        )
     unsupported_fields = changes.keys() - _UPDATABLE_FIELDS
     if unsupported_fields:
         names = ", ".join(sorted(unsupported_fields))
@@ -186,6 +277,23 @@ def update_category(
         category_id=category.id,
         parent_category_id=parent_category_id,
     )
+    _validate_parent_purpose(
+        session,
+        purpose=category.purpose,
+        parent_category_id=parent_category_id,
+    )
+
+    is_move = (
+        "parent_category_id" in changes
+        and parent_category_id != category.parent_category_id
+    )
+    if is_move:
+        has_children = _validate_subtree_purpose(session, category)
+        if has_children and not confirm_subtree_move:
+            raise CategoryHierarchyError(
+                CategoryHierarchyErrorCode.SUBTREE_MOVE_CONFIRMATION_REQUIRED,
+                "移动含子分类的节点必须显式确认整棵子树移动",
+            )
 
     for field_name, value in changes.items():
         setattr(category, field_name, value)

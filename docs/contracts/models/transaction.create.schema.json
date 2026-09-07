@@ -5,10 +5,30 @@
   "description": "Payload for creating a transaction. Relationships are represented by IDs.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["type", "sourceAccountId", "amount", "categoryId", "occurredAt"],
+  "required": ["type", "amount", "occurredAt"],
+  "allOf": [
+    {
+      "if": { "properties": { "type": { "enum": ["income", "expense"] } } },
+      "then": {
+        "required": ["categoryId"],
+        "properties": {
+          "categoryId": { "$ref": "common.schema.json#/$defs/uuid" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "enum": ["transfer", "balance_adjustment"] } } },
+      "then": { "properties": { "categoryId": { "type": "null" } } }
+    }
+  ],
   "properties": {
     "type": { "$ref": "common.schema.json#/$defs/transactionType" },
-    "sourceAccountId": { "$ref": "common.schema.json#/$defs/uuid" },
+    "sourceAccountId": {
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/uuid" },
+        { "type": "null" }
+      ]
+    },
     "destinationAccountId": {
       "oneOf": [
         { "$ref": "common.schema.json#/$defs/uuid" },
@@ -21,7 +41,13 @@
       "description": "CNY 金额；按 ROUND_HALF_UP 舍入到分后必须仍为正数。"
     },
     "description": { "$ref": "common.schema.json#/$defs/nullableString" },
-    "categoryId": { "$ref": "common.schema.json#/$defs/uuid" },
+    "categoryId": {
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/uuid" },
+        { "type": "null" }
+      ],
+      "description": "普通收入和支出必填；转账和余额调整必须为空。"
+    },
     "tagIds": {
       "type": "array",
       "items": { "$ref": "common.schema.json#/$defs/uuid" },

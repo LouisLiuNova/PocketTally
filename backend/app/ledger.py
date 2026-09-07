@@ -9,6 +9,8 @@ from sqlmodel import Session, select
 from app.models import (
     Account,
     BalanceAdjustmentDirection,
+    Category,
+    CategoryPurpose,
     Transaction,
     TransactionType,
 )
@@ -118,6 +120,41 @@ def _require_transaction(session: Session) -> None:
         raise LedgerError("账本写入必须在显式数据库事务中执行")
 
 
+def validate_transaction_category(
+    session: Session,
+    transaction: Transaction,
+) -> None:
+    """验证完整交易状态中的分类必填性和用途匹配。
+
+    Args:
+        session: 当前数据库会话。
+        transaction: 待创建或更新的完整交易状态。
+
+    Raises:
+        LedgerError: 分类缺失、不存在、用途不匹配或不应出现时抛出。
+    """
+
+    try:
+        transaction_type = TransactionType(transaction.type)
+    except ValueError as error:
+        raise LedgerError(f"不支持的交易类型: {transaction.type}") from error
+    required_purpose = {
+        TransactionType.INCOME: CategoryPurpose.INCOME,
+        TransactionType.EXPENSE: CategoryPurpose.EXPENSE,
+    }.get(transaction_type)
+    if required_purpose is None:
+        if transaction.category is not None:
+            raise LedgerError("转账和余额调整不能引用分类")
+        return
+    if transaction.category is None:
+        raise LedgerError("普通收入和支出交易必须引用分类")
+    category = session.get(Category, transaction.category)
+    if category is None:
+        raise LedgerError("交易引用了不存在的分类")
+    if category.purpose != required_purpose:
+        raise LedgerError("交易类型与分类用途不匹配")
+
+
 def recalculate_account_balances(
     session: Session,
     account_ids: Iterable[str] | None = None,
@@ -171,6 +208,7 @@ def post_transaction(session: Session, transaction: Transaction) -> Transaction:
     if transaction.voided_at is not None:
         raise LedgerError("不能直接写入已作废交易")
     postings = transaction_postings(transaction)
+    validate_transaction_category(session, transaction)
     account_ids = {posting.account_id for posting in postings}
     if account_ids:
         existing_account_ids = {
@@ -234,6 +272,7 @@ def update_transaction(
             raise LedgerError(f"不支持更新交易字段: {field_name}")
         setattr(transaction, field_name, value)
     new_postings = transaction_postings(transaction)
+    validate_transaction_category(session, transaction)
     session.add(transaction)
     session.flush()
     recalculate_account_balances(
@@ -282,5 +321,6 @@ __all__ = (
     "recalculate_account_balances",
     "transaction_postings",
     "update_transaction",
+    "validate_transaction_category",
     "void_transaction",
 )

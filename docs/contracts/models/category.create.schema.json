@@ -5,9 +5,10 @@
   "description": "Payload for creating a category. Relationships are represented by IDs.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["name"],
+  "required": ["name", "purpose"],
   "properties": {
     "name": { "type": "string", "minLength": 1 },
+    "purpose": { "$ref": "common.schema.json#/$defs/categoryPurpose" },
     "description": { "$ref": "common.schema.json#/$defs/nullableString" },
     "parentCategoryId": {
       "oneOf": [

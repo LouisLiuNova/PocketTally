@@ -5,10 +5,11 @@
   "description": "Category returned by the HTTP API. The parent is embedded as a bounded summary.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "name", "description", "parentCategory", "iconColor", "iconName", "createdAt", "updatedAt"],
+  "required": ["id", "name", "purpose", "description", "parentCategory", "iconColor", "iconName", "createdAt", "updatedAt"],
   "properties": {
     "id": { "$ref": "common.schema.json#/$defs/uuid" },
     "name": { "type": "string", "minLength": 1 },
+    "purpose": { "$ref": "common.schema.json#/$defs/categoryPurpose" },
     "description": { "$ref": "common.schema.json#/$defs/nullableString" },
     "parentCategory": {
       "oneOf": [

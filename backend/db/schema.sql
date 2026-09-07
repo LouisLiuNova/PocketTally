@@ -7,6 +7,7 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE categories (
     id TEXT PRIMARY KEY NOT NULL,
     name TEXT COLLATE NOCASE NOT NULL UNIQUE,
+    purpose TEXT NOT NULL CHECK (purpose IN ('income', 'expense')),
     description TEXT,
     parent_category_id TEXT,
     icon_color TEXT NOT NULL DEFAULT '#ff0000',
@@ -104,7 +105,7 @@ BEGIN
 END;
 
 CREATE TRIGGER tr_categories_updated_at
-AFTER UPDATE OF name, description, parent_category_id, icon_color, icon_name ON categories
+AFTER UPDATE OF name, purpose, description, parent_category_id, icon_color, icon_name ON categories
 FOR EACH ROW
 BEGIN
     UPDATE categories SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;

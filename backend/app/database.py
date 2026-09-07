@@ -24,7 +24,7 @@ UPDATED_AT_TRIGGERS = (
     """,
     """
     CREATE TRIGGER IF NOT EXISTS tr_categories_updated_at
-    AFTER UPDATE OF name, description, parent_category_id, icon_color, icon_name
+    AFTER UPDATE OF name, purpose, description, parent_category_id, icon_color, icon_name
     ON categories
     FOR EACH ROW BEGIN
         UPDATE categories SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;

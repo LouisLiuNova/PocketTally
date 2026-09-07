@@ -22,6 +22,8 @@ from app.models import (
     Account,
     AccountType,
     BalanceAdjustmentDirection,
+    Category,
+    CategoryPurpose,
     Transaction,
     TransactionType,
 )
@@ -248,8 +250,17 @@ def test_debit_overdraft_rolls_back_transaction_and_balance(tmp_path: Path) -> N
             type=TransactionType.EXPENSE,
             src_account_id=account.id,
             amount_minor=200,
+            category="expense-category",
             occurred_at=datetime.now(UTC),
         )
+        session.add(
+            Category(
+                id="expense-category",
+                name="支出分类",
+                purpose=CategoryPurpose.EXPENSE,
+            )
+        )
+        session.commit()
         with pytest.raises(IntegrityError), session.begin():
             post_transaction(session, expense)
 
@@ -276,3 +287,102 @@ def test_ledger_writes_require_an_explicit_transaction(tmp_path: Path) -> None:
                     BalanceAdjustmentDirection.INCREASE,
                 ),
             )
+
+
+def test_ledger_enforces_category_required_and_purpose_match(tmp_path: Path) -> None:
+    """验证收入和支出必须引用用途匹配且存在的分类。"""
+
+    engine = make_engine(tmp_path / "transaction-category.sqlite3")
+    account = Account(type=AccountType.CREDIT, name="分类校验账户")
+    income_category = Category(
+        name="工资",
+        purpose=CategoryPurpose.INCOME,
+    )
+    expense_category = Category(
+        name="餐饮",
+        purpose=CategoryPurpose.EXPENSE,
+    )
+    with Session(engine, expire_on_commit=False) as session:
+        session.add_all([account, income_category, expense_category])
+        session.commit()
+
+        income = Transaction(
+            type=TransactionType.INCOME,
+            dest_account_id=account.id,
+            amount_minor=1000,
+            category=income_category.id,
+            occurred_at=datetime.now(UTC),
+        )
+        with session.begin():
+            post_transaction(session, income)
+
+        invalid_transactions = (
+            Transaction(
+                type=TransactionType.EXPENSE,
+                src_account_id=account.id,
+                amount_minor=100,
+                category=income_category.id,
+                occurred_at=datetime.now(UTC),
+            ),
+            Transaction(
+                type=TransactionType.EXPENSE,
+                src_account_id=account.id,
+                amount_minor=100,
+                category=None,
+                occurred_at=datetime.now(UTC),
+            ),
+            Transaction(
+                type=TransactionType.EXPENSE,
+                src_account_id=account.id,
+                amount_minor=100,
+                category="missing-category",
+                occurred_at=datetime.now(UTC),
+            ),
+            Transaction(
+                type=TransactionType.TRANSFER,
+                src_account_id=account.id,
+                dest_account_id=str(uuid4()),
+                amount_minor=100,
+                category=expense_category.id,
+                occurred_at=datetime.now(UTC),
+            ),
+        )
+        for invalid in invalid_transactions:
+            with pytest.raises(LedgerError), session.begin():
+                post_transaction(session, invalid)
+
+        assert session.exec(select(func.count()).select_from(Transaction)).one() == 1
+
+
+def test_transaction_update_revalidates_category_against_complete_state(
+    tmp_path: Path,
+) -> None:
+    """验证 PATCH 等价更新会基于合并后的完整交易状态重验分类。"""
+
+    engine = make_engine(tmp_path / "update-category.sqlite3")
+    account = Account(type=AccountType.CREDIT, name="更新分类账户")
+    expense_category = Category(name="餐饮", purpose=CategoryPurpose.EXPENSE)
+    with Session(engine, expire_on_commit=False) as session:
+        session.add_all([account, expense_category])
+        session.commit()
+        transaction = Transaction(
+            type=TransactionType.EXPENSE,
+            src_account_id=account.id,
+            amount_minor=100,
+            category=expense_category.id,
+            occurred_at=datetime.now(UTC),
+        )
+        with session.begin():
+            post_transaction(session, transaction)
+
+        with pytest.raises(LedgerError, match="分类用途不匹配"), session.begin():
+            update_transaction(
+                session,
+                transaction,
+                type=TransactionType.INCOME,
+                src_account_id=None,
+                dest_account_id=account.id,
+            )
+
+        session.refresh(transaction)
+        assert transaction.type is TransactionType.EXPENSE

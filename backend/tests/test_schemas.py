@@ -11,6 +11,7 @@ from app.models import (
     Account,
     AccountType,
     Category,
+    CategoryPurpose,
     Tag,
     Transaction,
     TransactionTag,
@@ -89,6 +90,7 @@ def test_generated_json_schema_keeps_contract_object_and_array_constraints() -> 
     """验证 JSON Schema 暴露契约要求的 PATCH 和数组约束。"""
 
     account_update_schema = AccountUpdate.model_json_schema()
+    category_create_schema = CategoryCreate.model_json_schema()
     transaction_create_schema = TransactionCreate.model_json_schema()
     transaction_read_schema = TransactionRead.model_json_schema()
 
@@ -100,6 +102,11 @@ def test_generated_json_schema_keeps_contract_object_and_array_constraints() -> 
         "credit",
     ]
     assert "amount" not in AccountCreate.model_json_schema()["properties"]
+    assert "purpose" in category_create_schema["required"]
+    assert category_create_schema["$defs"]["CategoryPurpose"]["enum"] == [
+        "income",
+        "expense",
+    ]
     assert "anyOf" in account_update_schema["properties"]["description"]
     assert transaction_create_schema["properties"]["tagIds"]["uniqueItems"] is True
     assert transaction_create_schema["properties"]["amount"]["exclusiveMinimum"] == 0
@@ -147,8 +154,20 @@ def test_write_models_convert_relationship_ids_to_orm_columns() -> None:
     }
     assert transaction.tag_ids_for_relation() == [str(tag_id)]
 
-    category = CategoryCreate.model_validate({"name": "餐饮"})
+    category = CategoryCreate.model_validate({"name": "餐饮", "purpose": "expense"})
+    assert category.purpose is CategoryPurpose.EXPENSE
+    assert category.to_orm_kwargs()["purpose"] is CategoryPurpose.EXPENSE
     assert category.to_orm_kwargs()["parent_category_id"] is None
+
+    move = CategoryUpdate.model_validate(
+        {"parentCategoryId": str(category_id), "confirmSubtreeMove": True}
+    )
+    assert move.confirm_subtree_move is True
+    assert move.to_orm_kwargs() == {"parent_category_id": str(category_id)}
+    with pytest.raises(ValidationError):
+        CategoryUpdate.model_validate({"purpose": "income"})
+    with pytest.raises(ValidationError):
+        CategoryCreate.model_validate({"name": "缺少用途"})
 
     with pytest.raises(ValidationError):
         TransactionCreate.model_validate(
@@ -219,7 +238,6 @@ def test_transaction_type_and_amount_constraints() -> None:
         "type": TransactionType.BALANCE_ADJUSTMENT,
         "sourceAccountId": str(uuid4()),
         "amount": 1,
-        "categoryId": str(uuid4()),
         "balanceAdjustmentDirection": "increase",
         "occurredAt": datetime.now(UTC).isoformat(),
     }
@@ -237,6 +255,17 @@ def test_transaction_type_and_amount_constraints() -> None:
         TransactionCreate.model_validate({**payload, "type": "未知类型"})
     with pytest.raises(ValidationError, match="必须指定增加或减少方向"):
         TransactionCreate.model_validate({**payload, "balanceAdjustmentDirection": None})
+    with pytest.raises(ValidationError, match="不能指定分类"):
+        TransactionCreate.model_validate({**payload, "categoryId": str(uuid4())})
+    with pytest.raises(ValidationError, match="必须指定分类"):
+        TransactionCreate.model_validate(
+            {
+                "type": "income",
+                "destinationAccountId": str(uuid4()),
+                "amount": 1,
+                "occurredAt": datetime.now(UTC).isoformat(),
+            }
+        )
     with pytest.raises(ValidationError, match="有限正数"):
         TransactionCreate.model_validate({**payload, "amount": 0})
     with pytest.raises(ValidationError, match="有限正数"):
@@ -291,6 +320,7 @@ def test_read_models_map_orm_fields_and_nested_relationships() -> None:
     category = Category(
         id=str(uuid4()),
         name="餐饮",
+        purpose=CategoryPurpose.EXPENSE,
         description=None,
         icon_color="#ff0000",
         icon_name="default_icon",
@@ -333,6 +363,7 @@ def test_read_models_map_orm_fields_and_nested_relationships() -> None:
     assert isinstance(account_response.id, UUID)
     assert account_response.model_dump(mode="json", by_alias=True)["createdAt"]
     assert category_response.parent_category is None
+    assert category_response.purpose is CategoryPurpose.EXPENSE
     assert tag_response.color == "#00ff00"
     assert transaction_response.category.id == UUID(category.id)
     assert transaction_response.tags[0].id == UUID(tag.id)

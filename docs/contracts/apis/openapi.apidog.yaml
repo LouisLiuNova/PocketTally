@@ -533,6 +533,11 @@ components:
       enum:
         - debit
         - credit
+    categoryPurpose:
+      type: string
+      enum:
+        - income
+        - expense
     account.read.schema:
       $schema: https://json-schema.org/draft/2020-12/schema
       $id: https://schemas.pockettally.app/models/account.read.schema.json
@@ -626,6 +631,7 @@ components:
       required:
         - id
         - name
+        - purpose
         - iconColor
         - iconName
       properties:
@@ -634,6 +640,8 @@ components:
         name:
           type: string
           minLength: 1
+        purpose:
+          $ref: '#/components/schemas/categoryPurpose'
         iconColor:
           $ref: '#/components/schemas/hexColor'
         iconName:
@@ -649,6 +657,7 @@ components:
       required:
         - id
         - name
+        - purpose
         - description
         - parentCategory
         - iconColor
@@ -661,6 +670,8 @@ components:
         name:
           type: string
           minLength: 1
+        purpose:
+          $ref: '#/components/schemas/categoryPurpose'
         description:
           $ref: '#/components/schemas/nullableString'
         parentCategory:
@@ -685,10 +696,13 @@ components:
       additionalProperties: false
       required:
         - name
+        - purpose
       properties:
         name:
           type: string
           minLength: 1
+        purpose:
+          $ref: '#/components/schemas/categoryPurpose'
         description:
           $ref: '#/components/schemas/nullableString'
         parentCategoryId:
@@ -706,7 +720,7 @@ components:
       $schema: https://json-schema.org/draft/2020-12/schema
       $id: https://schemas.pockettally.app/models/category.update.schema.json
       title: CategoryUpdate
-      description: Partial payload for updating a category. Relationships are represented by IDs.
+      description: Partial payload for updating a category. Purpose is immutable. Moving a node with children requires explicit confirmation.
       type: object
       additionalProperties: false
       minProperties: 1
@@ -725,6 +739,9 @@ components:
         iconName:
           type: string
           minLength: 1
+        confirmSubtreeMove:
+          type: boolean
+          description: Must be true when changing the parent of a category that has descendants.
     tag.read.schema:
       $schema: https://json-schema.org/draft/2020-12/schema
       $id: https://schemas.pockettally.app/models/tag.read.schema.json
@@ -948,15 +965,38 @@ components:
       additionalProperties: false
       required:
         - type
-        - sourceAccountId
         - amount
-        - categoryId
         - occurredAt
+      allOf:
+        - if:
+            properties:
+              type:
+                enum:
+                  - income
+                  - expense
+          then:
+            required:
+              - categoryId
+            properties:
+              categoryId:
+                $ref: '#/components/schemas/uuid'
+        - if:
+            properties:
+              type:
+                enum:
+                  - transfer
+                  - balance_adjustment
+          then:
+            properties:
+              categoryId:
+                type: 'null'
       properties:
         type:
           $ref: '#/components/schemas/transactionType'
         sourceAccountId:
-          $ref: '#/components/schemas/uuid'
+          oneOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
         destinationAccountId:
           oneOf:
             - $ref: '#/components/schemas/uuid'
@@ -968,7 +1008,10 @@ components:
         description:
           $ref: '#/components/schemas/nullableString'
         categoryId:
-          $ref: '#/components/schemas/uuid'
+          oneOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+          description: 普通收入和支出必填；转账和余额调整必须为空。
         tagIds:
           type: array
           items:
@@ -1001,7 +1044,9 @@ components:
         type:
           $ref: '#/components/schemas/transactionType'
         sourceAccountId:
-          $ref: '#/components/schemas/uuid'
+          oneOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
         destinationAccountId:
           oneOf:
             - $ref: '#/components/schemas/uuid'
@@ -1013,7 +1058,10 @@ components:
         description:
           $ref: '#/components/schemas/nullableString'
         categoryId:
-          $ref: '#/components/schemas/uuid'
+          oneOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+          description: PATCH 合并完整状态后，普通收入和支出必填；转账和余额调整必须为空。
         tagIds:
           type: array
           items:

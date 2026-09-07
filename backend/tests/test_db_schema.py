@@ -37,10 +37,14 @@ def test_schema_normalizes_tags_and_enforces_unique_names() -> None:
                 "INSERT INTO accounts (id, type, name) VALUES ('account-2', 'debit', 'wallet')"
             )
 
-        connection.execute("INSERT INTO categories (id, name) VALUES ('category-1', '餐饮')")
+        connection.execute(
+            "INSERT INTO categories (id, name, purpose) "
+            "VALUES ('category-1', '餐饮', 'expense')"
+        )
         with pytest.raises(sqlite3.IntegrityError):
             connection.execute(
-                "INSERT INTO categories (id, name) VALUES ('category-2', '餐饮')"
+                "INSERT INTO categories (id, name, purpose) "
+                "VALUES ('category-2', '餐饮', 'expense')"
             )
 
         connection.execute("INSERT INTO tags (id, name) VALUES ('tag-1', '外卖')")
@@ -87,8 +91,18 @@ def test_schema_rejects_unknown_types_and_non_positive_amounts() -> None:
             "INSERT INTO accounts (id, type, name) VALUES ('account-1', 'debit', 'Wallet')"
         )
         connection.execute(
-            "INSERT INTO categories (id, name) VALUES ('category-1', '餐饮')"
+            "INSERT INTO categories (id, name, purpose) "
+            "VALUES ('category-1', '餐饮', 'expense')"
         )
+        with pytest.raises(sqlite3.IntegrityError):
+            connection.execute(
+                "INSERT INTO categories (id, name, purpose) "
+                "VALUES ('category-unknown', '未知用途', 'both')"
+            )
+        with pytest.raises(sqlite3.IntegrityError):
+            connection.execute(
+                "INSERT INTO categories (id, name) VALUES ('category-null', '空用途')"
+            )
 
         base_values = (
             "'transaction-1', 'expense', 'account-1', 1, 'category-1', "
@@ -230,10 +244,16 @@ def test_sqlmodel_declares_database_defaults_and_normalized_tag_link() -> None:
         transaction_tag_columns = connection.exec_driver_sql(
             "PRAGMA table_info(transaction_tags)"
         ).fetchall()
+        category_columns = {
+            row[1]: row[3]
+            for row in connection.exec_driver_sql("PRAGMA table_info(categories)")
+        }
 
     assert account_columns["amount_minor"] == "0"
     assert transaction_columns["is_refund"] == "0"
     assert app.models.Account.__table__.c.type.type.enums == ["debit", "credit"]
+    assert app.models.Category.__table__.c.purpose.type.enums == ["income", "expense"]
+    assert category_columns["purpose"] == 1
     assert any(
         isinstance(constraint, CheckConstraint)
         and str(constraint.sqltext) == "amount_minor > 0"
