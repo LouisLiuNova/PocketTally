@@ -63,8 +63,6 @@ class TransactionCreate(ContractModel):
         default_factory=list,
         json_schema_extra={"uniqueItems": True},
     )
-    is_refund: bool = False
-    related_transaction_id: UUID | None = None
     balance_adjustment_direction: BalanceAdjustmentDirection | None = None
     occurred_at: datetime
     @field_validator("amount", mode="before")
@@ -95,7 +93,7 @@ class TransactionCreate(ContractModel):
 
     @model_validator(mode="after")
     def validate_type_specific_fields(self) -> Self:
-        """确保余额调整方向和分类符合交易类型的请求形状。"""
+        """确保账户、分类和调整方向符合完整交易矩阵。"""
 
         has_direction = self.balance_adjustment_direction is not None
         if self.type is TransactionType.BALANCE_ADJUSTMENT and not has_direction:
@@ -107,6 +105,23 @@ class TransactionCreate(ContractModel):
             raise ValueError("普通收入和支出交易必须指定分类")
         if not uses_category and self.category_id is not None:
             raise ValueError("转账和余额调整不能指定分类")
+        if self.type is TransactionType.INCOME:
+            if self.source_account_id is not None or self.destination_account_id is None:
+                raise ValueError("收入交易必须只有目标账户")
+        elif self.type is TransactionType.EXPENSE:
+            if self.source_account_id is None or self.destination_account_id is not None:
+                raise ValueError("支出交易必须只有来源账户")
+        elif self.type is TransactionType.TRANSFER:
+            if (
+                self.source_account_id is None
+                or self.destination_account_id is None
+                or self.source_account_id == self.destination_account_id
+            ):
+                raise ValueError("转账必须使用两个不同的账户")
+        elif self.type is TransactionType.BALANCE_ADJUSTMENT and (
+            self.source_account_id is None or self.destination_account_id is not None
+        ):
+            raise ValueError("余额调整必须指定一个来源账户")
         return self
 
     def to_orm_kwargs(self) -> dict[str, Any]:
@@ -119,13 +134,11 @@ class TransactionCreate(ContractModel):
 
         return {
             "type": self.type,
-            "src_account_id": str(self.source_account_id),
+            "src_account_id": _uuid_to_string(self.source_account_id),
             "dest_account_id": _uuid_to_string(self.destination_account_id),
             "amount_minor": amount_to_minor(self.amount),
             "description": self.description,
             "category": _uuid_to_string(self.category_id),
-            "is_refund": self.is_refund,
-            "related_transaction_id": _uuid_to_string(self.related_transaction_id),
             "balance_adjustment_direction": self.balance_adjustment_direction,
             "occurred_at": self.occurred_at,
         }
@@ -170,8 +183,6 @@ class BalanceAdjustmentCreate(ContractModel):
             "amount_minor": amount_to_minor(self.amount),
             "description": self.description,
             "category": None,
-            "is_refund": False,
-            "related_transaction_id": None,
             "balance_adjustment_direction": self.direction,
             "occurred_at": self.occurred_at,
         }
@@ -196,8 +207,6 @@ class TransactionUpdate(UpdateModel):
         default=None,
         json_schema_extra={"uniqueItems": True},
     )
-    is_refund: bool = None
-    related_transaction_id: UUID | None = None
     balance_adjustment_direction: BalanceAdjustmentDirection | None = None
     occurred_at: datetime = None
     @field_validator("amount", mode="before")
@@ -238,7 +247,6 @@ class TransactionUpdate(UpdateModel):
             "source_account_id": "src_account_id",
             "destination_account_id": "dest_account_id",
             "category_id": "category",
-            "related_transaction_id": "related_transaction_id",
         }
         result: dict[str, Any] = {}
         for field_name, value in values.items():
@@ -313,6 +321,7 @@ class TransactionRead(ContractModel):
     is_refund: bool
     related_transaction: TransactionSummary | None
     balance_adjustment_direction: BalanceAdjustmentDirection | None
+    is_void: bool
     voided_at: datetime | None
     occurred_at: datetime
     created_at: datetime
@@ -354,6 +363,7 @@ class TransactionRead(ContractModel):
                     else None
                 ),
                 "balance_adjustment_direction": transaction.balance_adjustment_direction,
+                "is_void": transaction.is_void,
                 "voided_at": transaction.voided_at,
                 "occurred_at": transaction.occurred_at,
                 "created_at": transaction.created_at,

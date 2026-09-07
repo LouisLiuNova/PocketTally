@@ -349,6 +349,14 @@ paths:
       tags: [Transactions]
       operationId: listTransactions
       summary: List transactions
+      parameters:
+        - name: includeVoided
+          in: query
+          required: false
+          description: 是否包含已作废交易，默认仅返回有效交易。
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: Transactions returned successfully.
@@ -439,19 +447,24 @@ paths:
           $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/Error'
-    delete:
+  /transactions/{transactionId}/void:
+    parameters:
+      - $ref: '#/components/parameters/TransactionId'
+    post:
       tags: [Transactions]
-      operationId: deleteTransaction
-      summary: Delete a transaction
+      operationId: voidTransaction
+      summary: Void a transaction idempotently
       responses:
-        '204':
-          description: Transaction deleted successfully. No response body.
+        '200':
+          description: Transaction voided or existing void result returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: ../models/transaction.read.schema.json
         '422':
           $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/Error'
 

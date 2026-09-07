@@ -74,7 +74,7 @@ def test_extract_operations_rejects_invalid_contract() -> None:
 
 
 def test_implemented_api_status_codes_match_static_openapi() -> None:
-    """验证 Issue #12 路由与静态 OpenAPI 的响应状态完全一致。"""
+    """验证 Issue #4/#12 路由与静态 OpenAPI 的响应状态完全一致。"""
 
     design, _ = docs.validate_contracts()
     actual = docs.actual_openapi()
@@ -95,7 +95,10 @@ def test_implemented_api_status_codes_match_static_openapi() -> None:
         ("patch", "/tags/{tagId}"),
         ("delete", "/tags/{tagId}"),
         ("get", "/transactions"),
+        ("post", "/transactions"),
         ("get", "/transactions/{transactionId}"),
+        ("patch", "/transactions/{transactionId}"),
+        ("post", "/transactions/{transactionId}/void"),
     }
     actual_paths = {
         docs.normalize_path(path, ("/api/v1",)): value
@@ -109,6 +112,8 @@ def test_implemented_api_status_codes_match_static_openapi() -> None:
 
     error_properties = set(actual["components"]["schemas"]["ErrorResponse"]["properties"])
     assert error_properties == {"code", "message", "details"}
+    assert "delete" not in design["paths"]["/transactions/{transactionId}"]
+    assert "delete" not in actual_paths["/transactions/{transactionId}"]
 
 
 def test_parse_dbml_generates_table_and_relation() -> None:

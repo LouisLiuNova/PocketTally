@@ -5,7 +5,7 @@
   "description": "Transaction returned by the HTTP API. Relationships are embedded as bounded read summaries.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "type", "sourceAccount", "destinationAccount", "amount", "description", "category", "tags", "isRefund", "relatedTransaction", "balanceAdjustmentDirection", "voidedAt", "occurredAt", "createdAt", "updatedAt"],
+  "required": ["id", "type", "sourceAccount", "destinationAccount", "amount", "description", "category", "tags", "isRefund", "relatedTransaction", "balanceAdjustmentDirection", "isVoid", "voidedAt", "occurredAt", "createdAt", "updatedAt"],
   "properties": {
     "id": { "$ref": "common.schema.json#/$defs/uuid" },
     "type": { "$ref": "common.schema.json#/$defs/transactionType" },
@@ -51,6 +51,7 @@
         { "type": "null" }
       ]
     },
+    "isVoid": { "type": "boolean" },
     "voidedAt": {
       "oneOf": [
         { "$ref": "common.schema.json#/$defs/dateTime" },

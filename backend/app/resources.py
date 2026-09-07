@@ -218,7 +218,11 @@ def delete_tag(session: Session, tag: Tag) -> None:
     session.flush()
 
 
-def list_transactions(session: Session) -> list[Transaction]:
+def list_transactions(
+    session: Session,
+    *,
+    include_voided: bool = False,
+) -> list[Transaction]:
     """一次性预加载交易响应需要的全部有界关系。"""
 
     statement = (
@@ -232,6 +236,8 @@ def list_transactions(session: Session) -> list[Transaction]:
         )
         .order_by(Transaction.occurred_at.desc(), Transaction.created_at.desc())
     )
+    if not include_voided:
+        statement = statement.where(Transaction.is_void.is_(False))
     return list(session.exec(statement).unique())
 
 

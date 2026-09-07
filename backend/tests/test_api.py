@@ -1,5 +1,6 @@
-"""基础资源 CRUD 和交易读取 API 集成测试。"""
+"""基础资源 CRUD 和交易 API 集成测试。"""
 
+import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -279,6 +280,7 @@ async def test_transaction_reads_and_delete_conflicts_preserve_relations(
                 dest_account_id=str(destination["id"]),
                 amount_minor=100,
                 description="已作废转账",
+                is_void=True,
                 voided_at=datetime.now(UTC),
                 occurred_at=datetime.now(UTC),
             )
@@ -312,8 +314,13 @@ async def test_transaction_reads_and_delete_conflicts_preserve_relations(
                 record_statement,
             )
         assert listing.status_code == 200
-        assert len(listing.json()) == 3
+        assert len(listing.json()) == 2
         assert len(statements) == 2
+        audit_listing = await client.get(
+            "/api/v1/transactions", params={"includeVoided": "true"}
+        )
+        assert audit_listing.status_code == 200
+        assert len(audit_listing.json()) == 3
         detail = await client.get(f"/api/v1/transactions/{transaction_id}")
         assert detail.status_code == 200
         body = detail.json()
@@ -346,6 +353,7 @@ async def test_transaction_reads_and_delete_conflicts_preserve_relations(
             assert preserved_transfer is not None
             assert preserved_transfer.src_account_id == source["id"]
             assert preserved_transfer.dest_account_id == destination["id"]
+            assert preserved_transfer.is_void is True
             assert preserved_transfer.voided_at is not None
             assert session.get(TransactionTag, (transaction_id, tag["id"])) is not None
             preserved_child = session.get(Category, child["id"])
@@ -357,6 +365,185 @@ async def test_transaction_reads_and_delete_conflicts_preserve_relations(
         )
         assert missing_transaction.status_code == 404
         assert missing_transaction.json()["code"] == "transaction_not_found"
+
+
+@pytest.mark.asyncio
+async def test_transaction_write_patch_tags_and_idempotent_void(tmp_path: Path) -> None:
+    """验证四类交易写入、合并校验、标签语义和幂等作废。"""
+
+    app = create_app(
+        Settings(environment="test", database_path=tmp_path / "transactions.sqlite3")
+    )
+    async with (
+        app.router.lifespan_context(app),
+        AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client,
+    ):
+        source = await create_resource(
+            client, "/api/v1/accounts", {"type": "credit", "name": "来源"}
+        )
+        destination = await create_resource(
+            client, "/api/v1/accounts", {"type": "debit", "name": "目标"}
+        )
+        income_category = await create_resource(
+            client,
+            "/api/v1/categories",
+            {"name": "工资", "purpose": "income"},
+        )
+        expense_category = await create_resource(
+            client,
+            "/api/v1/categories",
+            {"name": "餐饮", "purpose": "expense"},
+        )
+        tag = await create_resource(client, "/api/v1/tags", {"name": "日常"})
+        occurred_at = datetime.now(UTC).isoformat()
+
+        adjustment = await client.post(
+            "/api/v1/transactions",
+            json={
+                "type": "balance_adjustment",
+                "sourceAccountId": source["id"],
+                "amount": 100,
+                "balanceAdjustmentDirection": "increase",
+                "occurredAt": occurred_at,
+            },
+        )
+        assert adjustment.status_code == 201, adjustment.text
+        assert adjustment.json()["isVoid"] is False
+        assert adjustment.json()["voidedAt"] is None
+
+        income = await client.post(
+            "/api/v1/transactions",
+            json={
+                "type": "income",
+                "destinationAccountId": destination["id"],
+                "amount": 5,
+                "categoryId": income_category["id"],
+                "occurredAt": occurred_at,
+            },
+        )
+        assert income.status_code == 201, income.text
+
+        expense = await client.post(
+            "/api/v1/transactions",
+            json={
+                "type": "expense",
+                "sourceAccountId": source["id"],
+                "amount": 12.5,
+                "categoryId": expense_category["id"],
+                "tagIds": [tag["id"]],
+                "occurredAt": occurred_at,
+            },
+        )
+        assert expense.status_code == 201, expense.text
+        expense_body = expense.json()
+        assert expense_body["tags"][0]["id"] == tag["id"]
+
+        transfer = await client.post(
+            "/api/v1/transactions",
+            json={
+                "type": "transfer",
+                "sourceAccountId": source["id"],
+                "destinationAccountId": destination["id"],
+                "amount": 20,
+                "occurredAt": occurred_at,
+            },
+        )
+        assert transfer.status_code == 201, transfer.text
+
+        forbidden_refund = await client.post(
+            "/api/v1/transactions",
+            json={
+                "type": "expense",
+                "sourceAccountId": source["id"],
+                "amount": 1,
+                "categoryId": expense_category["id"],
+                "isRefund": True,
+                "occurredAt": occurred_at,
+            },
+        )
+        assert forbidden_refund.status_code == 422
+
+        missing_tag = await client.patch(
+            f"/api/v1/transactions/{expense_body['id']}",
+            json={"tagIds": ["00000000-0000-0000-0000-000000000000"]},
+        )
+        assert missing_tag.status_code == 404
+        assert missing_tag.json()["code"] == "tag_not_found"
+
+        invalid_merged_state = await client.patch(
+            f"/api/v1/transactions/{expense_body['id']}",
+            json={"type": "transfer"},
+        )
+        assert invalid_merged_state.status_code == 422
+        preserved = await client.get(
+            f"/api/v1/transactions/{expense_body['id']}"
+        )
+        assert preserved.json()["type"] == "expense"
+        assert len(preserved.json()["tags"]) == 1
+
+        cleared = await client.patch(
+            f"/api/v1/transactions/{expense_body['id']}",
+            json={"tagIds": []},
+        )
+        assert cleared.status_code == 200, cleared.text
+        assert cleared.json()["tags"] == []
+
+        first_void = await client.post(
+            f"/api/v1/transactions/{expense_body['id']}/void"
+        )
+        assert first_void.status_code == 200, first_void.text
+        first_body = first_void.json()
+        assert first_body["isVoid"] is True
+        assert first_body["voidedAt"] is not None
+        repeated_void = await client.post(
+            f"/api/v1/transactions/{expense_body['id']}/void"
+        )
+        assert repeated_void.status_code == 200, repeated_void.text
+        assert repeated_void.json()["voidedAt"] == first_body["voidedAt"]
+        assert repeated_void.json()["updatedAt"] == first_body["updatedAt"]
+
+        rejected_patch = await client.patch(
+            f"/api/v1/transactions/{expense_body['id']}",
+            json={"description": "不可修改"},
+        )
+        assert rejected_patch.status_code == 409
+        assert rejected_patch.json()["code"] == "transaction_voided"
+
+        default_ids = {
+            item["id"] for item in (await client.get("/api/v1/transactions")).json()
+        }
+        assert expense_body["id"] not in default_ids
+        audit_ids = {
+            item["id"]
+            for item in (
+                await client.get(
+                    "/api/v1/transactions", params={"includeVoided": "true"}
+                )
+            ).json()
+        }
+        assert expense_body["id"] in audit_ids
+
+        concurrent_target = await client.post(
+            "/api/v1/transactions",
+            json={
+                "type": "balance_adjustment",
+                "sourceAccountId": source["id"],
+                "amount": 3,
+                "balanceAdjustmentDirection": "increase",
+                "occurredAt": occurred_at,
+            },
+        )
+        assert concurrent_target.status_code == 201
+        concurrent_id = concurrent_target.json()["id"]
+        concurrent_results = await asyncio.gather(
+            client.post(f"/api/v1/transactions/{concurrent_id}/void"),
+            client.post(f"/api/v1/transactions/{concurrent_id}/void"),
+        )
+        assert [response.status_code for response in concurrent_results] == [200, 200]
+        assert (
+            concurrent_results[0].json()["voidedAt"]
+            == concurrent_results[1].json()["voidedAt"]
+        )
 
 
 @pytest.mark.asyncio

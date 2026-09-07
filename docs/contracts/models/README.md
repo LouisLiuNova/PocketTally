@@ -20,7 +20,8 @@
 | `amount_minor` | `amount`（CNY 元） | `amount`（CNY 元） |
 | `category` | `category` | `categoryId` |
 | `transaction_tags` 关联表 | `tags` | `tagIds` |
-| `related_transaction_id` | `relatedTransaction` | `relatedTransactionId` |
+| `related_transaction_id` | `relatedTransaction` | 普通交易写入不接受；由后续退款业务入口维护 |
+| `is_void` / `voided_at` | `isVoid` / `voidedAt` | 普通创建和 PATCH 不接受；由作废入口维护 |
 | `parent_category_id` | `parentCategory` | `parentCategoryId` |
 | `categories.purpose` | `purpose` | `purpose`（仅创建） |
 
@@ -31,3 +32,5 @@
 账户、分类和标签名称在单个账本内按 SQLite `NOCASE` 规则全局唯一；重复名称由数据库拒绝。`updatedAt` 由 DDL 触发器在业务字段或交易标签关系变化时维护。
 
 分类 `purpose` 是必填的 `income` 或 `expense`，创建后不可修改，父子分类用途必须一致。普通收入和支出必须选择用途匹配的分类；转账和余额调整不能选择分类。分类移动的用户确认由前端负责，后端请求不接收确认字段，但仍会完整校验移动后的树结构和用途。
+
+交易创建必须满足类型对应的账户路由，PATCH 会把请求字段与原记录合并后再校验完整候选状态。作废使用 `POST /transactions/{transactionId}/void`，重复请求返回首次作废结果；列表默认隐藏作废交易，通过 `includeVoided=true` 查询完整审计集合。

@@ -359,6 +359,14 @@ paths:
         - Transactions
       operationId: listTransactions
       summary: List transactions
+      parameters:
+        - name: includeVoided
+          in: query
+          required: false
+          description: 是否包含已作废交易，默认仅返回有效交易。
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: Transactions returned successfully.
@@ -451,20 +459,25 @@ paths:
           $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/Error'
-    delete:
+  /transactions/{transactionId}/void:
+    parameters:
+      - $ref: '#/components/parameters/TransactionId'
+    post:
       tags:
         - Transactions
-      operationId: deleteTransaction
-      summary: Delete a transaction
+      operationId: voidTransaction
+      summary: Void a transaction idempotently
       responses:
-        '204':
-          description: Transaction deleted successfully. No response body.
+        '200':
+          description: Transaction voided or existing void result returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/transaction.read.schema'
         '422':
           $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/Error'
 components:
@@ -894,6 +907,7 @@ components:
         - isRefund
         - relatedTransaction
         - balanceAdjustmentDirection
+        - isVoid
         - voidedAt
         - occurredAt
         - createdAt
@@ -936,6 +950,8 @@ components:
           oneOf:
             - $ref: '#/components/schemas/balanceAdjustmentDirection'
             - type: 'null'
+        isVoid:
+          type: boolean
         voidedAt:
           oneOf:
             - $ref: '#/components/schemas/dateTime'
@@ -982,29 +998,67 @@ components:
         - type
         - amount
         - occurredAt
-      allOf:
-        - if:
-            properties:
-              type:
-                enum:
-                  - income
-                  - expense
-          then:
-            required:
-              - categoryId
-            properties:
-              categoryId:
-                $ref: '#/components/schemas/uuid'
-        - if:
-            properties:
-              type:
-                enum:
-                  - transfer
-                  - balance_adjustment
-          then:
-            properties:
-              categoryId:
-                type: 'null'
+      oneOf:
+        - title: IncomeTransactionCreate
+          required:
+            - destinationAccountId
+            - categoryId
+          properties:
+            type:
+              const: income
+            sourceAccountId:
+              type: 'null'
+            destinationAccountId:
+              $ref: '#/components/schemas/uuid'
+            categoryId:
+              $ref: '#/components/schemas/uuid'
+            balanceAdjustmentDirection:
+              type: 'null'
+        - title: ExpenseTransactionCreate
+          required:
+            - sourceAccountId
+            - categoryId
+          properties:
+            type:
+              const: expense
+            sourceAccountId:
+              $ref: '#/components/schemas/uuid'
+            destinationAccountId:
+              type: 'null'
+            categoryId:
+              $ref: '#/components/schemas/uuid'
+            balanceAdjustmentDirection:
+              type: 'null'
+        - title: TransferTransactionCreate
+          required:
+            - sourceAccountId
+            - destinationAccountId
+          properties:
+            type:
+              const: transfer
+            sourceAccountId:
+              $ref: '#/components/schemas/uuid'
+            destinationAccountId:
+              $ref: '#/components/schemas/uuid'
+            categoryId:
+              type: 'null'
+            balanceAdjustmentDirection:
+              type: 'null'
+        - title: BalanceAdjustmentTransactionCreate
+          required:
+            - sourceAccountId
+            - balanceAdjustmentDirection
+          properties:
+            type:
+              const: balance_adjustment
+            sourceAccountId:
+              $ref: '#/components/schemas/uuid'
+            destinationAccountId:
+              type: 'null'
+            categoryId:
+              type: 'null'
+            balanceAdjustmentDirection:
+              $ref: '#/components/schemas/balanceAdjustmentDirection'
       properties:
         type:
           $ref: '#/components/schemas/transactionType'
@@ -1033,13 +1087,6 @@ components:
             $ref: '#/components/schemas/uuid'
           uniqueItems: true
           default: []
-        isRefund:
-          type: boolean
-          default: false
-        relatedTransactionId:
-          oneOf:
-            - $ref: '#/components/schemas/uuid'
-            - type: 'null'
         balanceAdjustmentDirection:
           oneOf:
             - $ref: '#/components/schemas/balanceAdjustmentDirection'
@@ -1082,12 +1129,6 @@ components:
           items:
             $ref: '#/components/schemas/uuid'
           uniqueItems: true
-        isRefund:
-          type: boolean
-        relatedTransactionId:
-          oneOf:
-            - $ref: '#/components/schemas/uuid'
-            - type: 'null'
         balanceAdjustmentDirection:
           oneOf:
             - $ref: '#/components/schemas/balanceAdjustmentDirection'

@@ -38,13 +38,6 @@
       "items": { "$ref": "common.schema.json#/$defs/uuid" },
       "uniqueItems": true
     },
-    "isRefund": { "type": "boolean" },
-    "relatedTransactionId": {
-      "oneOf": [
-        { "$ref": "common.schema.json#/$defs/uuid" },
-        { "type": "null" }
-      ]
-    },
     "balanceAdjustmentDirection": {
       "oneOf": [
         { "$ref": "common.schema.json#/$defs/balanceAdjustmentDirection" },

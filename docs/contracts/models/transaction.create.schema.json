@@ -6,19 +6,52 @@
   "type": "object",
   "additionalProperties": false,
   "required": ["type", "amount", "occurredAt"],
-  "allOf": [
+  "oneOf": [
     {
-      "if": { "properties": { "type": { "enum": ["income", "expense"] } } },
-      "then": {
-        "required": ["categoryId"],
-        "properties": {
-          "categoryId": { "$ref": "common.schema.json#/$defs/uuid" }
-        }
+      "title": "IncomeTransactionCreate",
+      "required": ["destinationAccountId", "categoryId"],
+      "properties": {
+        "type": { "const": "income" },
+        "sourceAccountId": { "type": "null" },
+        "destinationAccountId": { "$ref": "common.schema.json#/$defs/uuid" },
+        "categoryId": { "$ref": "common.schema.json#/$defs/uuid" },
+        "balanceAdjustmentDirection": { "type": "null" }
       }
     },
     {
-      "if": { "properties": { "type": { "enum": ["transfer", "balance_adjustment"] } } },
-      "then": { "properties": { "categoryId": { "type": "null" } } }
+      "title": "ExpenseTransactionCreate",
+      "required": ["sourceAccountId", "categoryId"],
+      "properties": {
+        "type": { "const": "expense" },
+        "sourceAccountId": { "$ref": "common.schema.json#/$defs/uuid" },
+        "destinationAccountId": { "type": "null" },
+        "categoryId": { "$ref": "common.schema.json#/$defs/uuid" },
+        "balanceAdjustmentDirection": { "type": "null" }
+      }
+    },
+    {
+      "title": "TransferTransactionCreate",
+      "required": ["sourceAccountId", "destinationAccountId"],
+      "properties": {
+        "type": { "const": "transfer" },
+        "sourceAccountId": { "$ref": "common.schema.json#/$defs/uuid" },
+        "destinationAccountId": { "$ref": "common.schema.json#/$defs/uuid" },
+        "categoryId": { "type": "null" },
+        "balanceAdjustmentDirection": { "type": "null" }
+      }
+    },
+    {
+      "title": "BalanceAdjustmentTransactionCreate",
+      "required": ["sourceAccountId", "balanceAdjustmentDirection"],
+      "properties": {
+        "type": { "const": "balance_adjustment" },
+        "sourceAccountId": { "$ref": "common.schema.json#/$defs/uuid" },
+        "destinationAccountId": { "type": "null" },
+        "categoryId": { "type": "null" },
+        "balanceAdjustmentDirection": {
+          "$ref": "common.schema.json#/$defs/balanceAdjustmentDirection"
+        }
+      }
     }
   ],
   "properties": {
@@ -53,13 +86,6 @@
       "items": { "$ref": "common.schema.json#/$defs/uuid" },
       "uniqueItems": true,
       "default": []
-    },
-    "isRefund": { "type": "boolean", "default": false },
-    "relatedTransactionId": {
-      "oneOf": [
-        { "$ref": "common.schema.json#/$defs/uuid" },
-        { "type": "null" }
-      ]
     },
     "balanceAdjustmentDirection": {
       "oneOf": [

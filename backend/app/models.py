@@ -269,6 +269,23 @@ class Transaction(SQLModel, table=True):
             "balance_adjustment_direction IS NULL)",
             name="ck_transactions_balance_adjustment_direction",
         ),
+        CheckConstraint(
+            "(type = 'income' AND src_account_id IS NULL "
+            "AND dest_account_id IS NOT NULL AND category IS NOT NULL) OR "
+            "(type = 'expense' AND src_account_id IS NOT NULL "
+            "AND dest_account_id IS NULL AND category IS NOT NULL) OR "
+            "(type = 'transfer' AND src_account_id IS NOT NULL "
+            "AND dest_account_id IS NOT NULL AND src_account_id <> dest_account_id "
+            "AND category IS NULL) OR "
+            "(type = 'balance_adjustment' AND src_account_id IS NOT NULL "
+            "AND dest_account_id IS NULL AND category IS NULL)",
+            name="ck_transactions_route",
+        ),
+        CheckConstraint(
+            "(is_void = 0 AND voided_at IS NULL) OR "
+            "(is_void = 1 AND voided_at IS NOT NULL)",
+            name="ck_transactions_void_state",
+        ),
     )
 
     id: str = Field(default_factory=new_id,
@@ -320,6 +337,10 @@ class Transaction(SQLModel, table=True):
                 name="balance_adjustment_direction",
             )
         ),
+    )
+    is_void: bool = Field(
+        default=False,
+        sa_column=Column(Boolean, nullable=False, server_default=text("0")),
     )
     voided_at: datetime | None = Field(
         default=None,

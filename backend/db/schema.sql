@@ -56,6 +56,7 @@ CREATE TABLE transactions (
     related_transaction_id TEXT,
     balance_adjustment_direction TEXT
         CHECK (balance_adjustment_direction IN ('increase', 'decrease')),
+    is_void BOOLEAN NOT NULL DEFAULT 0,
     voided_at DATETIME,
     occurred_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -67,6 +68,21 @@ CREATE TABLE transactions (
         OR
         (type <> 'balance_adjustment'
             AND balance_adjustment_direction IS NULL)
+    ),
+    CONSTRAINT ck_transactions_route CHECK (
+        (type = 'income' AND src_account_id IS NULL
+            AND dest_account_id IS NOT NULL AND category IS NOT NULL)
+        OR (type = 'expense' AND src_account_id IS NOT NULL
+            AND dest_account_id IS NULL AND category IS NOT NULL)
+        OR (type = 'transfer' AND src_account_id IS NOT NULL
+            AND dest_account_id IS NOT NULL AND src_account_id <> dest_account_id
+            AND category IS NULL)
+        OR (type = 'balance_adjustment' AND src_account_id IS NOT NULL
+            AND dest_account_id IS NULL AND category IS NULL)
+    ),
+    CONSTRAINT ck_transactions_void_state CHECK (
+        (is_void = 0 AND voided_at IS NULL)
+        OR (is_void = 1 AND voided_at IS NOT NULL)
     ),
     FOREIGN KEY (src_account_id) REFERENCES accounts (id),
     FOREIGN KEY (dest_account_id) REFERENCES accounts (id),
@@ -121,7 +137,7 @@ END;
 CREATE TRIGGER tr_transactions_updated_at
 AFTER UPDATE OF type, src_account_id, dest_account_id, amount_minor, description, category,
                 is_refund, related_transaction_id, balance_adjustment_direction,
-                voided_at, occurred_at ON transactions
+                is_void, voided_at, occurred_at ON transactions
 FOR EACH ROW
 BEGIN
     UPDATE transactions SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;

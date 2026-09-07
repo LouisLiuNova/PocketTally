@@ -6,7 +6,6 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy import func
-from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app.database import create_database_engine, initialize_database
@@ -261,7 +260,7 @@ def test_debit_overdraft_rolls_back_transaction_and_balance(tmp_path: Path) -> N
             )
         )
         session.commit()
-        with pytest.raises(IntegrityError), session.begin():
+        with pytest.raises(LedgerError, match="余额不足"), session.begin():
             post_transaction(session, expense)
 
         refreshed_account = session.get(Account, account.id)

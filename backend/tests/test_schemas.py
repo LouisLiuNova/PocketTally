@@ -120,6 +120,9 @@ def test_generated_json_schema_keeps_contract_object_and_array_constraints() -> 
     assert transaction_read_schema["properties"]["tags"]["uniqueItems"] is True
     assert "occurredAt" in transaction_create_schema["required"]
     assert "occurredAt" in transaction_read_schema["required"]
+    assert "isVoid" in transaction_read_schema["required"]
+    assert "isRefund" not in transaction_create_schema["properties"]
+    assert "relatedTransactionId" not in transaction_create_schema["properties"]
 
 
 def test_write_models_convert_relationship_ids_to_orm_columns() -> None:
@@ -147,8 +150,6 @@ def test_write_models_convert_relationship_ids_to_orm_columns() -> None:
         "amount_minor": 1250,
         "description": None,
         "category": str(category_id),
-        "is_refund": False,
-        "related_transaction_id": None,
         "balance_adjustment_direction": None,
         "occurred_at": occurred_at,
     }
@@ -178,6 +179,28 @@ def test_write_models_convert_relationship_ids_to_orm_columns() -> None:
                 "amount": 1,
                 "categoryId": str(category_id),
                 "tagIds": [str(tag_id), str(tag_id)],
+                "occurredAt": occurred_at.isoformat(),
+            }
+        )
+    with pytest.raises(ValidationError, match="收入交易必须只有目标账户"):
+        TransactionCreate.model_validate(
+            {
+                "type": "income",
+                "sourceAccountId": str(source_id),
+                "destinationAccountId": str(uuid4()),
+                "amount": 1,
+                "categoryId": str(category_id),
+                "occurredAt": occurred_at.isoformat(),
+            }
+        )
+    with pytest.raises(ValidationError):
+        TransactionCreate.model_validate(
+            {
+                "type": "expense",
+                "sourceAccountId": str(source_id),
+                "amount": 1,
+                "categoryId": str(category_id),
+                "isVoid": True,
                 "occurredAt": occurred_at.isoformat(),
             }
         )
@@ -297,8 +320,6 @@ def test_balance_adjustment_request_has_explicit_direction_and_no_initial_balanc
         "amount_minor": 101,
         "description": None,
         "category": None,
-        "is_refund": False,
-        "related_transaction_id": None,
         "balance_adjustment_direction": "increase",
         "occurred_at": request.occurred_at,
     }

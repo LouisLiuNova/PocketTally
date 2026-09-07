@@ -3,22 +3,48 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from enum import StrEnum
 
+from sqlalchemy import update
 from sqlmodel import Session, select
 
 from app.models import (
     Account,
+    AccountType,
     BalanceAdjustmentDirection,
     Category,
     CategoryPurpose,
+    Tag,
     Transaction,
     TransactionType,
 )
 from app.schemas.transaction import BalanceAdjustmentCreate
 
 
+class LedgerErrorCode(StrEnum):
+    """账本服务对外稳定的错误码。"""
+
+    INVALID_TRANSACTION = "invalid_transaction"
+    ACCOUNT_NOT_FOUND = "account_not_found"
+    CATEGORY_NOT_FOUND = "category_not_found"
+    TAG_NOT_FOUND = "tag_not_found"
+    INSUFFICIENT_BALANCE = "insufficient_balance"
+    TRANSACTION_VOIDED = "transaction_voided"
+    TRANSACTION_NOT_FOUND = "transaction_not_found"
+
+
 class LedgerError(ValueError):
     """账本交易不符合可记账条件。"""
+
+    def __init__(
+        self,
+        message: str,
+        code: LedgerErrorCode = LedgerErrorCode.INVALID_TRANSACTION,
+    ) -> None:
+        """初始化稳定的账本业务错误。"""
+
+        super().__init__(message)
+        self.code = code
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,7 +70,7 @@ def transaction_postings(transaction: Transaction) -> tuple[Posting, ...]:
         LedgerError: 交易字段无法表达合法资金方向时抛出。
     """
 
-    if transaction.voided_at is not None:
+    if transaction.is_void:
         return ()
     if transaction.amount_minor <= 0:
         raise LedgerError("交易金额必须为正整数分")
@@ -150,7 +176,7 @@ def validate_transaction_category(
         raise LedgerError("普通收入和支出交易必须引用分类")
     category = session.get(Category, transaction.category)
     if category is None:
-        raise LedgerError("交易引用了不存在的分类")
+        raise LedgerError("交易引用了不存在的分类", LedgerErrorCode.CATEGORY_NOT_FOUND)
     if category.purpose != required_purpose:
         raise LedgerError("交易类型与分类用途不匹配")
 
@@ -181,13 +207,69 @@ def recalculate_account_balances(
     for account in accounts:
         if target_ids is not None and account.id not in target_ids:
             continue
-        account.amount_minor = balances.get(account.id, 0)
+        new_balance = balances.get(account.id, 0)
+        if account.type is AccountType.DEBIT and new_balance < 0:
+            raise LedgerError("借记账户余额不足", LedgerErrorCode.INSUFFICIENT_BALANCE)
+        account.amount_minor = new_balance
         result[account.id] = account.amount_minor
     session.flush()
     return result
 
 
-def post_transaction(session: Session, transaction: Transaction) -> Transaction:
+def _resolve_tags(session: Session, tag_ids: Iterable[str]) -> list[Tag]:
+    """按请求顺序读取标签，并拒绝任何不存在的标签。"""
+
+    tags: list[Tag] = []
+    for tag_id in tag_ids:
+        tag = session.get(Tag, tag_id)
+        if tag is None:
+            raise LedgerError("交易引用了不存在的标签", LedgerErrorCode.TAG_NOT_FOUND)
+        tags.append(tag)
+    return tags
+
+
+def validate_complete_transaction(
+    session: Session,
+    transaction: Transaction,
+    *,
+    tag_ids: Iterable[str] = (),
+) -> tuple[tuple[Posting, ...], list[Tag]]:
+    """统一校验一笔完整基础交易及其全部关系。
+
+    Args:
+        session: 当前数据库会话。
+        transaction: 创建、PATCH 合并结果或未来导入生成的完整候选状态。
+        tag_ids: 候选交易的完整标签 ID 集合。
+
+    Returns:
+        已验证的余额分录和标签对象。
+
+    Raises:
+        LedgerError: 交易矩阵、分类用途或任一关系不合法时抛出。
+    """
+
+    if transaction.is_void or transaction.voided_at is not None:
+        raise LedgerError("不能通过普通写入设置作废状态")
+    postings = transaction_postings(transaction)
+    validate_transaction_category(session, transaction)
+    account_ids = {posting.account_id for posting in postings}
+    existing_account_ids = {
+        account.id
+        for account in session.exec(
+            select(Account).where(Account.id.in_(account_ids))
+        )
+    }
+    if existing_account_ids != account_ids:
+        raise LedgerError("交易引用了不存在的账户", LedgerErrorCode.ACCOUNT_NOT_FOUND)
+    return postings, _resolve_tags(session, tag_ids)
+
+
+def post_transaction(
+    session: Session,
+    transaction: Transaction,
+    *,
+    tag_ids: Iterable[str] = (),
+) -> Transaction:
     """在同一事务中写入交易并同步受影响账户余额。
 
     调用方负责使用 ``with session.begin():`` 控制提交或回滚；本函数不会
@@ -205,20 +287,13 @@ def post_transaction(session: Session, transaction: Transaction) -> Transaction:
     """
 
     _require_transaction(session)
-    if transaction.voided_at is not None:
-        raise LedgerError("不能直接写入已作废交易")
-    postings = transaction_postings(transaction)
-    validate_transaction_category(session, transaction)
+    postings, tags = validate_complete_transaction(
+        session,
+        transaction,
+        tag_ids=tag_ids,
+    )
     account_ids = {posting.account_id for posting in postings}
-    if account_ids:
-        existing_account_ids = {
-            account.id
-            for account in session.exec(
-                select(Account).where(Account.id.in_(account_ids))
-            )
-        }
-        if existing_account_ids != account_ids:
-            raise LedgerError("交易引用了不存在的账户")
+    transaction.tags = tags
     session.add(transaction)
     session.flush()
     recalculate_account_balances(session, account_ids=account_ids)
@@ -245,6 +320,8 @@ def post_balance_adjustment(
 def update_transaction(
     session: Session,
     transaction: Transaction,
+    *,
+    tag_ids: Iterable[str] | None = None,
     **changes: object,
 ) -> Transaction:
     """在同一事务中更新交易并重算受影响账户余额。
@@ -262,22 +339,46 @@ def update_transaction(
     """
 
     _require_transaction(session)
-    if transaction.voided_at is not None:
-        raise LedgerError("作废交易不可直接修改")
-    old_account_ids = {
-        posting.account_id for posting in transaction_postings(transaction)
+    if transaction.is_void:
+        raise LedgerError("作废交易不可直接修改", LedgerErrorCode.TRANSACTION_VOIDED)
+    old_account_ids = {posting.account_id for posting in transaction_postings(transaction)}
+    candidate_values = {
+        "type": transaction.type,
+        "src_account_id": transaction.src_account_id,
+        "dest_account_id": transaction.dest_account_id,
+        "amount_minor": transaction.amount_minor,
+        "description": transaction.description,
+        "category": transaction.category,
+        "is_refund": transaction.is_refund,
+        "related_transaction_id": transaction.related_transaction_id,
+        "balance_adjustment_direction": transaction.balance_adjustment_direction,
+        "is_void": transaction.is_void,
+        "voided_at": transaction.voided_at,
+        "occurred_at": transaction.occurred_at,
     }
     for field_name, value in changes.items():
         if not hasattr(transaction, field_name):
             raise LedgerError(f"不支持更新交易字段: {field_name}")
+        candidate_values[field_name] = value
+    candidate = Transaction(**candidate_values)
+    candidate_tag_ids = (
+        list(tag_ids) if tag_ids is not None else [tag.id for tag in transaction.tags]
+    )
+    new_postings, new_tags = validate_complete_transaction(
+        session,
+        candidate,
+        tag_ids=candidate_tag_ids,
+    )
+    new_account_ids = {posting.account_id for posting in new_postings}
+    for field_name, value in changes.items():
         setattr(transaction, field_name, value)
-    new_postings = transaction_postings(transaction)
-    validate_transaction_category(session, transaction)
+    if tag_ids is not None:
+        transaction.tags = new_tags
     session.add(transaction)
     session.flush()
     recalculate_account_balances(
         session,
-        account_ids=old_account_ids | {posting.account_id for posting in new_postings},
+        account_ids=old_account_ids | new_account_ids,
     )
     return transaction
 
@@ -302,18 +403,71 @@ def void_transaction(
     """
 
     _require_transaction(session)
-    if transaction.voided_at is not None:
-        raise LedgerError("交易已经作废")
+    if transaction.is_void:
+        return transaction
     account_ids = {posting.account_id for posting in transaction_postings(transaction)}
-    transaction.voided_at = voided_at or datetime.now(UTC)
-    session.add(transaction)
+    effective_voided_at = voided_at or datetime.now(UTC)
+    result = session.exec(
+        update(Transaction)
+        .where(Transaction.id == transaction.id, Transaction.is_void.is_(False))
+        .values(is_void=True, voided_at=effective_voided_at)
+    )
+    if result.rowcount == 0:
+        session.refresh(transaction)
+        return transaction
     session.flush()
+    session.refresh(transaction)
     recalculate_account_balances(session, account_ids=account_ids)
+    return transaction
+
+
+def void_transaction_by_id(
+    session: Session,
+    transaction_id: str,
+    voided_at: datetime | None = None,
+) -> Transaction:
+    """以先写后读的条件更新幂等作废交易。
+
+    条件更新先取得 SQLite 写锁，使并发请求按顺序判断 ``is_void``；只有
+    首次请求会获得一条更新记录并重算余额，后续请求直接读取首次结果。
+
+    Args:
+        session: 当前数据库会话。
+        transaction_id: 待作废的交易 ID。
+        voided_at: 作废时间，省略时使用当前 UTC 时间。
+
+    Returns:
+        首次写入或已存在的作废交易。
+
+    Raises:
+        LedgerError: 交易不存在或未处于显式事务时抛出。
+    """
+
+    _require_transaction(session)
+    effective_voided_at = voided_at or datetime.now(UTC)
+    result = session.exec(
+        update(Transaction)
+        .where(Transaction.id == transaction_id, Transaction.is_void.is_(False))
+        .values(is_void=True, voided_at=effective_voided_at)
+    )
+    transaction = session.get(Transaction, transaction_id)
+    if transaction is None:
+        raise LedgerError("交易不存在", LedgerErrorCode.TRANSACTION_NOT_FOUND)
+    if result.rowcount == 0:
+        return transaction
+    account_ids = {
+        account_id
+        for account_id in (transaction.src_account_id, transaction.dest_account_id)
+        if account_id is not None
+    }
+    recalculate_account_balances(session, account_ids=account_ids)
+    session.refresh(transaction)
     return transaction
 
 
 __all__ = (
     "LedgerError",
+    "LedgerErrorCode",
     "Posting",
     "calculate_balances",
     "post_balance_adjustment",
@@ -321,6 +475,8 @@ __all__ = (
     "recalculate_account_balances",
     "transaction_postings",
     "update_transaction",
+    "validate_complete_transaction",
     "validate_transaction_category",
     "void_transaction",
+    "void_transaction_by_id",
 )

@@ -150,6 +150,57 @@ def test_schema_rejects_unknown_types_and_non_positive_amounts() -> None:
         connection.close()
 
 
+def test_schema_enforces_transaction_routes_and_void_state() -> None:
+    """验证 SQLite 单行约束保护交易矩阵和作废字段一致性。"""
+
+    connection = create_connection()
+    try:
+        connection.execute(
+            "INSERT INTO accounts (id, type, name) VALUES ('a1', 'credit', 'A1')"
+        )
+        connection.execute(
+            "INSERT INTO accounts (id, type, name) VALUES ('a2', 'credit', 'A2')"
+        )
+        connection.execute(
+            "INSERT INTO categories (id, name, purpose) "
+            "VALUES ('income-category', '收入', 'income')"
+        )
+        invalid_rows = (
+            (
+                "('income-source', 'income', 'a1', 'a2', 1, 'income-category', "
+                "'2026-09-07 00:00:00')"
+            ),
+            (
+                "('same-transfer', 'transfer', 'a1', 'a1', 1, NULL, "
+                "'2026-09-07 00:00:00')"
+            ),
+        )
+        for row in invalid_rows:
+            with pytest.raises(sqlite3.IntegrityError):
+                connection.execute(
+                    "INSERT INTO transactions "
+                    "(id, type, src_account_id, dest_account_id, amount_minor, "
+                    "category, occurred_at) VALUES " + row
+                )
+        with pytest.raises(sqlite3.IntegrityError):
+            connection.execute(
+                "INSERT INTO transactions "
+                "(id, type, dest_account_id, amount_minor, category, is_void, "
+                "occurred_at) VALUES ('void-without-time', 'income', 'a1', 1, "
+                "'income-category', 1, '2026-09-07 00:00:00')"
+            )
+        with pytest.raises(sqlite3.IntegrityError):
+            connection.execute(
+                "INSERT INTO transactions "
+                "(id, type, dest_account_id, amount_minor, category, voided_at, "
+                "occurred_at) VALUES ('time-without-void', 'income', 'a1', 1, "
+                "'income-category', '2026-09-07 01:00:00', "
+                "'2026-09-07 00:00:00')"
+            )
+    finally:
+        connection.close()
+
+
 def test_schema_server_defaults_and_triggers_keep_audit_values_current() -> None:
     """验证 DDL 默认值与更新时间戳不依赖应用写入路径。"""
 
@@ -194,7 +245,8 @@ def test_schema_leaves_balance_projection_to_ledger_service() -> None:
         ).fetchone()[0] == 0
 
         connection.execute(
-            "UPDATE transactions SET voided_at = '2026-08-25 12:00:00' "
+                "UPDATE transactions SET is_void = 1, "
+                "voided_at = '2026-08-25 12:00:00' "
             "WHERE id = 'adjustment-1'"
         )
         assert connection.execute(
