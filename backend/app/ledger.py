@@ -18,7 +18,8 @@ from app.models import (
     Transaction,
     TransactionType,
 )
-from app.schemas.transaction import BalanceAdjustmentCreate
+from app.money import amount_to_minor
+from app.schemas.transaction import BalanceAdjustmentCreate, ExpenseRefundCreate
 
 
 class LedgerErrorCode(StrEnum):
@@ -31,6 +32,8 @@ class LedgerErrorCode(StrEnum):
     INSUFFICIENT_BALANCE = "insufficient_balance"
     TRANSACTION_VOIDED = "transaction_voided"
     TRANSACTION_NOT_FOUND = "transaction_not_found"
+    REFUND_LIMIT_EXCEEDED = "refund_limit_exceeded"
+    ORIGINAL_HAS_ACTIVE_REFUNDS = "original_has_active_refunds"
 
 
 class LedgerError(ValueError):
@@ -88,6 +91,10 @@ def transaction_postings(transaction: Transaction) -> tuple[Posting, ...]:
         if transaction.src_account_id is None or transaction.dest_account_id is not None:
             raise LedgerError("支出交易必须只有来源账户")
         return (Posting(transaction.src_account_id, -amount),)
+    if transaction_type is TransactionType.EXPENSE_REFUND:
+        if transaction.src_account_id is None or transaction.dest_account_id is not None:
+            raise LedgerError("支出退款必须只有原支出的来源账户")
+        return (Posting(transaction.src_account_id, amount),)
     if transaction_type is TransactionType.TRANSFER:
         if (
             transaction.src_account_id is None
@@ -167,6 +174,7 @@ def validate_transaction_category(
     required_purpose = {
         TransactionType.INCOME: CategoryPurpose.INCOME,
         TransactionType.EXPENSE: CategoryPurpose.EXPENSE,
+        TransactionType.EXPENSE_REFUND: CategoryPurpose.EXPENSE,
     }.get(transaction_type)
     if required_purpose is None:
         if transaction.category is not None:
@@ -233,6 +241,7 @@ def validate_complete_transaction(
     transaction: Transaction,
     *,
     tag_ids: Iterable[str] = (),
+    _refund_entry: bool = False,
 ) -> tuple[tuple[Posting, ...], list[Tag]]:
     """统一校验一笔完整基础交易及其全部关系。
 
@@ -250,6 +259,15 @@ def validate_complete_transaction(
 
     if transaction.is_void or transaction.voided_at is not None:
         raise LedgerError("不能通过普通写入设置作废状态")
+    if not _refund_entry and (
+        transaction.type == TransactionType.EXPENSE_REFUND
+        or transaction.refund_of_transaction_id is not None
+    ):
+        raise LedgerError("退款只能通过专用退款入口创建，不能通过普通交易修改")
+    if transaction.type != TransactionType.BALANCE_ADJUSTMENT and (
+        transaction.balance_adjustment_direction is not None
+    ):
+        raise LedgerError("只有余额调整可以设置调整方向")
     postings = transaction_postings(transaction)
     validate_transaction_category(session, transaction)
     account_ids = {posting.account_id for posting in postings}
@@ -317,6 +335,75 @@ def post_balance_adjustment(
     return post_transaction(session, Transaction(**request.to_orm_kwargs()))
 
 
+def post_expense_refund(session: Session, request: ExpenseRefundCreate) -> Transaction:
+    """在调用方事务内校验退款累计额，派生原支出关系并更新余额。
+
+    Args:
+        session: 已开启事务的数据库会话。
+        request: 仅含原支出、金额、时间和说明的退款请求。
+
+    Returns:
+        已写入的退款交易。
+
+    Raises:
+        LedgerError: 原交易无效或累计退款超过原支出时抛出。
+    """
+
+    _require_transaction(session)
+    original_id = str(request.refund_of_transaction_id)
+    # 在读取累计额前取得 SQLite 写锁，避免两个退款请求同时通过额度检查。
+    session.exec(
+        update(Transaction)
+        .where(
+            Transaction.id == original_id,
+            Transaction.type == TransactionType.EXPENSE,
+            Transaction.is_void.is_(False),
+        )
+        .values(id=Transaction.id)
+    )
+    original = session.get(Transaction, original_id)
+    if original is None:
+        raise LedgerError("原支出不存在", LedgerErrorCode.TRANSACTION_NOT_FOUND)
+    if original.type != TransactionType.EXPENSE or original.is_void:
+        raise LedgerError("只能对有效支出退款")
+    refunded = sum(
+        refund.amount_minor
+        for refund in session.exec(select(Transaction).where(
+            Transaction.refund_of_transaction_id == original.id,
+            Transaction.is_void.is_(False),
+        ))
+    )
+    amount_minor = amount_to_minor(request.amount)
+    if refunded + amount_minor > original.amount_minor:
+        raise LedgerError("累计退款超过原支出金额", LedgerErrorCode.REFUND_LIMIT_EXCEEDED)
+    transaction = Transaction(
+        type=TransactionType.EXPENSE_REFUND,
+        refund_of_transaction_id=original.id,
+        src_account_id=original.src_account_id,
+        dest_account_id=None,
+        category=original.category,
+        amount_minor=amount_minor,
+        occurred_at=request.occurred_at,
+        description=request.description,
+    )
+    postings, _ = validate_complete_transaction(session, transaction, _refund_entry=True)
+    session.add(transaction)
+    session.flush()
+    recalculate_account_balances(session, (posting.account_id for posting in postings))
+    return transaction
+
+
+def has_active_refunds(session: Session, transaction_id: str) -> bool:
+    """判断原支出是否仍有未作废退款。"""
+
+    return session.exec(
+        select(Transaction.id).where(
+            Transaction.refund_of_transaction_id == transaction_id,
+            Transaction.is_void.is_(False),
+        )
+    ).first() is not None
+
+
 def update_transaction(
     session: Session,
     transaction: Transaction,
@@ -341,6 +428,30 @@ def update_transaction(
     _require_transaction(session)
     if transaction.is_void:
         raise LedgerError("作废交易不可直接修改", LedgerErrorCode.TRANSACTION_VOIDED)
+    protected_fields = {
+        "type",
+        "src_account_id",
+        "dest_account_id",
+        "amount_minor",
+        "category",
+        "balance_adjustment_direction",
+        "refund_of_transaction_id",
+    }
+    if transaction.type == TransactionType.EXPENSE_REFUND:
+        if protected_fields.intersection(changes):
+            raise LedgerError("退款的类型、金额、账户、分类和原支出不可修改")
+        refund_entry = True
+    else:
+        refund_entry = False
+        if (
+            transaction.type == TransactionType.EXPENSE
+            and protected_fields.intersection(changes)
+            and has_active_refunds(session, transaction.id)
+        ):
+            raise LedgerError(
+                "原支出存在有效退款，请先作废退款",
+                LedgerErrorCode.ORIGINAL_HAS_ACTIVE_REFUNDS,
+            )
     old_account_ids = {posting.account_id for posting in transaction_postings(transaction)}
     candidate_values = {
         "type": transaction.type,
@@ -349,8 +460,7 @@ def update_transaction(
         "amount_minor": transaction.amount_minor,
         "description": transaction.description,
         "category": transaction.category,
-        "is_refund": transaction.is_refund,
-        "related_transaction_id": transaction.related_transaction_id,
+        "refund_of_transaction_id": transaction.refund_of_transaction_id,
         "balance_adjustment_direction": transaction.balance_adjustment_direction,
         "is_void": transaction.is_void,
         "voided_at": transaction.voided_at,
@@ -368,6 +478,7 @@ def update_transaction(
         session,
         candidate,
         tag_ids=candidate_tag_ids,
+        _refund_entry=refund_entry,
     )
     new_account_ids = {posting.account_id for posting in new_postings}
     for field_name, value in changes.items():
@@ -405,6 +516,14 @@ def void_transaction(
     _require_transaction(session)
     if transaction.is_void:
         return transaction
+    if (
+        transaction.type == TransactionType.EXPENSE
+        and has_active_refunds(session, transaction.id)
+    ):
+        raise LedgerError(
+            "原支出存在有效退款，请先作废退款",
+            LedgerErrorCode.ORIGINAL_HAS_ACTIVE_REFUNDS,
+        )
     account_ids = {posting.account_id for posting in transaction_postings(transaction)}
     effective_voided_at = voided_at or datetime.now(UTC)
     result = session.exec(
@@ -444,6 +563,18 @@ def void_transaction_by_id(
     """
 
     _require_transaction(session)
+    existing = session.get(Transaction, transaction_id)
+    if existing is None:
+        raise LedgerError("交易不存在", LedgerErrorCode.TRANSACTION_NOT_FOUND)
+    if (
+        existing.type == TransactionType.EXPENSE
+        and not existing.is_void
+        and has_active_refunds(session, transaction_id)
+    ):
+        raise LedgerError(
+            "原支出存在有效退款，请先作废退款",
+            LedgerErrorCode.ORIGINAL_HAS_ACTIVE_REFUNDS,
+        )
     effective_voided_at = voided_at or datetime.now(UTC)
     result = session.exec(
         update(Transaction)
@@ -471,6 +602,7 @@ __all__ = (
     "Posting",
     "calculate_balances",
     "post_balance_adjustment",
+    "post_expense_refund",
     "post_transaction",
     "recalculate_account_balances",
     "transaction_postings",

@@ -55,7 +55,7 @@
     }
   ],
   "properties": {
-    "type": { "$ref": "common.schema.json#/$defs/transactionType" },
+    "type": { "$ref": "common.schema.json#/$defs/basicTransactionType" },
     "sourceAccountId": {
       "oneOf": [
         { "$ref": "common.schema.json#/$defs/uuid" },

@@ -44,6 +44,8 @@ def map_ledger_error(error: LedgerError) -> ApiError:
         LedgerErrorCode.TRANSACTION_NOT_FOUND: 404,
         LedgerErrorCode.INSUFFICIENT_BALANCE: 409,
         LedgerErrorCode.TRANSACTION_VOIDED: 409,
+        LedgerErrorCode.REFUND_LIMIT_EXCEEDED: 409,
+        LedgerErrorCode.ORIGINAL_HAS_ACTIVE_REFUNDS: 409,
     }.get(error.code, 422)
     return ApiError(status_code, error.code, str(error))
 

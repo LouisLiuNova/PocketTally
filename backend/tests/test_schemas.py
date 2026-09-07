@@ -25,6 +25,7 @@ from app.schemas import (
     CategoryCreate,
     CategoryRead,
     CategoryUpdate,
+    ExpenseRefundCreate,
     TagRead,
     TagUpdate,
     TransactionCreate,
@@ -111,7 +112,7 @@ def test_generated_json_schema_keeps_contract_object_and_array_constraints() -> 
     assert transaction_create_schema["properties"]["tagIds"]["uniqueItems"] is True
     assert transaction_create_schema["properties"]["amount"]["exclusiveMinimum"] == 0
     assert transaction_create_schema["properties"]["amount"]["type"] == "number"
-    assert transaction_create_schema["$defs"]["TransactionType"]["enum"] == [
+    assert transaction_create_schema["properties"]["type"]["enum"] == [
         "income",
         "expense",
         "transfer",
@@ -120,6 +121,14 @@ def test_generated_json_schema_keeps_contract_object_and_array_constraints() -> 
     assert transaction_read_schema["properties"]["tags"]["uniqueItems"] is True
     assert "occurredAt" in transaction_create_schema["required"]
     assert "occurredAt" in transaction_read_schema["required"]
+    refund_schema = ExpenseRefundCreate.model_json_schema()
+    assert set(refund_schema["properties"]) == {
+        "refundOfTransactionId",
+        "amount",
+        "occurredAt",
+        "description",
+    }
+    assert refund_schema["additionalProperties"] is False
     assert "isVoid" in transaction_read_schema["required"]
     assert "isRefund" not in transaction_create_schema["properties"]
     assert "relatedTransactionId" not in transaction_create_schema["properties"]
@@ -271,6 +280,7 @@ def test_transaction_type_and_amount_constraints() -> None:
     assert Transaction.__table__.c.type.type.enums == [
         "income",
         "expense",
+        "expense_refund",
         "transfer",
         "balance_adjustment",
     ]
@@ -365,8 +375,7 @@ def test_read_models_map_orm_fields_and_nested_relationships() -> None:
         amount_minor=2000,
         description="午餐",
         category=category.id,
-        is_refund=False,
-        related_transaction_id=None,
+        refund_of_transaction_id=None,
         occurred_at=now,
         created_at=now,
         updated_at=now,
@@ -374,7 +383,7 @@ def test_read_models_map_orm_fields_and_nested_relationships() -> None:
     transaction.source_account = account
     transaction.destination_account = None
     transaction.category_record = category
-    transaction.related_transaction = None
+    transaction.refund_of_transaction = None
     transaction.tags = [tag]
 
     account_response = AccountRead.from_orm_model(account)

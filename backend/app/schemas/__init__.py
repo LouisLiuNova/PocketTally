@@ -16,6 +16,7 @@ from app.schemas.category import (
 from app.schemas.tag import TagCreate, TagRead, TagSummary, TagUpdate
 from app.schemas.transaction import (
     BalanceAdjustmentCreate,
+    ExpenseRefundCreate,
     TransactionCreate,
     TransactionRead,
     TransactionSummary,
@@ -33,6 +34,7 @@ __all__ = (
     "CategorySummary",
     "CategoryUpdate",
     "ContractModel",
+    "ExpenseRefundCreate",
     "HexColor",
     "TagCreate",
     "TagRead",

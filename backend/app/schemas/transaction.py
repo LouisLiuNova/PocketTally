@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Self
+from typing import Any, Literal, Self
 from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
@@ -47,10 +47,34 @@ def _require_positive_amount(value: object) -> Decimal:
     return amount
 
 
+BasicTransactionType = Literal[
+    TransactionType.INCOME,
+    TransactionType.EXPENSE,
+    TransactionType.TRANSFER,
+    TransactionType.BALANCE_ADJUSTMENT,
+]
+
+
+class ExpenseRefundCreate(ContractModel):
+    """专用支出退款请求，账户和分类由原支出派生。"""
+
+    refund_of_transaction_id: UUID
+    amount: MoneyAmount = Field(json_schema_extra={"exclusiveMinimum": 0})
+    occurred_at: datetime
+    description: str | None = None
+
+    @field_validator("amount", mode="before")
+    @classmethod
+    def require_positive_amount(cls, value: object) -> Decimal:
+        """确保退款金额为舍入后的有限正数。"""
+
+        return _require_positive_amount(value)
+
+
 class TransactionCreate(ContractModel):
     """创建交易的请求模型。"""
 
-    type: TransactionType
+    type: BasicTransactionType
     source_account_id: UUID | None = None
     destination_account_id: UUID | None = None
     amount: MoneyAmount = Field(json_schema_extra={"exclusiveMinimum": 0})
@@ -191,7 +215,7 @@ class BalanceAdjustmentCreate(ContractModel):
 class TransactionUpdate(UpdateModel):
     """部分更新交易的请求模型。"""
 
-    type: TransactionType = None
+    type: BasicTransactionType = None
     source_account_id: UUID | None = None
     destination_account_id: UUID | None = None
     amount: MoneyAmount = Field(
@@ -318,8 +342,8 @@ class TransactionRead(ContractModel):
     description: str | None
     category: CategorySummary | None
     tags: list[TagSummary] = Field(json_schema_extra={"uniqueItems": True})
-    is_refund: bool
-    related_transaction: TransactionSummary | None
+    refund_of_transaction_id: UUID | None
+    refund_of_transaction: TransactionSummary | None
     balance_adjustment_direction: BalanceAdjustmentDirection | None
     is_void: bool
     voided_at: datetime | None
@@ -354,12 +378,12 @@ class TransactionRead(ContractModel):
                 "description": transaction.description,
                 "category": transaction.category_record,
                 "tags": transaction.tags,
-                "is_refund": transaction.is_refund,
-                "related_transaction": (
+                "refund_of_transaction_id": transaction.refund_of_transaction_id,
+                "refund_of_transaction": (
                     TransactionSummary.from_orm_model(
-                        transaction.related_transaction
+                        transaction.refund_of_transaction
                     )
-                    if transaction.related_transaction is not None
+                    if transaction.refund_of_transaction is not None
                     else None
                 ),
                 "balance_adjustment_direction": transaction.balance_adjustment_direction,
@@ -374,6 +398,7 @@ class TransactionRead(ContractModel):
 
 __all__ = (
     "BalanceAdjustmentCreate",
+    "ExpenseRefundCreate",
     "TransactionCreate",
     "TransactionRead",
     "TransactionSummary",

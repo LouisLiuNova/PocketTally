@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/expense-refund.create.schema.json",
+  "title": "ExpenseRefundCreate",
+  "description": "创建支出退款；账户、分类和类型由服务端从原支出派生。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["refundOfTransactionId", "amount", "occurredAt"],
+  "properties": {
+    "refundOfTransactionId": { "$ref": "common.schema.json#/$defs/uuid" },
+    "amount": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "CNY 金额；按 ROUND_HALF_UP 舍入到分后必须仍为正数。"
+    },
+    "occurredAt": { "$ref": "common.schema.json#/$defs/dateTime" },
+    "description": { "$ref": "common.schema.json#/$defs/nullableString" }
+  }
+}

@@ -302,7 +302,12 @@ def test_sqlmodel_declares_database_defaults_and_normalized_tag_link() -> None:
         }
 
     assert account_columns["amount_minor"] == "0"
-    assert transaction_columns["is_refund"] == "0"
+    assert transaction_columns["refund_of_transaction_id"] is None
+    assert "is_refund" not in transaction_columns
+    assert "related_transaction_id" not in transaction_columns
+    assert app.models.Transaction.__table__.c.type.type.enums == [
+        "income", "expense", "expense_refund", "transfer", "balance_adjustment"
+    ]
     assert app.models.Account.__table__.c.type.type.enums == ["debit", "credit"]
     assert app.models.Category.__table__.c.purpose.type.enums == ["income", "expense"]
     assert category_columns["purpose"] == 1

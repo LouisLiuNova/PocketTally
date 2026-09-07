@@ -15,13 +15,19 @@ from app.api.routes.common import map_ledger_error
 from app.dependencies import SessionDep
 from app.ledger import (
     LedgerError,
+    post_expense_refund,
     post_transaction,
     update_transaction,
     void_transaction_by_id,
 )
 from app.models import Transaction
 from app.resources import get_transaction, list_transactions
-from app.schemas import TransactionCreate, TransactionRead, TransactionUpdate
+from app.schemas import (
+    ExpenseRefundCreate,
+    TransactionCreate,
+    TransactionRead,
+    TransactionUpdate,
+)
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 TransactionId = Annotated[
@@ -87,6 +93,28 @@ def create_transaction_route(
             Transaction(**payload.to_orm_kwargs()),
             tag_ids=payload.tag_ids_for_relation(),
         )
+    except LedgerError as error:
+        raise map_ledger_error(error) from error
+    response.headers["Location"] = f"/api/v1/transactions/{transaction.id}"
+    return read_after_write(session, transaction.id)
+
+
+@router.post(
+    "/refunds",
+    response_model=TransactionRead,
+    status_code=status.HTTP_201_CREATED,
+    responses=NOT_FOUND_CONFLICT_RESPONSES,
+    operation_id="createExpenseRefund",
+)
+def create_expense_refund_route(
+    payload: ExpenseRefundCreate,
+    response: Response,
+    session: SessionDep,
+) -> TransactionRead:
+    """创建由原支出派生账户和分类的退款。"""
+
+    try:
+        transaction = post_expense_refund(session, payload)
     except LedgerError as error:
         raise map_ledger_error(error) from error
     response.headers["Location"] = f"/api/v1/transactions/{transaction.id}"

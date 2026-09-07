@@ -40,7 +40,7 @@ UPDATED_AT_TRIGGERS = (
     """
     CREATE TRIGGER IF NOT EXISTS tr_transactions_updated_at
     AFTER UPDATE OF type, src_account_id, dest_account_id, amount_minor,
-                    description, category, is_refund, related_transaction_id,
+                    description, category, refund_of_transaction_id,
                     balance_adjustment_direction, is_void, voided_at, occurred_at
     ON transactions
     FOR EACH ROW BEGIN

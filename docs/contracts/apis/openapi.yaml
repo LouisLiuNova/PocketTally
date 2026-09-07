@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: PocketTally HTTP API
   version: 0.1.0
-  description: PocketTally 资源 API；基础资源维护与交易读取已实现，交易写入仍在设计中。
+  description: PocketTally 资源、基础交易写入与支出退款 API。
 servers:
   - url: /api/v1
 tags:
@@ -435,6 +435,38 @@ paths:
       responses:
         '200':
           description: Transaction updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: ../models/transaction.read.schema.json
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Error'
+  /transactions/refunds:
+    post:
+      tags: [Transactions]
+      operationId: createExpenseRefund
+      summary: Create an expense refund
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../models/expense-refund.create.schema.json
+      responses:
+        '201':
+          description: Expense refund created successfully.
+          headers:
+            Location:
+              description: URL of the newly created refund transaction.
+              schema:
+                type: string
+                format: uri-reference
           content:
             application/json:
               schema:

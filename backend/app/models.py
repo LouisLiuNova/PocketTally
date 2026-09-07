@@ -55,6 +55,7 @@ class TransactionType(StrEnum):
 
     INCOME = "income"
     EXPENSE = "expense"
+    EXPENSE_REFUND = "expense_refund"
     TRANSFER = "transfer"
     BALANCE_ADJUSTMENT = "balance_adjustment"
 
@@ -249,7 +250,7 @@ class Tag(SQLModel, table=True):
 
 
 class Transaction(SQLModel, table=True):
-    """一笔收入、支出、转账或余额调整交易。"""
+    """一笔基础交易或支出退款。"""
 
     __tablename__ = "transactions"
     __table_args__ = (
@@ -272,7 +273,7 @@ class Transaction(SQLModel, table=True):
         CheckConstraint(
             "(type = 'income' AND src_account_id IS NULL "
             "AND dest_account_id IS NOT NULL AND category IS NOT NULL) OR "
-            "(type = 'expense' AND src_account_id IS NOT NULL "
+            "(type IN ('expense', 'expense_refund') AND src_account_id IS NOT NULL "
             "AND dest_account_id IS NULL AND category IS NOT NULL) OR "
             "(type = 'transfer' AND src_account_id IS NOT NULL "
             "AND dest_account_id IS NOT NULL AND src_account_id <> dest_account_id "
@@ -280,6 +281,12 @@ class Transaction(SQLModel, table=True):
             "(type = 'balance_adjustment' AND src_account_id IS NOT NULL "
             "AND dest_account_id IS NULL AND category IS NULL)",
             name="ck_transactions_route",
+        ),
+        CheckConstraint(
+            "(type = 'expense_refund' AND refund_of_transaction_id IS NOT NULL "
+            "AND refund_of_transaction_id <> id) OR "
+            "(type <> 'expense_refund' AND refund_of_transaction_id IS NULL)",
+            name="ck_transactions_refund_reference",
         ),
         CheckConstraint(
             "(is_void = 0 AND voided_at IS NULL) OR "
@@ -317,11 +324,7 @@ class Transaction(SQLModel, table=True):
         foreign_key="categories.id",
         index=True,
     )
-    is_refund: bool = Field(
-        default=False,
-        sa_column=Column(Boolean, nullable=False, server_default=text("0")),
-    )
-    related_transaction_id: str | None = Field(
+    refund_of_transaction_id: str | None = Field(
         default=None,
         foreign_key="transactions.id",
         index=True,
@@ -367,7 +370,7 @@ class Transaction(SQLModel, table=True):
     category_record: Category | None = Relationship(
         sa_relationship=relationship("Category", back_populates="transactions")
     )
-    related_transaction: Transaction | None = Relationship(
+    refund_of_transaction: Transaction | None = Relationship(
         sa_relationship=relationship(
             "Transaction",
             back_populates="refund_transactions",
@@ -376,7 +379,7 @@ class Transaction(SQLModel, table=True):
     )
     refund_transactions: list[Transaction] = Relationship(
         sa_relationship=relationship(
-            "Transaction", back_populates="related_transaction"
+            "Transaction", back_populates="refund_of_transaction"
         )
     )
     tags: list[Tag] = Relationship(

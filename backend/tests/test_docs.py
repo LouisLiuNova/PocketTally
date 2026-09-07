@@ -96,6 +96,7 @@ def test_implemented_api_status_codes_match_static_openapi() -> None:
         ("delete", "/tags/{tagId}"),
         ("get", "/transactions"),
         ("post", "/transactions"),
+        ("post", "/transactions/refunds"),
         ("get", "/transactions/{transactionId}"),
         ("patch", "/transactions/{transactionId}"),
         ("post", "/transactions/{transactionId}/void"),

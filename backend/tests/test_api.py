@@ -9,6 +9,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import event
 from sqlmodel import Session
 
+import app.ledger as ledger_module
 from app.config import Settings
 from app.main import create_app
 from app.models import Category, Transaction, TransactionTag, TransactionType
@@ -263,13 +264,12 @@ async def test_transaction_reads_and_delete_conflicts_preserve_relations(
                 TransactionTag(transaction_id=transaction.id, tag_id=str(tag["id"]))
             )
             related = Transaction(
-                type=TransactionType.EXPENSE,
+                type=TransactionType.EXPENSE_REFUND,
                 src_account_id=str(source["id"]),
                 amount_minor=500,
                 description="关联记录",
                 category=str(category["id"]),
-                is_refund=True,
-                related_transaction_id=transaction.id,
+                refund_of_transaction_id=transaction.id,
                 occurred_at=datetime.now(UTC),
             )
             related_id = related.id
@@ -331,8 +331,8 @@ async def test_transaction_reads_and_delete_conflicts_preserve_relations(
 
         related_detail = await client.get(f"/api/v1/transactions/{related_id}")
         assert related_detail.status_code == 200
-        assert related_detail.json()["relatedTransaction"]["id"] == transaction_id
-        assert related_detail.json()["relatedTransaction"]["amount"] == 18.8
+        assert related_detail.json()["refundOfTransaction"]["id"] == transaction_id
+        assert related_detail.json()["refundOfTransaction"]["amount"] == 18.8
 
         for path, code in (
             (f"/api/v1/accounts/{source['id']}", "account_in_use"),
@@ -462,6 +462,17 @@ async def test_transaction_write_patch_tags_and_idempotent_void(tmp_path: Path) 
             },
         )
         assert forbidden_refund.status_code == 422
+        forbidden_type = await client.post(
+            "/api/v1/transactions",
+            json={
+                "type": "expense_refund",
+                "sourceAccountId": source["id"],
+                "amount": 1,
+                "categoryId": expense_category["id"],
+                "occurredAt": occurred_at,
+            },
+        )
+        assert forbidden_type.status_code == 422
 
         missing_tag = await client.patch(
             f"/api/v1/transactions/{expense_body['id']}",
@@ -544,6 +555,246 @@ async def test_transaction_write_patch_tags_and_idempotent_void(tmp_path: Path) 
             concurrent_results[0].json()["voidedAt"]
             == concurrent_results[1].json()["voidedAt"]
         )
+
+
+@pytest.mark.asyncio
+async def test_expense_refund_failure_rolls_back_record_and_balance(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """验证退款余额同步失败时，请求事务不会留下退款记录。"""
+
+    app = create_app(
+        Settings(environment="test", database_path=tmp_path / "refund-rollback.sqlite3")
+    )
+    occurred_at = datetime.now(UTC).isoformat()
+    async with (
+        app.router.lifespan_context(app),
+        AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client,
+    ):
+        account = await create_resource(
+            client, "/api/v1/accounts", {"type": "credit", "name": "退款回滚账户"}
+        )
+        category = await create_resource(
+            client,
+            "/api/v1/categories",
+            {"name": "退款回滚分类", "purpose": "expense"},
+        )
+        expense = await create_resource(
+            client,
+            "/api/v1/transactions",
+            {
+                "type": "expense",
+                "sourceAccountId": account["id"],
+                "amount": 10,
+                "categoryId": category["id"],
+                "occurredAt": occurred_at,
+            },
+        )
+
+        def fail_balance_update(*_args, **_kwargs) -> dict[str, int]:
+            """模拟退款记录刷新后余额投影失败。"""
+
+            raise ledger_module.LedgerError("模拟余额同步失败")
+
+        monkeypatch.setattr(
+            ledger_module, "recalculate_account_balances", fail_balance_update
+        )
+        failed = await client.post(
+            "/api/v1/transactions/refunds",
+            json={
+                "refundOfTransactionId": expense["id"],
+                "amount": 2,
+                "occurredAt": occurred_at,
+            },
+        )
+        assert failed.status_code == 422
+        transactions = (await client.get("/api/v1/transactions")).json()
+        assert [item["id"] for item in transactions] == [expense["id"]]
+        assert (
+            await client.get(f"/api/v1/accounts/{account['id']}")
+        ).json()["amount"] == -10.0
+
+
+@pytest.mark.asyncio
+async def test_expense_refund_limits_balance_void_and_derived_fields(
+    tmp_path: Path,
+) -> None:
+    """验证专用退款入口、累计上限、派生字段、作废及失败回滚。"""
+
+    app = create_app(
+        Settings(environment="test", database_path=tmp_path / "refund.sqlite3")
+    )
+    occurred_at = datetime.now(UTC).isoformat()
+    async with (
+        app.router.lifespan_context(app),
+        AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client,
+    ):
+        account = await create_resource(
+            client, "/api/v1/accounts", {"type": "credit", "name": "退款账户"}
+        )
+        category = await create_resource(
+            client,
+            "/api/v1/categories",
+            {"name": "退款分类", "purpose": "expense"},
+        )
+        expense = await create_resource(
+            client,
+            "/api/v1/transactions",
+            {
+                "type": "expense",
+                "sourceAccountId": account["id"],
+                "amount": 10,
+                "categoryId": category["id"],
+                "occurredAt": occurred_at,
+            },
+        )
+        client_controlled_fields = await client.post(
+            "/api/v1/transactions/refunds",
+            json={
+                "refundOfTransactionId": expense["id"],
+                "amount": 1,
+                "occurredAt": occurred_at,
+                "sourceAccountId": account["id"],
+            },
+        )
+        assert client_controlled_fields.status_code == 422
+
+        first = await create_resource(
+            client,
+            "/api/v1/transactions/refunds",
+            {
+                "refundOfTransactionId": expense["id"],
+                "amount": 3,
+                "occurredAt": occurred_at,
+                "description": "第一笔退款",
+            },
+        )
+        assert first["type"] == "expense_refund"
+        assert first["sourceAccount"]["id"] == account["id"]
+        assert first["destinationAccount"] is None
+        assert first["category"]["id"] == category["id"]
+        assert first["refundOfTransactionId"] == expense["id"]
+        assert first["refundOfTransaction"]["id"] == expense["id"]
+
+        second = await create_resource(
+            client,
+            "/api/v1/transactions/refunds",
+            {
+                "refundOfTransactionId": expense["id"],
+                "amount": 7,
+                "occurredAt": occurred_at,
+            },
+        )
+        account_after_full_refund = await client.get(
+            f"/api/v1/accounts/{account['id']}"
+        )
+        assert account_after_full_refund.json()["amount"] == 0.0
+
+        over_limit = await client.post(
+            "/api/v1/transactions/refunds",
+            json={
+                "refundOfTransactionId": expense["id"],
+                "amount": 0.01,
+                "occurredAt": occurred_at,
+            },
+        )
+        assert over_limit.status_code == 409
+        assert over_limit.json()["code"] == "refund_limit_exceeded"
+        assert len((await client.get("/api/v1/transactions")).json()) == 3
+        assert (
+            await client.get(f"/api/v1/accounts/{account['id']}")
+        ).json()["amount"] == 0.0
+
+        blocked_change = await client.patch(
+            f"/api/v1/transactions/{expense['id']}", json={"amount": 11}
+        )
+        assert blocked_change.status_code == 409
+        assert blocked_change.json()["code"] == "original_has_active_refunds"
+        allowed_note = await client.patch(
+            f"/api/v1/transactions/{expense['id']}",
+            json={"description": "保留账务字段"},
+        )
+        assert allowed_note.status_code == 200
+        blocked_void = await client.post(
+            f"/api/v1/transactions/{expense['id']}/void"
+        )
+        assert blocked_void.status_code == 409
+
+        refund_note = await client.patch(
+            f"/api/v1/transactions/{first['id']}", json={"description": "已到账"}
+        )
+        assert refund_note.status_code == 200
+        refund_amount = await client.patch(
+            f"/api/v1/transactions/{first['id']}", json={"amount": 2}
+        )
+        assert refund_amount.status_code == 422
+
+        assert (await client.post(f"/api/v1/transactions/{second['id']}/void")).status_code == 200
+        assert (await client.post(f"/api/v1/transactions/{first['id']}/void")).status_code == 200
+        account_after_voids = await client.get(f"/api/v1/accounts/{account['id']}")
+        assert account_after_voids.json()["amount"] == -10.0
+        assert (await client.post(f"/api/v1/transactions/{expense['id']}/void")).status_code == 200
+        account_after_expense_void = await client.get(f"/api/v1/accounts/{account['id']}")
+        assert account_after_expense_void.json()["amount"] == 0.0
+
+        income_category = await create_resource(
+            client,
+            "/api/v1/categories",
+            {"name": "退款测试收入", "purpose": "income"},
+        )
+        income = await create_resource(
+            client,
+            "/api/v1/transactions",
+            {
+                "type": "income",
+                "destinationAccountId": account["id"],
+                "categoryId": income_category["id"],
+                "amount": 1,
+                "occurredAt": occurred_at,
+            },
+        )
+        adjustment = await create_resource(
+            client,
+            "/api/v1/transactions",
+            {
+                "type": "balance_adjustment",
+                "sourceAccountId": account["id"],
+                "balanceAdjustmentDirection": "increase",
+                "amount": 1,
+                "occurredAt": occurred_at,
+            },
+        )
+        other_account = await create_resource(
+            client, "/api/v1/accounts", {"type": "credit", "name": "退款测试转入"}
+        )
+        transfer = await create_resource(
+            client,
+            "/api/v1/transactions",
+            {
+                "type": "transfer",
+                "sourceAccountId": account["id"],
+                "destinationAccountId": other_account["id"],
+                "amount": 1,
+                "occurredAt": occurred_at,
+            },
+        )
+        for invalid_id in (
+            expense["id"],
+            second["id"],
+            income["id"],
+            adjustment["id"],
+            transfer["id"],
+        ):
+            invalid_target = await client.post(
+                "/api/v1/transactions/refunds",
+                json={
+                    "refundOfTransactionId": invalid_id,
+                    "amount": 1,
+                    "occurredAt": occurred_at,
+                },
+            )
+            assert invalid_target.status_code == 422
 
 
 @pytest.mark.asyncio

@@ -231,7 +231,7 @@ def list_transactions(
             joinedload(Transaction.source_account),
             joinedload(Transaction.destination_account),
             joinedload(Transaction.category_record),
-            joinedload(Transaction.related_transaction),
+            joinedload(Transaction.refund_of_transaction),
             selectinload(Transaction.tags),
         )
         .order_by(Transaction.occurred_at.desc(), Transaction.created_at.desc())
@@ -251,7 +251,7 @@ def get_transaction(session: Session, transaction_id: str) -> Transaction | None
             joinedload(Transaction.source_account),
             joinedload(Transaction.destination_account),
             joinedload(Transaction.category_record),
-            joinedload(Transaction.related_transaction),
+            joinedload(Transaction.refund_of_transaction),
             selectinload(Transaction.tags),
         )
     )

@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: PocketTally HTTP API
   version: 0.1.0
-  description: PocketTally 资源 API；基础资源维护与交易读取已实现，交易写入仍在设计中。
+  description: PocketTally 资源、基础交易写入与支出退款 API。
 servers:
   - url: /api/v1
 tags:
@@ -459,6 +459,39 @@ paths:
           $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/Error'
+  /transactions/refunds:
+    post:
+      tags:
+        - Transactions
+      operationId: createExpenseRefund
+      summary: Create an expense refund
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/expense-refund.create.schema'
+      responses:
+        '201':
+          description: Expense refund created successfully.
+          headers:
+            Location:
+              description: URL of the newly created refund transaction.
+              schema:
+                type: string
+                format: uri-reference
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/transaction.read.schema'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Error'
   /transactions/{transactionId}/void:
     parameters:
       - $ref: '#/components/parameters/TransactionId'
@@ -548,6 +581,14 @@ components:
       type: string
       format: date-time
     transactionType:
+      type: string
+      enum:
+        - income
+        - expense
+        - expense_refund
+        - transfer
+        - balance_adjustment
+    basicTransactionType:
       type: string
       enum:
         - income
@@ -904,8 +945,8 @@ components:
         - description
         - category
         - tags
-        - isRefund
-        - relatedTransaction
+        - refundOfTransactionId
+        - refundOfTransaction
         - balanceAdjustmentDirection
         - isVoid
         - voidedAt
@@ -940,9 +981,11 @@ components:
           items:
             $ref: '#/components/schemas/tagSummary'
           uniqueItems: true
-        isRefund:
-          type: boolean
-        relatedTransaction:
+        refundOfTransactionId:
+          oneOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        refundOfTransaction:
           oneOf:
             - $ref: '#/components/schemas/transactionSummary'
             - type: 'null'
@@ -987,6 +1030,28 @@ components:
           $ref: '#/components/schemas/nullableString'
         occurredAt:
           $ref: '#/components/schemas/dateTime'
+    expense-refund.create.schema:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://schemas.pockettally.app/models/expense-refund.create.schema.json
+      title: ExpenseRefundCreate
+      description: 创建支出退款；账户、分类和类型由服务端从原支出派生。
+      type: object
+      additionalProperties: false
+      required:
+        - refundOfTransactionId
+        - amount
+        - occurredAt
+      properties:
+        refundOfTransactionId:
+          $ref: '#/components/schemas/uuid'
+        amount:
+          type: number
+          exclusiveMinimum: 0
+          description: CNY 金额；按 ROUND_HALF_UP 舍入到分后必须仍为正数。
+        occurredAt:
+          $ref: '#/components/schemas/dateTime'
+        description:
+          $ref: '#/components/schemas/nullableString'
     transaction.create.schema:
       $schema: https://json-schema.org/draft/2020-12/schema
       $id: https://schemas.pockettally.app/models/transaction.create.schema.json
@@ -1061,7 +1126,7 @@ components:
               $ref: '#/components/schemas/balanceAdjustmentDirection'
       properties:
         type:
-          $ref: '#/components/schemas/transactionType'
+          $ref: '#/components/schemas/basicTransactionType'
         sourceAccountId:
           oneOf:
             - $ref: '#/components/schemas/uuid'
@@ -1104,7 +1169,7 @@ components:
       minProperties: 1
       properties:
         type:
-          $ref: '#/components/schemas/transactionType'
+          $ref: '#/components/schemas/basicTransactionType'
         sourceAccountId:
           oneOf:
             - $ref: '#/components/schemas/uuid'

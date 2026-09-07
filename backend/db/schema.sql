@@ -43,7 +43,7 @@ CREATE TABLE tags (
 
 CREATE TABLE transactions (
     id TEXT PRIMARY KEY NOT NULL,
-    type TEXT NOT NULL CHECK (type IN ('income', 'expense', 'transfer', 'balance_adjustment')),
+    type TEXT NOT NULL CHECK (type IN ('income', 'expense', 'transfer', 'balance_adjustment', 'expense_refund')),
     src_account_id TEXT,
     dest_account_id TEXT,
     amount_minor INTEGER NOT NULL
@@ -52,8 +52,7 @@ CREATE TABLE transactions (
         CHECK (typeof(amount_minor) = 'integer'),
     description TEXT,
     category TEXT,
-    is_refund BOOLEAN NOT NULL DEFAULT 0,
-    related_transaction_id TEXT,
+    refund_of_transaction_id TEXT,
     balance_adjustment_direction TEXT
         CHECK (balance_adjustment_direction IN ('increase', 'decrease')),
     is_void BOOLEAN NOT NULL DEFAULT 0,
@@ -72,7 +71,7 @@ CREATE TABLE transactions (
     CONSTRAINT ck_transactions_route CHECK (
         (type = 'income' AND src_account_id IS NULL
             AND dest_account_id IS NOT NULL AND category IS NOT NULL)
-        OR (type = 'expense' AND src_account_id IS NOT NULL
+        OR (type IN ('expense', 'expense_refund') AND src_account_id IS NOT NULL
             AND dest_account_id IS NULL AND category IS NOT NULL)
         OR (type = 'transfer' AND src_account_id IS NOT NULL
             AND dest_account_id IS NOT NULL AND src_account_id <> dest_account_id
@@ -80,13 +79,18 @@ CREATE TABLE transactions (
         OR (type = 'balance_adjustment' AND src_account_id IS NOT NULL
             AND dest_account_id IS NULL AND category IS NULL)
     ),
+    CONSTRAINT ck_transactions_refund_reference CHECK (
+        (type = 'expense_refund' AND refund_of_transaction_id IS NOT NULL
+            AND refund_of_transaction_id <> id)
+        OR (type <> 'expense_refund' AND refund_of_transaction_id IS NULL)
+    ),
     CONSTRAINT ck_transactions_void_state CHECK (
         (is_void = 0 AND voided_at IS NULL)
         OR (is_void = 1 AND voided_at IS NOT NULL)
     ),
     FOREIGN KEY (src_account_id) REFERENCES accounts (id),
     FOREIGN KEY (dest_account_id) REFERENCES accounts (id),
-    FOREIGN KEY (related_transaction_id) REFERENCES transactions (id),
+    FOREIGN KEY (refund_of_transaction_id) REFERENCES transactions (id),
     FOREIGN KEY (category) REFERENCES categories (id)
 );
 
@@ -102,8 +106,8 @@ CREATE INDEX ix_transactions_src_account_id
     ON transactions (src_account_id);
 CREATE INDEX ix_transactions_dest_account_id
     ON transactions (dest_account_id);
-CREATE INDEX ix_transactions_related_transaction_id
-    ON transactions (related_transaction_id);
+CREATE INDEX ix_transactions_refund_of_transaction_id
+    ON transactions (refund_of_transaction_id);
 CREATE INDEX ix_transactions_category
     ON transactions (category);
 CREATE INDEX ix_categories_parent_category_id
@@ -136,7 +140,7 @@ END;
 
 CREATE TRIGGER tr_transactions_updated_at
 AFTER UPDATE OF type, src_account_id, dest_account_id, amount_minor, description, category,
-                is_refund, related_transaction_id, balance_adjustment_direction,
+                refund_of_transaction_id, balance_adjustment_direction,
                 is_void, voided_at, occurred_at ON transactions
 FOR EACH ROW
 BEGIN
