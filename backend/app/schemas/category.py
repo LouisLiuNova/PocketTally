@@ -51,18 +51,15 @@ class CategoryUpdate(UpdateModel):
     parent_category_id: UUID | None = None
     icon_color: HexColor = None
     icon_name: str = Field(default=None, min_length=1)
-    confirm_subtree_move: bool = None
 
     def to_orm_kwargs(self) -> dict[str, Any]:
         """将已提交字段转换为 ``Category`` 的更新字段。
 
         Returns:
-            仅包含已提交字段的数据库列名字典；显式 null 会被保留，
-            ``confirmSubtreeMove`` 控制标记不会作为数据库列返回。
+            仅包含已提交字段的数据库列名字典；显式 null 会被保留。
         """
 
         values = self.model_dump(exclude_unset=True, by_alias=False)
-        values.pop("confirm_subtree_move", None)
         if "parent_category_id" in values:
             values["parent_category_id"] = _uuid_to_string(values["parent_category_id"])
         return values

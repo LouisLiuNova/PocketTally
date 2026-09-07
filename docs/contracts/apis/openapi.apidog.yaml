@@ -720,7 +720,7 @@ components:
       $schema: https://json-schema.org/draft/2020-12/schema
       $id: https://schemas.pockettally.app/models/category.update.schema.json
       title: CategoryUpdate
-      description: Partial payload for updating a category. Purpose is immutable. Moving a node with children requires explicit confirmation.
+      description: Partial payload for updating a category. Purpose is immutable.
       type: object
       additionalProperties: false
       minProperties: 1
@@ -739,9 +739,6 @@ components:
         iconName:
           type: string
           minLength: 1
-        confirmSubtreeMove:
-          type: boolean
-          description: Must be true when changing the parent of a category that has descendants.
     tag.read.schema:
       $schema: https://json-schema.org/draft/2020-12/schema
       $id: https://schemas.pockettally.app/models/tag.read.schema.json

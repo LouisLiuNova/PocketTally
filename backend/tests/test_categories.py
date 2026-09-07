@@ -128,7 +128,6 @@ def test_update_category_allows_legal_cross_level_move(tmp_path: Path) -> None:
             update_category(
                 session,
                 child,
-                confirm_subtree_move=True,
                 parent_category_id=destination.id,
             )
 
@@ -260,10 +259,10 @@ def test_category_purpose_is_immutable(tmp_path: Path) -> None:
         assert category.purpose is CategoryPurpose.EXPENSE
 
 
-def test_subtree_move_requires_explicit_confirmation(tmp_path: Path) -> None:
-    """验证含子分类的节点移动前必须显式确认整棵子树。"""
+def test_backend_moves_subtree_without_confirmation_field(tmp_path: Path) -> None:
+    """验证后端不接收前端确认字段，并安全移动整棵子树。"""
 
-    engine = make_engine(tmp_path / "confirm-subtree.sqlite3")
+    engine = make_engine(tmp_path / "subtree-move.sqlite3")
     source = Category(name="生活", purpose=CategoryPurpose.EXPENSE)
     destination = Category(name="固定支出", purpose=CategoryPurpose.EXPENSE)
     child = Category(
@@ -276,18 +275,10 @@ def test_subtree_move_requires_explicit_confirmation(tmp_path: Path) -> None:
             for category in (source, destination, child):
                 create_category(session, category)
 
-        with pytest.raises(CategoryHierarchyError) as error, session.begin():
-            update_category(session, source, parent_category_id=destination.id)
-        assert_error_code(
-            error,
-            CategoryHierarchyErrorCode.SUBTREE_MOVE_CONFIRMATION_REQUIRED,
-        )
-
         with session.begin():
             update_category(
                 session,
                 source,
-                confirm_subtree_move=True,
                 parent_category_id=destination.id,
             )
         assert source.parent_category_id == destination.id
@@ -353,7 +344,6 @@ def test_subtree_move_rejects_existing_purpose_mismatch(tmp_path: Path) -> None:
             update_category(
                 session,
                 source,
-                confirm_subtree_move=True,
                 parent_category_id=destination.id,
             )
 

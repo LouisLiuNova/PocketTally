@@ -159,13 +159,14 @@ def test_write_models_convert_relationship_ids_to_orm_columns() -> None:
     assert category.to_orm_kwargs()["purpose"] is CategoryPurpose.EXPENSE
     assert category.to_orm_kwargs()["parent_category_id"] is None
 
-    move = CategoryUpdate.model_validate(
-        {"parentCategoryId": str(category_id), "confirmSubtreeMove": True}
-    )
-    assert move.confirm_subtree_move is True
+    move = CategoryUpdate.model_validate({"parentCategoryId": str(category_id)})
     assert move.to_orm_kwargs() == {"parent_category_id": str(category_id)}
     with pytest.raises(ValidationError):
         CategoryUpdate.model_validate({"purpose": "income"})
+    with pytest.raises(ValidationError):
+        CategoryUpdate.model_validate(
+            {"parentCategoryId": str(category_id), "confirmSubtreeMove": True}
+        )
     with pytest.raises(ValidationError):
         CategoryCreate.model_validate({"name": "缺少用途"})
 
