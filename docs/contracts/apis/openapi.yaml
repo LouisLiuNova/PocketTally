@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: PocketTally HTTP API
   version: 0.1.0
-  description: CRUD contract skeleton for PocketTally resources.
+  description: PocketTally 资源 API；基础资源维护与交易读取已实现，交易写入仍在设计中。
 servers:
   - url: /api/v1
 tags:
@@ -29,8 +29,8 @@ paths:
                 type: array
                 items:
                   $ref: ../models/account.read.schema.json
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '500':
           $ref: '#/components/responses/Error'
     post:
@@ -56,8 +56,10 @@ paths:
             application/json:
               schema:
                 $ref: ../models/account.read.schema.json
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/Error'
 
@@ -75,8 +77,8 @@ paths:
             application/json:
               schema:
                 $ref: ../models/account.read.schema.json
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
@@ -98,10 +100,12 @@ paths:
             application/json:
               schema:
                 $ref: ../models/account.read.schema.json
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/Error'
     delete:
@@ -111,8 +115,8 @@ paths:
       responses:
         '204':
           description: Account deleted successfully. No response body.
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -134,8 +138,8 @@ paths:
                 type: array
                 items:
                   $ref: ../models/category.read.schema.json
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '500':
           $ref: '#/components/responses/Error'
     post:
@@ -161,10 +165,12 @@ paths:
             application/json:
               schema:
                 $ref: ../models/category.read.schema.json
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/Error'
 
@@ -182,8 +188,8 @@ paths:
             application/json:
               schema:
                 $ref: ../models/category.read.schema.json
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
@@ -205,8 +211,8 @@ paths:
             application/json:
               schema:
                 $ref: ../models/category.read.schema.json
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -220,8 +226,8 @@ paths:
       responses:
         '204':
           description: Category deleted successfully. No response body.
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -243,8 +249,8 @@ paths:
                 type: array
                 items:
                   $ref: ../models/tag.read.schema.json
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '500':
           $ref: '#/components/responses/Error'
     post:
@@ -270,8 +276,10 @@ paths:
             application/json:
               schema:
                 $ref: ../models/tag.read.schema.json
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/Error'
 
@@ -289,8 +297,8 @@ paths:
             application/json:
               schema:
                 $ref: ../models/tag.read.schema.json
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
@@ -312,10 +320,12 @@ paths:
             application/json:
               schema:
                 $ref: ../models/tag.read.schema.json
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/Error'
     delete:
@@ -325,10 +335,12 @@ paths:
       responses:
         '204':
           description: Tag deleted successfully. No response body.
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/Error'
 
@@ -346,8 +358,8 @@ paths:
                 type: array
                 items:
                   $ref: ../models/transaction.read.schema.json
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '500':
           $ref: '#/components/responses/Error'
     post:
@@ -373,8 +385,8 @@ paths:
             application/json:
               schema:
                 $ref: ../models/transaction.read.schema.json
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -396,8 +408,8 @@ paths:
             application/json:
               schema:
                 $ref: ../models/transaction.read.schema.json
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
@@ -419,8 +431,8 @@ paths:
             application/json:
               schema:
                 $ref: ../models/transaction.read.schema.json
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -434,8 +446,8 @@ paths:
       responses:
         '204':
           description: Transaction deleted successfully. No response body.
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -490,8 +502,14 @@ components:
           type: string
           minLength: 1
         details:
-          type: object
-          additionalProperties: true
+          description: 可选的结构化错误详情；请求校验失败时为字段错误数组。
+          oneOf:
+            - type: object
+              additionalProperties: true
+            - type: array
+              items:
+                type: object
+                additionalProperties: true
   responses:
     Error:
       description: Unexpected error.
@@ -499,8 +517,8 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-    BadRequest:
-      description: The request is invalid.
+    ValidationError:
+      description: Request validation failed.
       content:
         application/json:
           schema:

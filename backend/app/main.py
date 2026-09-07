@@ -3,6 +3,7 @@
 import uvicorn
 from fastapi import FastAPI
 
+from app.api.errors import register_exception_handlers
 from app.api.router import api_router
 from app.config import Settings, get_settings
 from app.lifespan import lifespan
@@ -31,6 +32,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # 让所有 Settings 依赖都使用构建此应用实例时的配置，尤其适用于测试和嵌入式使用。
     application.dependency_overrides[get_settings] = lambda: settings
     register_middleware(application)
+    register_exception_handlers(application)
     application.include_router(api_router, prefix=settings.api_prefix)
     return application
 

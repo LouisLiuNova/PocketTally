@@ -73,6 +73,44 @@ def test_extract_operations_rejects_invalid_contract() -> None:
         docs.extract_operations({"openapi": "3.1.0"})
 
 
+def test_implemented_api_status_codes_match_static_openapi() -> None:
+    """验证 Issue #12 路由与静态 OpenAPI 的响应状态完全一致。"""
+
+    design, _ = docs.validate_contracts()
+    actual = docs.actual_openapi()
+    implemented = {
+        ("get", "/accounts"),
+        ("post", "/accounts"),
+        ("get", "/accounts/{accountId}"),
+        ("patch", "/accounts/{accountId}"),
+        ("delete", "/accounts/{accountId}"),
+        ("get", "/categories"),
+        ("post", "/categories"),
+        ("get", "/categories/{categoryId}"),
+        ("patch", "/categories/{categoryId}"),
+        ("delete", "/categories/{categoryId}"),
+        ("get", "/tags"),
+        ("post", "/tags"),
+        ("get", "/tags/{tagId}"),
+        ("patch", "/tags/{tagId}"),
+        ("delete", "/tags/{tagId}"),
+        ("get", "/transactions"),
+        ("get", "/transactions/{transactionId}"),
+    }
+    actual_paths = {
+        docs.normalize_path(path, ("/api/v1",)): value
+        for path, value in actual["paths"].items()
+    }
+
+    for method, path in implemented:
+        design_statuses = set(design["paths"][path][method]["responses"])
+        actual_statuses = set(actual_paths[path][method]["responses"])
+        assert actual_statuses == design_statuses, f"{method.upper()} {path}"
+
+    error_properties = set(actual["components"]["schemas"]["ErrorResponse"]["properties"])
+    assert error_properties == {"code", "message", "details"}
+
+
 def test_parse_dbml_generates_table_and_relation() -> None:
     """验证 DBML 字段、备注和外键会进入模型。"""
 

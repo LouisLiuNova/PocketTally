@@ -346,7 +346,13 @@ class TransactionRead(ContractModel):
                 "category": transaction.category_record,
                 "tags": transaction.tags,
                 "is_refund": transaction.is_refund,
-                "related_transaction": transaction.related_transaction,
+                "related_transaction": (
+                    TransactionSummary.from_orm_model(
+                        transaction.related_transaction
+                    )
+                    if transaction.related_transaction is not None
+                    else None
+                ),
                 "balance_adjustment_direction": transaction.balance_adjustment_direction,
                 "voided_at": transaction.voided_at,
                 "occurred_at": transaction.occurred_at,

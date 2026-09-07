@@ -12,6 +12,11 @@ uv run pocket-tally-backend
 API 文档位于 <http://127.0.0.1:8000/docs>，健康检查端点为
 `GET /api/v1/health`。
 
+当前运行时已提供账户、树状分类和标签的创建、列表、详情、更新与删除接口，
+以及交易列表和详情读取接口。请求模型使用 camelCase；校验失败、不存在和冲突
+分别返回 `422`、`404` 和 `409`，错误体统一为 `{code, message, details?}`。
+基础资源仅在未被历史交易、子分类或关联表引用时允许物理删除。
+
 如需覆盖配置，将 `.env.example` 复制为 `.env`。所有环境变量均使用
 `POCKET_TALLY_` 前缀。数据库默认创建于启动工作目录下的
 `data/pocket-tally.sqlite3`，可通过 `POCKET_TALLY_DATABASE_PATH` 指定其他
