@@ -14,6 +14,8 @@
 
 ## 已完成
 
+- [x] 前端接入真实资源与交易 API，支持核心记账、退款、编辑、作废和统计；使用 Bun 运行，并提供独立账本的端到端验收。
+
 - [x] 将当前已实现的基础交易类型限制为 `income`、`expense`、`transfer` 和 `balance_adjustment`，并要求交易金额为有限正数。
 - [x] 要求创建交易提供 `occurred_at`，并在交易读取结果中返回；文档区分 `occurredAt`、`createdAt` 和 `updatedAt`。
 - [x] 将交易标签从 `transactions.tags` JSON 字段规范化为 `transaction_tags` 关联表，使用复合主键和外键约束。
