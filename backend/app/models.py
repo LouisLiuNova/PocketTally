@@ -260,6 +260,12 @@ class Transaction(SQLModel, table=True):
         Index("ix_transactions_src_occurred_at", "src_account_id", "occurred_at"),
         Index("ix_transactions_dest_occurred_at", "dest_account_id", "occurred_at"),
         Index("ix_transactions_category_occurred_at", "category", "occurred_at"),
+        Index(
+            "ix_transactions_type_status_refund_of",
+            "type",
+            "is_void",
+            "refund_of_transaction_id",
+        ),
         CheckConstraint(
             "amount_minor > 0",
             name="ck_transactions_amount_positive",

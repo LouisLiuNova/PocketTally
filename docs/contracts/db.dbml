@@ -38,6 +38,7 @@ Table transactions{
       (src_account_id, occurred_at)
       (dest_account_id, occurred_at)
       (category, occurred_at)
+      (type, is_void, refund_of_transaction_id)
     }
 
 }

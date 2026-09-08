@@ -25,7 +25,8 @@ API 文档位于 <http://127.0.0.1:8000/docs>，健康检查端点为
 如需覆盖配置，将 `.env.example` 复制为 `.env`。所有环境变量均使用
 `POCKET_TALLY_` 前缀。数据库默认创建于启动工作目录下的
 `data/pocket-tally.sqlite3`，可通过 `POCKET_TALLY_DATABASE_PATH` 指定其他
-绝对或相对路径。应用会自动创建父目录和数据表，并为每个 SQLite 连接启用外键。
+绝对或相对路径。应用会自动创建父目录和数据表，为每个 SQLite 连接启用外键，并为
+已有账本幂等补建不改变数据的必要统计索引。
 
 当前开发阶段不自动升级旧数据库。如果启动时报出旧余额触发器，请切换到新的
 开发数据库；应用不会删除或改写旧数据。
@@ -34,7 +35,12 @@ API 文档位于 <http://127.0.0.1:8000/docs>，健康检查端点为
 
 ```bash
 uv run pytest
+uv run pytest -q -s benchmarks/test_statistics_performance.py
 ```
+
+默认 pytest 包含 100,000 笔账本的单轮正确性回归；独立性能命令在预热后对八个接口
+各测量 20 次，并以 p95 不超过 1 秒为通过条件。测量环境和最近结果记录在
+`docs/statistics-performance.md`。
 
 Engine 在 `lifespan.py` 中初始化并保存到 `app.state.resources`。路由通过
 `dependencies.py` 中的 `SessionDep` 获得请求独占 Session：处理成功时提交，

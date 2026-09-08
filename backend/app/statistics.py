@@ -75,9 +75,30 @@ def _records(
     end: datetime,
     filters: StatisticsFilters = StatisticsFilters(),
 ) -> list[ExpenseRecord]:
-    """读取时间范围内原支出，并一次性聚合其全部有效退款。"""
+    """读取时间范围内原支出，并由数据库关联其全部有效退款。"""
 
-    statement = transaction_statement(
+    rows = session.execute(_net_expense_statement(session, start, end, filters))
+    return [
+        ExpenseRecord(
+            row.id,
+            stored_datetime_as_utc(row.occurred_at),
+            int(row.amount_minor),
+            row.category_id,
+            int(row.refunded_amount_minor),
+        )
+        for row in rows
+    ]
+
+
+def _filtered_expense_statement(
+    session: Session,
+    start: datetime,
+    end: datetime,
+    filters: StatisticsFilters,
+):
+    """构造包含完整统计筛选语义的有效原支出查询。"""
+
+    return transaction_statement(
         session,
         start_at=start,
         end_at=end,
@@ -88,31 +109,57 @@ def _records(
         tag_id=filters.tag_id,
         query=filters.query,
         status="active",
-    ).with_only_columns(
+    )
+
+
+def _refund_totals_subquery():
+    """按原支出聚合全部有效退款，不展开原支出 ID 参数。"""
+
+    return (
+        select(
+            Transaction.refund_of_transaction_id.label("transaction_id"),
+            func.coalesce(func.sum(Transaction.amount_minor), 0).label(
+                "refunded_amount_minor"
+            ),
+        )
+        .where(
+            Transaction.type == TransactionType.EXPENSE_REFUND,
+            Transaction.is_void.is_(False),
+        )
+        .group_by(Transaction.refund_of_transaction_id)
+        .subquery("expense_refunds")
+    )
+
+
+def _net_expense_statement(
+    session: Session,
+    start: datetime,
+    end: datetime,
+    filters: StatisticsFilters,
+):
+    """构造筛选后原支出及其有效退款净额的数据库查询。"""
+
+    filtered_statement = _filtered_expense_statement(session, start, end, filters)
+    filtered = filtered_statement.with_only_columns(
         Transaction.id,
         Transaction.occurred_at,
         Transaction.amount_minor,
-        Transaction.category,
-    )
-    rows = list(session.execute(statement).all())
-    if not rows:
-        return []
-    ids = [row[0] for row in rows]
-    refund_rows = session.execute(
+        Transaction.category.label("category_id"),
+    ).subquery("filtered_expenses")
+    refunds = _refund_totals_subquery()
+    refunded_amount = func.coalesce(refunds.c.refunded_amount_minor, 0)
+    return (
         select(
-            Transaction.refund_of_transaction_id,
-            func.coalesce(func.sum(Transaction.amount_minor), 0),
-        ).where(
-            Transaction.type == TransactionType.EXPENSE_REFUND,
-            Transaction.is_void.is_(False),
-            Transaction.refund_of_transaction_id.in_(ids),
-        ).group_by(Transaction.refund_of_transaction_id)
+            filtered.c.id,
+            filtered.c.occurred_at,
+            filtered.c.amount_minor,
+            filtered.c.category_id,
+            refunded_amount.label("refunded_amount_minor"),
+            (filtered.c.amount_minor - refunded_amount).label("net_expense_minor"),
+        )
+        .select_from(filtered)
+        .outerjoin(refunds, refunds.c.transaction_id == filtered.c.id)
     )
-    refunds = {row[0]: int(row[1] or 0) for row in refund_rows}
-    return [
-        ExpenseRecord(row[0], stored_datetime_as_utc(row[1]), int(row[2]), row[3], refunds.get(row[0], 0))
-        for row in rows
-    ]
 
 
 def _events(
@@ -451,23 +498,32 @@ def tags(
     end_date: date,
     filters: StatisticsFilters = StatisticsFilters(),
 ) -> TagsResponse:
-    records = _records(session, start, end, filters)
-    by_id = {record.id: record.net_expense_minor for record in records}
-    if not by_id:
-        return TagsResponse(period=_period(start_date, end_date), items=[])
-    rows = session.execute(
-        select(TransactionTag.tag_id, TransactionTag.transaction_id)
-        .where(TransactionTag.transaction_id.in_(by_id))
+    net_expenses = _net_expense_statement(session, start, end, filters).subquery(
+        "net_expenses"
     )
-    totals: dict[str, int] = defaultdict(int)
-    for tag_id, transaction_id in rows:
-        totals[tag_id] += by_id[transaction_id]
-    tag_rows = {
-        tag.id: tag for tag in session.exec(select(Tag).where(Tag.id.in_(totals)))
-    }
+    rows = session.execute(
+        select(
+            Tag.id,
+            Tag.name,
+            Tag.color,
+            func.sum(net_expenses.c.net_expense_minor).label("net_expense_minor"),
+        )
+        .select_from(net_expenses)
+        .join(
+            TransactionTag,
+            TransactionTag.transaction_id == net_expenses.c.id,
+        )
+        .join(Tag, Tag.id == TransactionTag.tag_id)
+        .group_by(Tag.id, Tag.name, Tag.color)
+    )
     items = [
-        TagAmount(tag_id=tag.id, name=tag.name, color=tag.color, net_expense_minor=totals[tag.id])
-        for tag in tag_rows.values()
+        TagAmount(
+            tag_id=row.id,
+            name=row.name,
+            color=row.color,
+            net_expense_minor=int(row.net_expense_minor or 0),
+        )
+        for row in rows
     ]
     items.sort(key=lambda item: (-item.net_expense_minor, str(item.tag_id)))
     return TagsResponse(period=_period(start_date, end_date), items=items)
@@ -518,43 +574,17 @@ def expense_transaction_page(
     同时避免把所有匹配支出加载到 Python 再切页。
     """
 
-    filtered = transaction_statement(
-        session,
-        start_at=start,
-        end_at=end,
-        transaction_type=TransactionType.EXPENSE,
-        account_id=filters.account_id,
-        category_id=filters.category_id,
-        include_descendants=filters.include_descendants,
-        tag_id=filters.tag_id,
-        query=filters.query,
-        status="active",
+    filtered = _filtered_expense_statement(session, start, end, filters)
+    net_expenses = _net_expense_statement(session, start, end, filters).subquery(
+        "net_expenses"
     )
-    filtered_subquery = filtered.subquery("filtered_expenses")
-    refund_totals = (
-        select(
-            Transaction.refund_of_transaction_id.label("transaction_id"),
-            func.coalesce(func.sum(Transaction.amount_minor), 0).label("refunded_amount_minor"),
-        )
-        .where(
-            Transaction.type == TransactionType.EXPENSE_REFUND,
-            Transaction.is_void.is_(False),
-        )
-        .group_by(Transaction.refund_of_transaction_id)
-        .subquery("expense_refunds")
-    )
-    refund_amount = func.coalesce(refund_totals.c.refunded_amount_minor, 0)
     totals_row = session.execute(
         select(
-            func.count(filtered_subquery.c.id),
-            func.coalesce(func.sum(filtered_subquery.c.amount_minor), 0),
-            func.coalesce(func.sum(refund_amount), 0),
+            func.count(net_expenses.c.id),
+            func.coalesce(func.sum(net_expenses.c.amount_minor), 0),
+            func.coalesce(func.sum(net_expenses.c.refunded_amount_minor), 0),
         )
-        .select_from(filtered_subquery)
-        .outerjoin(
-            refund_totals,
-            refund_totals.c.transaction_id == filtered_subquery.c.id,
-        )
+        .select_from(net_expenses)
     ).one()
     total = int(totals_row[0] or 0)
     original_amount_minor = int(totals_row[1] or 0)

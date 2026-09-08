@@ -65,6 +65,7 @@ Playwright E2E 每次使用当前进程对应的独立 SQLite 文件，默认位
 ```bash
 cd backend
 uv run pytest -q
+uv run pytest -q -s benchmarks/test_statistics_performance.py
 uvx ruff check .
 uv run --group docs python ../scripts/docs.py check
 ```
@@ -73,6 +74,7 @@ uv run --group docs python ../scripts/docs.py check
 
 - [在线开发文档](https://louisliunova.github.io/PocketTally/)
 - [业务规则](docs/business-rules.md)
+- [十万笔统计性能验收](docs/statistics-performance.md)
 - [通用前端测试方案与指示](docs/frontend-testing-plan.md)
 - [待办事项](TODO.md)
 - [历史方案与决策背景](TODO-IMP.md)

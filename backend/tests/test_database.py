@@ -41,6 +41,40 @@ def test_database_initialization_is_repeatable_and_enables_foreign_keys(
     reopened_engine.dispose()
 
 
+def test_database_initialization_restores_statistics_index(tmp_path: Path) -> None:
+    """验证已有账本会幂等补建有效退款统计索引。"""
+
+    engine = create_database_engine(tmp_path / "existing.sqlite3")
+    initialize_database(engine)
+    with engine.begin() as connection:
+        connection.exec_driver_sql(
+            "DROP INDEX ix_transactions_type_status_refund_of"
+        )
+
+    initialize_database(engine)
+    with engine.connect() as connection:
+        index_names = {
+            row[1]
+            for row in connection.exec_driver_sql(
+                "PRAGMA index_list(transactions)"
+            )
+        }
+        query_plan = " ".join(
+            str(row[3])
+            for row in connection.exec_driver_sql(
+                "EXPLAIN QUERY PLAN "
+                "SELECT refund_of_transaction_id, SUM(amount_minor) "
+                "FROM transactions "
+                "WHERE type = 'expense_refund' AND is_void = 0 "
+                "GROUP BY refund_of_transaction_id"
+            )
+        )
+    engine.dispose()
+
+    assert "ix_transactions_type_status_refund_of" in index_names
+    assert "ix_transactions_type_status_refund_of" in query_plan
+
+
 def test_database_rejects_legacy_balance_triggers(tmp_path: Path) -> None:
     """验证运行时不会静默升级带旧余额触发器的数据库。"""
 

@@ -120,6 +120,8 @@ CREATE INDEX ix_transactions_category
     ON transactions (category);
 CREATE INDEX ix_transactions_category_occurred_at
     ON transactions (category, occurred_at);
+CREATE INDEX ix_transactions_type_status_refund_of
+    ON transactions (type, is_void, refund_of_transaction_id);
 CREATE INDEX ix_categories_parent_category_id
     ON categories (parent_category_id);
 CREATE INDEX ix_transaction_tags_tag_id

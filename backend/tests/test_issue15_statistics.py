@@ -42,7 +42,7 @@ async def test_pagination_filters_and_cross_period_refund_statistics(tmp_path: P
                 "categoryId": child["id"],
                 "tagIds": [tag["id"]],
                 "description": "午餐 100%",
-                "occurredAt": "2026-01-31T16:00:00Z",
+                "occurredAt": "2026-01-31T15:59:00Z",
             },
         )
         refund = await create_resource(
@@ -51,7 +51,7 @@ async def test_pagination_filters_and_cross_period_refund_statistics(tmp_path: P
             {
                 "refundOfTransactionId": expense["id"],
                 "amount": 20,
-                "occurredAt": "2026-02-01T16:00:00Z",
+                "occurredAt": "2026-01-31T16:00:00Z",
             },
         )
 
@@ -74,15 +74,20 @@ async def test_pagination_filters_and_cross_period_refund_statistics(tmp_path: P
             params={"refundOfTransactionId": expense["id"]},
         )).json()["items"][0]["id"] == refund["id"]
 
-        period = {"startDate": "2026-02-01", "endDate": "2026-03-01"}
-        overview = (await client.get("/api/v1/statistics/overview", params=period)).json()
+        january = {"startDate": "2026-01-01", "endDate": "2026-02-01"}
+        february = {"startDate": "2026-02-01", "endDate": "2026-03-01"}
+        overview = (await client.get("/api/v1/statistics/overview", params=january)).json()
         assert overview["netExpense"]["currentAmountMinor"] == 8000
-        assert overview["netCashFlow"]["currentAmountMinor"] == -8000
-        cash = (await client.get("/api/v1/statistics/cash-flow", params=period)).json()
+        february_overview = (
+            await client.get("/api/v1/statistics/overview", params=february)
+        ).json()
+        assert february_overview["income"]["currentAmountMinor"] == 0
+        assert february_overview["netCashFlow"]["currentAmountMinor"] == 2000
+        cash = (await client.get("/api/v1/statistics/cash-flow", params=february)).json()
         assert sum(bucket["refundAmountMinor"] for bucket in cash["buckets"]) == 2000
         assert sum(bucket["incomeAmountMinor"] for bucket in cash["buckets"]) == 0
 
-        details = (await client.get("/api/v1/statistics/expense-transactions", params=period)).json()
+        details = (await client.get("/api/v1/statistics/expense-transactions", params=january)).json()
         assert details["totals"] == {
             "originalAmountMinor": 10000,
             "refundedAmountMinor": 2000,
@@ -93,19 +98,19 @@ async def test_pagination_filters_and_cross_period_refund_statistics(tmp_path: P
         assert details["items"][0]["netExpenseMinor"] == 8000
         categories = (await client.get(
             "/api/v1/statistics/categories",
-            params={**period, "granularity": "day"},
+            params={**january, "granularity": "day"},
         )).json()
         assert categories["granularity"] == "day"
-        assert len(categories["buckets"]) == 28
+        assert len(categories["buckets"]) == 31
         assert categories["items"][0]["amountMinor"] == 8000
         assert categories["items"][0]["directAmountMinor"] == 0
-        tags = (await client.get("/api/v1/statistics/tags", params=period)).json()
+        tags = (await client.get("/api/v1/statistics/tags", params=january)).json()
         assert tags["items"][0]["netExpenseMinor"] == 8000
 
         assert (await client.post(f"/api/v1/transactions/{refund['id']}/void")).status_code == 200
-        overview_after_void = (await client.get("/api/v1/statistics/overview", params=period)).json()
+        overview_after_void = (await client.get("/api/v1/statistics/overview", params=january)).json()
         assert overview_after_void["netExpense"]["currentAmountMinor"] == 10000
-        cash_after_void = (await client.get("/api/v1/statistics/cash-flow", params=period)).json()
+        cash_after_void = (await client.get("/api/v1/statistics/cash-flow", params=february)).json()
         assert sum(bucket["refundAmountMinor"] for bucket in cash_after_void["buckets"]) == 0
 
         naive = await client.post(

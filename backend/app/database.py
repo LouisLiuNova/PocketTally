@@ -65,6 +65,13 @@ UPDATED_AT_TRIGGERS = (
     """,
 )
 
+REQUIRED_INDEXES = (
+    (
+        "CREATE INDEX IF NOT EXISTS ix_transactions_type_status_refund_of "
+        "ON transactions (type, is_void, refund_of_transaction_id)"
+    ),
+)
+
 
 def resolve_database_path(database_path: Path) -> Path:
     """解析并准备本地 SQLite 数据库路径。
@@ -121,7 +128,7 @@ def create_database_engine(database_path: Path) -> Engine:
 
 
 def initialize_database(engine: Engine) -> None:
-    """创建表和审计触发器，并拒绝带旧余额触发器的数据库。
+    """创建表、必要索引和审计触发器，并拒绝带旧余额触发器的数据库。
 
     Args:
         engine: 待初始化的 SQLite Engine。
@@ -145,12 +152,15 @@ def initialize_database(engine: Engine) -> None:
 
     SQLModel.metadata.create_all(engine)
     with engine.begin() as connection:
+        for statement in REQUIRED_INDEXES:
+            connection.exec_driver_sql(statement)
         for statement in UPDATED_AT_TRIGGERS:
             connection.exec_driver_sql(statement)
 
 
 __all__ = (
     "LEGACY_BALANCE_TRIGGERS",
+    "REQUIRED_INDEXES",
     "create_database_engine",
     "initialize_database",
     "resolve_database_path",

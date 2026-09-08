@@ -74,10 +74,21 @@ def test_schema_normalizes_tags_and_enforces_unique_names() -> None:
         transaction_columns = {
             row[1] for row in connection.execute("PRAGMA table_info(transactions)")
         }
+        statistics_index_columns = tuple(
+            row[2]
+            for row in connection.execute(
+                "PRAGMA index_info(ix_transactions_type_status_refund_of)"
+            )
+        )
         assert "tags" not in transaction_columns
         assert "amount" not in transaction_columns
         assert "amount_minor" in transaction_columns
         assert "occurred_at" in transaction_columns
+        assert statistics_index_columns == (
+            "type",
+            "is_void",
+            "refund_of_transaction_id",
+        )
     finally:
         connection.close()
 
@@ -300,9 +311,14 @@ def test_sqlmodel_declares_database_defaults_and_normalized_tag_link() -> None:
             row[1]: row[3]
             for row in connection.exec_driver_sql("PRAGMA table_info(categories)")
         }
+        transaction_indexes = {
+            row[1]
+            for row in connection.exec_driver_sql("PRAGMA index_list(transactions)")
+        }
 
     assert account_columns["amount_minor"] == "0"
     assert transaction_columns["refund_of_transaction_id"] is None
+    assert "ix_transactions_type_status_refund_of" in transaction_indexes
     assert "is_refund" not in transaction_columns
     assert "related_transaction_id" not in transaction_columns
     assert app.models.Transaction.__table__.c.type.type.enums == [
