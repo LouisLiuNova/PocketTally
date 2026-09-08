@@ -20,6 +20,7 @@ theme:
 nav:
   - 首页: index.md
   - 业务规则: business-rules.md
+  - 通用前端测试方案与指示: frontend-testing-plan.md
   - 数据模型:
       - 数据库模型: data-models.md
       - HTTP 模型: http-models.md

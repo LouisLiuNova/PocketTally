@@ -42,12 +42,25 @@ bun run preview
 cd frontend
 bun run typecheck
 bun run test
-# 首次执行需安装浏览器；Linux 还需 Chromium 系统依赖。
+# 首次执行需安装 Chromium；Linux 还需 Chromium 系统依赖。
 bun --bun playwright install chromium
-bun run test:e2e
+bun run test:e2e:matrix
 ```
 
-端到端测试自动在 8012/3012 端口启动真实后端和 Bun 前端，使用 `frontend/.data/e2e.sqlite3` 独立测试账本，不使用默认个人账本。每次使用唯一资源名称，可重复执行。测试覆盖资源创建、调账、收支、编辑、退款限额与摘要、作废退款、转账、分页查询、服务端统计与下钻、余额持久化、引用资源删除保护和移动端布局。
+端到端测试自动在 8012/3012 端口启动真实后端和 Bun 前端，使用每次运行独立的 `frontend/.data/e2e-<进程号>.sqlite3` 测试账本，不使用默认个人账本。每次使用唯一资源名称，可重复执行。测试覆盖资源创建、调账、收支、编辑、退款限额与摘要、作废退款、转账、分页查询、服务端统计与下钻、余额持久化、引用资源删除保护和移动端布局。
+
+桌面兼容性验收当前只阻断 Chromium，固定覆盖 1280、1440 和 1920 三档宽度；Firefox 和 WebKit 不属于当前 MVP 验收范围。矩阵测试还会检查五个主页面、空状态、长文本、20 笔以上分页、多时间桶统计、明暗主题、弹窗视口边界、横向溢出和保存失败后的输入保留。失败时可在 `frontend/test-results/` 查看截图和 trace。
+
+只运行单个桌面视口进行调试：
+
+```bash
+cd frontend
+bun run test:e2e --project=chromium-1280
+bun run test:e2e --project=chromium-1440
+bun run test:e2e --project=chromium-1920
+```
+
+Playwright E2E 每次使用当前进程对应的独立 SQLite 文件，默认位于 `frontend/.data/e2e-<进程号>.sqlite3`；也可以通过 `POCKET_TALLY_E2E_DATABASE_PATH` 指定测试数据库路径。
 
 ```bash
 cd backend
@@ -60,6 +73,7 @@ uv run --group docs python ../scripts/docs.py check
 
 - [在线开发文档](https://louisliunova.github.io/PocketTally/)
 - [业务规则](docs/business-rules.md)
+- [通用前端测试方案与指示](docs/frontend-testing-plan.md)
 - [待办事项](TODO.md)
 - [历史方案与决策背景](TODO-IMP.md)
 

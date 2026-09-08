@@ -9,7 +9,8 @@
     "preview": "bun .output/server/index.mjs",
     "typecheck": "bun --bun nuxt typecheck",
     "test": "bun test tests",
-    "test:e2e": "bun --bun playwright test"
+    "test:e2e": "bun --bun playwright test",
+    "test:e2e:matrix": "bun --bun playwright test --project=chromium-1280 --project=chromium-1440 --project=chromium-1920"
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.68",

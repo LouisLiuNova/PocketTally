@@ -10,6 +10,7 @@
 | 内容 | 用途 |
 | --- | --- |
 | [业务规则](business-rules.md) | 查看已生效、部分落地和待决策的账本规则。 |
+| [通用前端测试方案与指示](frontend-testing-plan.md) | 查看前端基础检查、E2E、Chromium 桌面矩阵和验收标准。 |
 | [数据库模型](data-models.md) | 查看表、字段、约束说明和 ER 关系图。 |
 | [HTTP 模型](http-models.md) | 按请求和响应模型查询字段。 |
 | [接口实现状态](api-status.md) | 对照设计契约与 FastAPI 当前路由。 |
