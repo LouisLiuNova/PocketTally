@@ -39,3 +39,14 @@ uv run pytest
 Engine 在 `lifespan.py` 中初始化并保存到 `app.state.resources`。路由通过
 `dependencies.py` 中的 `SessionDep` 获得请求独占 Session：处理成功时提交，
 发生异常或提交失败时回滚。账本服务只执行写入与 `flush`，不自行提交事务。
+
+## Pydantic 兼容范围
+
+当前后端支持 Pydantic `>=2.0,<3.0`；锁定环境当前使用 Pydantic 2.13.4。
+HTTP 模型使用 Pydantic 2 的 `field_serializer` 序列化时间，避免使用已弃用的
+`json_encoders`，并保持 UTC `Z` 时间、Decimal 金额 JSON number 和 camelCase
+字段别名不变。
+
+升级到 Pydantic 3 前仍需确认 FastAPI、pydantic-settings 及其生态依赖的正式兼容
+版本，并重新运行完整 pytest、运行时/静态 OpenAPI 对照和 JSON Schema 检查；在这些
+依赖发布兼容版本前，`<3.0` 上限是有意保留的阻断项。

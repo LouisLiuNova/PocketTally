@@ -26,10 +26,12 @@ from app.schemas import (
     CategoryRead,
     CategoryUpdate,
     ExpenseRefundCreate,
+    ExpenseTransactionItem,
     TagRead,
     TagUpdate,
     TransactionCreate,
     TransactionRead,
+    TransactionSummary,
     TransactionUpdate,
 )
 
@@ -243,6 +245,54 @@ def test_money_uses_decimal_rounding_and_integer_minor_units() -> None:
                 "occurredAt": datetime.now(UTC).isoformat(),
             }
         )
+
+
+def test_json_serialization_preserves_http_scalar_contract() -> None:
+    """验证字段序列化器保持金额、时间、枚举、UUID 和别名契约。"""
+
+    occurred_at = datetime(2026, 1, 1, 8, 9, 10, 123456, tzinfo=UTC)
+    transaction = TransactionCreate.model_validate(
+        {
+            "type": "expense",
+            "sourceAccountId": str(uuid4()),
+            "amount": 12.34,
+            "categoryId": str(uuid4()),
+            "occurredAt": occurred_at.isoformat(),
+        }
+    )
+
+    dumped = transaction.model_dump(mode="json", by_alias=True)
+
+    assert dumped["type"] == "expense"
+    assert dumped["amount"] == 12.34
+    assert dumped["sourceAccountId"] == str(transaction.source_account_id)
+    assert dumped["occurredAt"] == "2026-01-01T08:09:10.123456Z"
+    assert "source_account_id" not in dumped
+
+
+def test_datetime_json_serialization_normalizes_nested_and_naive_values() -> None:
+    """验证嵌套响应和无时区 datetime 仍输出 UTC ``Z``。"""
+
+    naive = datetime.fromisoformat("2026-01-01T08:00:00")
+    summary = TransactionSummary(
+        id=uuid4(),
+        type=TransactionType.EXPENSE,
+        amount=Decimal("1.00"),
+        description=None,
+        occurred_at=naive,
+        created_at=naive,
+    )
+    page = ExpenseTransactionItem(
+        transaction=summary,
+        original_amount_minor=100,
+        refunded_amount_minor=0,
+        net_expense_minor=100,
+    )
+
+    dumped = page.model_dump(mode="json", by_alias=True)
+
+    assert dumped["transaction"]["occurredAt"] == "2026-01-01T08:00:00Z"
+    assert dumped["transaction"]["createdAt"] == "2026-01-01T08:00:00Z"
 
 
 def test_account_type_and_debit_amount_constraints() -> None:

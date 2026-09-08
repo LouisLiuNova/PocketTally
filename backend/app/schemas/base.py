@@ -3,7 +3,13 @@
 from datetime import UTC, datetime
 from typing import Annotated, Self
 
-from pydantic import BaseModel, ConfigDict, StringConstraints, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    StringConstraints,
+    field_serializer,
+    model_validator,
+)
 
 
 def to_camel(value: str) -> str:
@@ -36,15 +42,28 @@ class ContractModel(BaseModel):
         from_attributes=True,
         populate_by_name=True,
         str_strip_whitespace=True,
-        json_encoders={
-            datetime: lambda value: (
-                (value if value.tzinfo is not None else value.replace(tzinfo=UTC))
-                .astimezone(UTC)
-                .isoformat()
-                .replace("+00:00", "Z")
-            ),
-        },
     )
+
+    @field_serializer(
+        "created_at",
+        "updated_at",
+        "occurred_at",
+        "voided_at",
+        when_used="json",
+        check_fields=False,
+    )
+    def serialize_datetime(self, value: object) -> object:
+        """将 HTTP 响应中的时间统一序列化为带 ``Z`` 的 UTC 字符串。
+
+        Pydantic 2 的字段序列化器只在 JSON 模式生效，因此普通
+        ``model_dump()`` 仍保留 datetime 对象，HTTP
+        输出和嵌套响应则统一使用当前契约要求的 UTC 表示。
+        """
+
+        if not isinstance(value, datetime):
+            return value
+        aware = value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+        return aware.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
 class UpdateModel(ContractModel):
