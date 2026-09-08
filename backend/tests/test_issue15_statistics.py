@@ -88,7 +88,15 @@ async def test_pagination_filters_and_cross_period_refund_statistics(tmp_path: P
             "refundedAmountMinor": 2000,
             "netExpenseMinor": 8000,
         }
-        categories = (await client.get("/api/v1/statistics/categories", params=period)).json()
+        assert details["items"][0]["originalAmountMinor"] == 10000
+        assert details["items"][0]["refundedAmountMinor"] == 2000
+        assert details["items"][0]["netExpenseMinor"] == 8000
+        categories = (await client.get(
+            "/api/v1/statistics/categories",
+            params={**period, "granularity": "day"},
+        )).json()
+        assert categories["granularity"] == "day"
+        assert len(categories["buckets"]) == 28
         assert categories["items"][0]["amountMinor"] == 8000
         assert categories["items"][0]["directAmountMinor"] == 0
         tags = (await client.get("/api/v1/statistics/tags", params=period)).json()

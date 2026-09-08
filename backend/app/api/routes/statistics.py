@@ -137,6 +137,7 @@ def get_categories(
     session: SessionDep,
     start_date: date | None = Query(None, alias="startDate"),
     end_date: date | None = Query(None, alias="endDate"),
+    granularity: Granularity = Query("month"),
     parent_category_id: UUID | None = Query(None, alias="parentCategoryId"),
     account_id: UUID | None = Query(None, alias="accountId"),
     category_id: UUID | None = Query(None, alias="categoryId"),
@@ -145,7 +146,16 @@ def get_categories(
     q: str | None = Query(None),
 ) -> CategoriesResponse:
     start_date, end_date, start, end = _resolve_period(start_date, end_date)
-    return categories(session, start, end, start_date, end_date, _filters(account_id, category_id, include_descendants, tag_id, q), str(parent_category_id) if parent_category_id else None)
+    return categories(
+        session,
+        start,
+        end,
+        start_date,
+        end_date,
+        _filters(account_id, category_id, include_descendants, tag_id, q),
+        str(parent_category_id) if parent_category_id else None,
+        granularity,
+    )
 
 
 @router.get("/tags", response_model=TagsResponse, responses=VALIDATION_RESPONSES, operation_id="getStatisticsTags")

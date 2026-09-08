@@ -1390,6 +1390,17 @@ paths:
             format: date
           - type: 'null'
           title: Enddate
+      - name: granularity
+        in: query
+        required: false
+        schema:
+          enum:
+          - day
+          - week
+          - month
+          type: string
+          default: month
+          title: Granularity
       - name: parentCategoryId
         in: query
         required: false

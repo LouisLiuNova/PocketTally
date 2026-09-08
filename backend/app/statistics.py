@@ -6,6 +6,7 @@ from datetime import date, datetime
 from typing import Literal
 
 from sqlalchemy import func
+from sqlalchemy.orm import aliased, joinedload, selectinload
 from sqlmodel import Session, select
 
 from app.models import (
@@ -510,20 +511,88 @@ def expense_transaction_page(
     page_size: int,
     filters: StatisticsFilters = StatisticsFilters(),
 ) -> ExpenseTransactionPage:
-    records = _records(session, start, end, filters)
-    records.sort(key=lambda item: (item.occurred_at, item.id), reverse=True)
-    total = len(records)
-    selected = records[(page - 1) * page_size : page * page_size]
-    ids = [record.id for record in selected]
-    transactions = {item.id: item for item in session.exec(select(Transaction).where(Transaction.id.in_(ids)))}
+    """按数据库过滤、聚合和分页消费明细。
+
+    原支出的有效退款不按退款发生时间过滤，而是通过退款关联回原支出后
+    聚合。这保持了报表“原支出发生时间归属期间、退款抵减原支出”的口径，
+    同时避免把所有匹配支出加载到 Python 再切页。
+    """
+
+    filtered = transaction_statement(
+        session,
+        start_at=start,
+        end_at=end,
+        transaction_type=TransactionType.EXPENSE,
+        account_id=filters.account_id,
+        category_id=filters.category_id,
+        include_descendants=filters.include_descendants,
+        tag_id=filters.tag_id,
+        query=filters.query,
+        status="active",
+    )
+    filtered_subquery = filtered.subquery("filtered_expenses")
+    refund_totals = (
+        select(
+            Transaction.refund_of_transaction_id.label("transaction_id"),
+            func.coalesce(func.sum(Transaction.amount_minor), 0).label("refunded_amount_minor"),
+        )
+        .where(
+            Transaction.type == TransactionType.EXPENSE_REFUND,
+            Transaction.is_void.is_(False),
+        )
+        .group_by(Transaction.refund_of_transaction_id)
+        .subquery("expense_refunds")
+    )
+    refund_amount = func.coalesce(refund_totals.c.refunded_amount_minor, 0)
+    totals_row = session.execute(
+        select(
+            func.count(filtered_subquery.c.id),
+            func.coalesce(func.sum(filtered_subquery.c.amount_minor), 0),
+            func.coalesce(func.sum(refund_amount), 0),
+        )
+        .select_from(filtered_subquery)
+        .outerjoin(
+            refund_totals,
+            refund_totals.c.transaction_id == filtered_subquery.c.id,
+        )
+    ).one()
+    total = int(totals_row[0] or 0)
+    original_amount_minor = int(totals_row[1] or 0)
+    refunded_amount_minor = int(totals_row[2] or 0)
+
+    refund_transaction = aliased(Transaction)
+    refund_amount_for_page = (
+        select(func.coalesce(func.sum(refund_transaction.amount_minor), 0))
+        .where(
+            refund_transaction.type == TransactionType.EXPENSE_REFUND,
+            refund_transaction.is_void.is_(False),
+            refund_transaction.refund_of_transaction_id == Transaction.id,
+        )
+        .correlate(Transaction)
+        .scalar_subquery()
+    )
+    page_rows = session.execute(
+        filtered
+        .options(
+            joinedload(Transaction.source_account),
+            joinedload(Transaction.destination_account),
+            joinedload(Transaction.category_record),
+            joinedload(Transaction.refund_of_transaction),
+            selectinload(Transaction.tags),
+        )
+        .add_columns(refund_amount_for_page.label("refunded_amount_minor"))
+        .order_by(Transaction.occurred_at.desc(), Transaction.id.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    ).unique().all()
     items = [
         ExpenseTransactionItem(
-            transaction=TransactionSummary.from_orm_model(transactions[record.id]),
-            original_amount_minor=record.amount_minor,
-            refunded_amount_minor=record.refunded_amount_minor,
-            net_expense_minor=record.net_expense_minor,
+            transaction=TransactionSummary.from_orm_model(transaction),
+            original_amount_minor=int(transaction.amount_minor),
+            refunded_amount_minor=int(refunded),
+            net_expense_minor=int(transaction.amount_minor) - int(refunded),
         )
-        for record in selected
+        for transaction, refunded in page_rows
     ]
     return ExpenseTransactionPage(
         items=items,
@@ -531,9 +600,9 @@ def expense_transaction_page(
         page=page,
         page_size=page_size,
         totals=ExpenseTransactionTotals(
-            original_amount_minor=sum(item.amount_minor for item in records),
-            refunded_amount_minor=sum(item.refunded_amount_minor for item in records),
-            net_expense_minor=sum(item.net_expense_minor for item in records),
+            original_amount_minor=original_amount_minor,
+            refunded_amount_minor=refunded_amount_minor,
+            net_expense_minor=original_amount_minor - refunded_amount_minor,
         ),
     )
 
