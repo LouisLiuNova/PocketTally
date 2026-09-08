@@ -314,13 +314,14 @@ async def test_transaction_reads_and_delete_conflicts_preserve_relations(
                 record_statement,
             )
         assert listing.status_code == 200
-        assert len(listing.json()) == 2
-        assert len(statements) == 2
+        assert len(listing.json()["items"]) == 2
+        assert listing.json()["total"] == 2
+        assert len(statements) == 3
         audit_listing = await client.get(
-            "/api/v1/transactions", params={"includeVoided": "true"}
+            "/api/v1/transactions", params={"status": "all"}
         )
         assert audit_listing.status_code == 200
-        assert len(audit_listing.json()) == 3
+        assert len(audit_listing.json()["items"]) == 3
         detail = await client.get(f"/api/v1/transactions/{transaction_id}")
         assert detail.status_code == 200
         body = detail.json()
@@ -521,16 +522,16 @@ async def test_transaction_write_patch_tags_and_idempotent_void(tmp_path: Path) 
         assert rejected_patch.json()["code"] == "transaction_voided"
 
         default_ids = {
-            item["id"] for item in (await client.get("/api/v1/transactions")).json()
+            item["id"] for item in (await client.get("/api/v1/transactions")).json()["items"]
         }
         assert expense_body["id"] not in default_ids
         audit_ids = {
             item["id"]
             for item in (
                 await client.get(
-                    "/api/v1/transactions", params={"includeVoided": "true"}
+                    "/api/v1/transactions", params={"status": "all"}
                 )
-            ).json()
+            ).json()["items"]
         }
         assert expense_body["id"] in audit_ids
 
@@ -610,7 +611,7 @@ async def test_expense_refund_failure_rolls_back_record_and_balance(
         )
         assert failed.status_code == 422
         transactions = (await client.get("/api/v1/transactions")).json()
-        assert [item["id"] for item in transactions] == [expense["id"]]
+        assert [item["id"] for item in transactions["items"]] == [expense["id"]]
         assert (
             await client.get(f"/api/v1/accounts/{account['id']}")
         ).json()["amount"] == -10.0
@@ -701,7 +702,7 @@ async def test_expense_refund_limits_balance_void_and_derived_fields(
         )
         assert over_limit.status_code == 409
         assert over_limit.json()["code"] == "refund_limit_exceeded"
-        assert len((await client.get("/api/v1/transactions")).json()) == 3
+        assert len((await client.get("/api/v1/transactions")).json()["items"]) == 3
         assert (
             await client.get(f"/api/v1/accounts/{account['id']}")
         ).json()["amount"] == 0.0

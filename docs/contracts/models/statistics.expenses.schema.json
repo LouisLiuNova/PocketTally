@@ -1,0 +1,98 @@
+{
+  "$defs": {
+    "ExpenseBucket": {
+      "additionalProperties": false,
+      "properties": {
+        "startAt": {
+          "format": "date-time",
+          "title": "Startat",
+          "type": "string"
+        },
+        "endAt": {
+          "format": "date-time",
+          "title": "Endat",
+          "type": "string"
+        },
+        "netExpenseMinor": {
+          "title": "Netexpenseminor",
+          "type": "integer"
+        },
+        "cumulativeNetExpenseMinor": {
+          "title": "Cumulativenetexpenseminor",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "startAt",
+        "endAt",
+        "netExpenseMinor",
+        "cumulativeNetExpenseMinor"
+      ],
+      "title": "ExpenseBucket",
+      "type": "object"
+    },
+    "Period": {
+      "additionalProperties": false,
+      "properties": {
+        "startDate": {
+          "format": "date",
+          "title": "Startdate",
+          "type": "string"
+        },
+        "endDate": {
+          "format": "date",
+          "title": "Enddate",
+          "type": "string"
+        },
+        "timezone": {
+          "const": "Asia/Shanghai",
+          "default": "Asia/Shanghai",
+          "title": "Timezone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "startDate",
+        "endDate"
+      ],
+      "title": "Period",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "period": {
+      "$ref": "#/$defs/Period"
+    },
+    "granularity": {
+      "enum": [
+        "day",
+        "week",
+        "month"
+      ],
+      "title": "Granularity",
+      "type": "string"
+    },
+    "buckets": {
+      "items": {
+        "$ref": "#/$defs/ExpenseBucket"
+      },
+      "title": "Buckets",
+      "type": "array"
+    },
+    "cumulativeStartMinor": {
+      "default": 0,
+      "title": "Cumulativestartminor",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "period",
+    "granularity",
+    "buckets"
+  ],
+  "title": "ExpensesResponse",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/statistics.expenses.schema.json"
+}

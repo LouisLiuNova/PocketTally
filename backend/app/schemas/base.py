@@ -1,5 +1,6 @@
 """HTTP Pydantic 模型的公共配置和标量约束。"""
 
+from datetime import UTC, datetime
 from typing import Annotated, Self
 
 from pydantic import BaseModel, ConfigDict, StringConstraints, model_validator
@@ -35,6 +36,14 @@ class ContractModel(BaseModel):
         from_attributes=True,
         populate_by_name=True,
         str_strip_whitespace=True,
+        json_encoders={
+            datetime: lambda value: (
+                (value if value.tzinfo is not None else value.replace(tzinfo=UTC))
+                .astimezone(UTC)
+                .isoformat()
+                .replace("+00:00", "Z")
+            ),
+        },
     )
 
 

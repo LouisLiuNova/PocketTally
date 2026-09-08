@@ -1,0 +1,380 @@
+{
+  "$defs": {
+    "AccountSummary": {
+      "additionalProperties": false,
+      "description": "事务中嵌入的账户有界摘要。",
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/AccountType"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "name"
+      ],
+      "title": "AccountSummary",
+      "type": "object"
+    },
+    "AccountType": {
+      "description": "系统支持的账户类型。",
+      "enum": [
+        "debit",
+        "credit"
+      ],
+      "title": "AccountType",
+      "type": "string"
+    },
+    "BalanceAdjustmentDirection": {
+      "description": "余额调整的资金方向。",
+      "enum": [
+        "increase",
+        "decrease"
+      ],
+      "title": "BalanceAdjustmentDirection",
+      "type": "string"
+    },
+    "CategoryPurpose": {
+      "description": "分类可用于的交易用途。",
+      "enum": [
+        "income",
+        "expense"
+      ],
+      "title": "CategoryPurpose",
+      "type": "string"
+    },
+    "CategorySummary": {
+      "additionalProperties": false,
+      "description": "事务或分类关系中嵌入的分类有界摘要。",
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "purpose": {
+          "$ref": "#/$defs/CategoryPurpose"
+        },
+        "iconColor": {
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "title": "Iconcolor",
+          "type": "string"
+        },
+        "iconName": {
+          "minLength": 1,
+          "title": "Iconname",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "purpose",
+        "iconColor",
+        "iconName"
+      ],
+      "title": "CategorySummary",
+      "type": "object"
+    },
+    "TagSummary": {
+      "additionalProperties": false,
+      "description": "交易中嵌入的标签有界摘要。",
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "color": {
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "title": "Color",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "color"
+      ],
+      "title": "TagSummary",
+      "type": "object"
+    },
+    "TransactionRead": {
+      "additionalProperties": false,
+      "description": "交易响应模型，关系以有界摘要嵌入。",
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/TransactionType"
+        },
+        "sourceAccount": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AccountSummary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "destinationAccount": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AccountSummary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "amount": {
+          "description": "CNY 金额；服务端接收后按 ROUND_HALF_UP 舍入到分。",
+          "examples": [
+            12.34
+          ],
+          "exclusiveMinimum": 0,
+          "title": "Amount",
+          "type": "number"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Description"
+        },
+        "category": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CategorySummary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tags": {
+          "items": {
+            "$ref": "#/$defs/TagSummary"
+          },
+          "title": "Tags",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "refundOfTransactionId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Refundoftransactionid"
+        },
+        "refundOfTransaction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransactionSummary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "balanceAdjustmentDirection": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BalanceAdjustmentDirection"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "isVoid": {
+          "title": "Isvoid",
+          "type": "boolean"
+        },
+        "voidedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Voidedat"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "title": "Occurredat",
+          "type": "string"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "updatedAt": {
+          "format": "date-time",
+          "title": "Updatedat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "sourceAccount",
+        "destinationAccount",
+        "amount",
+        "description",
+        "category",
+        "tags",
+        "refundOfTransactionId",
+        "refundOfTransaction",
+        "balanceAdjustmentDirection",
+        "isVoid",
+        "voidedAt",
+        "occurredAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "title": "TransactionRead",
+      "type": "object"
+    },
+    "TransactionSummary": {
+      "additionalProperties": false,
+      "description": "退款关联交易中嵌入的有界摘要。",
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/TransactionType"
+        },
+        "amount": {
+          "description": "CNY 金额；服务端接收后按 ROUND_HALF_UP 舍入到分。",
+          "examples": [
+            12.34
+          ],
+          "exclusiveMinimum": 0,
+          "title": "Amount",
+          "type": "number"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Description"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "title": "Occurredat",
+          "type": "string"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "amount",
+        "description",
+        "occurredAt",
+        "createdAt"
+      ],
+      "title": "TransactionSummary",
+      "type": "object"
+    },
+    "TransactionType": {
+      "description": "系统支持的交易类型。",
+      "enum": [
+        "income",
+        "expense",
+        "expense_refund",
+        "transfer",
+        "balance_adjustment"
+      ],
+      "title": "TransactionType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "items": {
+      "items": {
+        "$ref": "#/$defs/TransactionRead"
+      },
+      "title": "Items",
+      "type": "array"
+    },
+    "total": {
+      "minimum": 0,
+      "title": "Total",
+      "type": "integer"
+    },
+    "page": {
+      "minimum": 1,
+      "title": "Page",
+      "type": "integer"
+    },
+    "pageSize": {
+      "maximum": 100,
+      "minimum": 1,
+      "title": "Pagesize",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "items",
+    "total",
+    "page",
+    "pageSize"
+  ],
+  "title": "TransactionPage",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/transaction.page.schema.json"
+}

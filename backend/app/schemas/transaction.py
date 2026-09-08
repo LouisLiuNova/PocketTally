@@ -17,6 +17,7 @@ from app.schemas.account import AccountSummary
 from app.schemas.base import ContractModel, UpdateModel
 from app.schemas.category import CategorySummary
 from app.schemas.tag import TagSummary
+from app.time_utils import require_aware_datetime
 
 
 def _uuid_to_string(value: UUID | None) -> str | None:
@@ -63,6 +64,11 @@ class ExpenseRefundCreate(ContractModel):
     occurred_at: datetime
     description: str | None = None
 
+    @field_validator("occurred_at")
+    @classmethod
+    def require_timestamp_offset(cls, value: datetime) -> datetime:
+        return require_aware_datetime(value)
+
     @field_validator("amount", mode="before")
     @classmethod
     def require_positive_amount(cls, value: object) -> Decimal:
@@ -89,6 +95,12 @@ class TransactionCreate(ContractModel):
     )
     balance_adjustment_direction: BalanceAdjustmentDirection | None = None
     occurred_at: datetime
+
+    @field_validator("occurred_at")
+    @classmethod
+    def require_timestamp_offset(cls, value: datetime) -> datetime:
+        return require_aware_datetime(value)
+
     @field_validator("amount", mode="before")
     @classmethod
     def require_positive_amount(cls, value: object) -> Decimal:
@@ -186,6 +198,11 @@ class BalanceAdjustmentCreate(ContractModel):
     description: str | None = None
     occurred_at: datetime
 
+    @field_validator("occurred_at")
+    @classmethod
+    def require_timestamp_offset(cls, value: datetime) -> datetime:
+        return require_aware_datetime(value)
+
     @field_validator("amount", mode="before")
     @classmethod
     def require_positive_amount(cls, value: object) -> Decimal:
@@ -233,6 +250,11 @@ class TransactionUpdate(UpdateModel):
     )
     balance_adjustment_direction: BalanceAdjustmentDirection | None = None
     occurred_at: datetime = None
+
+    @field_validator("occurred_at")
+    @classmethod
+    def require_timestamp_offset(cls, value: datetime | None) -> datetime | None:
+        return require_aware_datetime(value) if value is not None else None
     @field_validator("amount", mode="before")
     @classmethod
     def require_positive_amount(cls, value: object) -> Decimal:

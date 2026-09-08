@@ -32,6 +32,13 @@ Table transactions{
     FOREIGN KEY (dest_account_id) REFERENCES accounts(id)
     FOREIGN KEY (refund_of_transaction_id) REFERENCES transactions(id)
     FOREIGN KEY (category) REFERENCES categories(id)
+    indexes {
+      (occurred_at)
+      (is_void, occurred_at)
+      (src_account_id, occurred_at)
+      (dest_account_id, occurred_at)
+      (category, occurred_at)
+    }
 
 }
 

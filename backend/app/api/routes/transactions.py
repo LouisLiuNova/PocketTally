@@ -1,6 +1,6 @@
 """交易创建、读取、更新和作废路由。"""
 
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Path, Query, Response, status
@@ -20,14 +20,17 @@ from app.ledger import (
     update_transaction,
     void_transaction_by_id,
 )
-from app.models import Transaction
-from app.resources import get_transaction, list_transactions
+from app.models import Transaction, TransactionType
+from app.resources import get_transaction, list_transactions_page, refund_summary
 from app.schemas import (
     ExpenseRefundCreate,
+    RefundSummary,
     TransactionCreate,
+    TransactionPage,
     TransactionRead,
     TransactionUpdate,
 )
+from app.time_utils import AwareDateTime
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 TransactionId = Annotated[
@@ -38,20 +41,58 @@ TransactionId = Annotated[
 
 @router.get(
     "",
-    response_model=list[TransactionRead],
+    response_model=TransactionPage,
     responses=VALIDATION_RESPONSES,
     operation_id="listTransactions",
 )
 def list_transaction_routes(
     session: SessionDep,
-    include_voided: bool = Query(False, alias="includeVoided"),
-) -> list[TransactionRead]:
-    """返回交易及其有界关系摘要。"""
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100, alias="pageSize"),
+    start_at: AwareDateTime | None = Query(None, alias="startAt"),
+    end_at: AwareDateTime | None = Query(None, alias="endAt"),
+    transaction_type: TransactionType | None = Query(None, alias="type"),
+    account_id: UUID | None = Query(None, alias="accountId"),
+    source_account_id: UUID | None = Query(None, alias="sourceAccountId"),
+    destination_account_id: UUID | None = Query(None, alias="destinationAccountId"),
+    category_id: UUID | None = Query(None, alias="categoryId"),
+    include_descendants: bool = Query(False, alias="includeDescendants"),
+    tag_id: UUID | None = Query(None, alias="tagId"),
+    q: str | None = Query(None),
+    status_filter: Literal["active", "voided", "all"] = Query("active", alias="status"),
+    refund_of_transaction_id: UUID | None = Query(None, alias="refundOfTransactionId"),
+    sort_by: Literal["occurredAt", "amount"] = Query("occurredAt", alias="sortBy"),
+    sort_order: Literal["asc", "desc"] = Query("desc", alias="sortOrder"),
+) -> TransactionPage:
+    """按组合条件返回分页交易；旧的 ``includeVoided`` 参数已移除。"""
 
-    return [
-        TransactionRead.from_orm_model(transaction)
-        for transaction in list_transactions(session, include_voided=include_voided)
-    ]
+    if start_at is not None and end_at is not None and start_at >= end_at:
+        raise ApiError(422, "validation_error", "startAt 必须早于 endAt")
+    transactions, total = list_transactions_page(
+        session,
+        page=page,
+        page_size=page_size,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        start_at=start_at,
+        end_at=end_at,
+        transaction_type=transaction_type,
+        account_id=str(account_id) if account_id else None,
+        source_account_id=str(source_account_id) if source_account_id else None,
+        destination_account_id=str(destination_account_id) if destination_account_id else None,
+        category_id=str(category_id) if category_id else None,
+        include_descendants=include_descendants,
+        tag_id=str(tag_id) if tag_id else None,
+        query=q,
+        status=status_filter,
+        refund_of_transaction_id=str(refund_of_transaction_id) if refund_of_transaction_id else None,
+    )
+    return TransactionPage(
+        items=[TransactionRead.from_orm_model(item) for item in transactions],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 def require_transaction(session: SessionDep, transaction_id: UUID) -> Transaction:
@@ -134,6 +175,33 @@ def get_transaction_route(
     """返回一个交易及其有界关系摘要。"""
 
     return TransactionRead.from_orm_model(require_transaction(session, transaction_id))
+
+
+@router.get(
+    "/{transactionId}/refund-summary",
+    response_model=RefundSummary,
+    responses=NOT_FOUND_CONFLICT_RESPONSES,
+    operation_id="getRefundSummary",
+)
+def get_refund_summary_route(
+    transaction_id: TransactionId,
+    session: SessionDep,
+) -> RefundSummary:
+    """返回原支出的有界退款额度摘要。"""
+
+    original, refunded, count = refund_summary(session, str(transaction_id))
+    if original is None:
+        raise ApiError(404, "transaction_not_found", "交易不存在")
+    if original.type is not TransactionType.EXPENSE:
+        raise ApiError(409, "refund_original_not_expense", "只有支出交易可以查询退款摘要")
+    remaining = 0 if original.is_void else max(original.amount_minor - refunded, 0)
+    return RefundSummary(
+        original_amount_minor=original.amount_minor,
+        refunded_amount_minor=refunded,
+        remaining_refundable_amount_minor=remaining,
+        can_refund=not original.is_void and remaining > 0,
+        active_refund_count=count,
+    )
 
 
 @router.patch(

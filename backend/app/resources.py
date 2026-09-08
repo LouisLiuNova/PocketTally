@@ -1,14 +1,23 @@
 """账户、分类、标签与交易读取的应用服务。"""
 
+from datetime import datetime
 from enum import StrEnum
+from typing import Literal
 
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, select
 
 from app.categories import CategoryHierarchyError, create_category, update_category
-from app.models import Account, Category, Tag, Transaction, TransactionTag
+from app.models import (
+    Account,
+    Category,
+    Tag,
+    Transaction,
+    TransactionTag,
+    TransactionType,
+)
 
 
 class ResourceErrorCode(StrEnum):
@@ -241,6 +250,119 @@ def list_transactions(
     return list(session.exec(statement).unique())
 
 
+def category_descendant_ids(session: Session, category_id: str) -> set[str]:
+    """返回分类自身及当前子树的 ID，遍历有环数据时也能终止。"""
+
+    children: dict[str, list[str]] = {}
+    for item in session.execute(select(Category.id, Category.parent_category_id)):
+        children.setdefault(item[1] or "", []).append(item[0])
+    result = {category_id}
+    pending = [category_id]
+    while pending:
+        parent = pending.pop()
+        for child in children.get(parent, []):
+            if child not in result:
+                result.add(child)
+                pending.append(child)
+    return result
+
+
+def _literal_contains(column: object, value: str):
+    """构造不把 ``%`` 和 ``_`` 当作通配符的 SQLite 子串条件。"""
+
+    escaped = value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return column.like(f"%{escaped}%", escape="\\")  # type: ignore[union-attr]
+
+
+def transaction_statement(
+    session: Session,
+    *,
+    start_at: datetime | None = None,
+    end_at: datetime | None = None,
+    transaction_type: TransactionType | None = None,
+    account_id: str | None = None,
+    source_account_id: str | None = None,
+    destination_account_id: str | None = None,
+    category_id: str | None = None,
+    include_descendants: bool = False,
+    tag_id: str | None = None,
+    query: str | None = None,
+    status: Literal["active", "voided", "all"] = "active",
+    refund_of_transaction_id: str | None = None,
+):
+    """构造交易列表和消费下钻共用的数据库过滤语句。"""
+
+    statement = select(Transaction)
+    conditions = []
+    if start_at is not None:
+        conditions.append(Transaction.occurred_at >= start_at)
+    if end_at is not None:
+        conditions.append(Transaction.occurred_at < end_at)
+    if transaction_type is not None:
+        conditions.append(Transaction.type == transaction_type)
+    if account_id is not None:
+        conditions.append(
+            or_(Transaction.src_account_id == account_id, Transaction.dest_account_id == account_id)
+        )
+    if source_account_id is not None:
+        conditions.append(Transaction.src_account_id == source_account_id)
+    if destination_account_id is not None:
+        conditions.append(Transaction.dest_account_id == destination_account_id)
+    if category_id is not None:
+        category_ids = {category_id}
+        if include_descendants:
+            category_ids = category_descendant_ids(session, category_id)
+        conditions.append(Transaction.category.in_(category_ids))
+    if tag_id is not None:
+        conditions.append(
+            select(TransactionTag.transaction_id)
+            .where(
+                TransactionTag.transaction_id == Transaction.id,
+                TransactionTag.tag_id == tag_id,
+            )
+            .exists()
+        )
+    if query:
+        conditions.append(_literal_contains(Transaction.description, query))
+    if status == "active":
+        conditions.append(Transaction.is_void.is_(False))
+    elif status == "voided":
+        conditions.append(Transaction.is_void.is_(True))
+    if refund_of_transaction_id is not None:
+        conditions.append(Transaction.refund_of_transaction_id == refund_of_transaction_id)
+    return statement.where(and_(*conditions)) if conditions else statement
+
+
+def list_transactions_page(
+    session: Session,
+    *,
+    page: int = 1,
+    page_size: int = 20,
+    sort_by: Literal["occurredAt", "amount"] = "occurredAt",
+    sort_order: Literal["asc", "desc"] = "desc",
+    **filters: object,
+) -> tuple[list[Transaction], int]:
+    """在数据库中完成交易计数、稳定排序和分页。"""
+
+    statement = transaction_statement(session, **filters)  # type: ignore[arg-type]
+    total = int(session.exec(select(func.count()).select_from(statement.subquery())).one())
+    primary = Transaction.occurred_at if sort_by == "occurredAt" else Transaction.amount_minor
+    ordering = primary.asc() if sort_order == "asc" else primary.desc()
+    statement = statement.options(
+        joinedload(Transaction.source_account),
+        joinedload(Transaction.destination_account),
+        joinedload(Transaction.category_record),
+        joinedload(Transaction.refund_of_transaction),
+        selectinload(Transaction.tags),
+    ).order_by(
+        ordering,
+        Transaction.occurred_at.asc() if sort_order == "asc" else Transaction.occurred_at.desc(),
+        Transaction.created_at.asc() if sort_order == "asc" else Transaction.created_at.desc(),
+        Transaction.id.asc() if sort_order == "asc" else Transaction.id.desc(),
+    ).offset((page - 1) * page_size).limit(page_size)
+    return list(session.exec(statement).unique()), total
+
+
 def get_transaction(session: Session, transaction_id: str) -> Transaction | None:
     """按 ID 读取并预加载一个交易的有界关系。"""
 
@@ -258,10 +380,29 @@ def get_transaction(session: Session, transaction_id: str) -> Transaction | None
     return session.exec(statement).unique().one_or_none()
 
 
+def refund_summary(session: Session, transaction_id: str) -> tuple[Transaction | None, int, int]:
+    """读取原交易及有效退款总额和笔数，不加载退款明细。"""
+
+    original = session.get(Transaction, transaction_id)
+    if original is None:
+        return None, 0, 0
+    result = session.exec(
+        select(
+            func.coalesce(func.sum(Transaction.amount_minor), 0),
+            func.count(Transaction.id),
+        ).where(
+            Transaction.refund_of_transaction_id == transaction_id,
+            Transaction.is_void.is_(False),
+        )
+    ).one()
+    return original, int(result[0] or 0), int(result[1] or 0)
+
+
 __all__ = (
     "CategoryHierarchyError",
     "ResourceError",
     "ResourceErrorCode",
+    "category_descendant_ids",
     "create_account",
     "create_tag",
     "create_validated_category",
@@ -270,6 +411,9 @@ __all__ = (
     "delete_tag",
     "get_transaction",
     "list_transactions",
+    "list_transactions_page",
+    "refund_summary",
+    "transaction_statement",
     "update_account",
     "update_tag",
     "update_validated_category",

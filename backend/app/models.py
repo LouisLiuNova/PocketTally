@@ -11,6 +11,7 @@ from sqlalchemy import (
     CheckConstraint,
     Column,
     DateTime,
+    Index,
     Integer,
     Text,
     func,
@@ -254,6 +255,11 @@ class Transaction(SQLModel, table=True):
 
     __tablename__ = "transactions"
     __table_args__ = (
+        Index("ix_transactions_occurred_at", "occurred_at"),
+        Index("ix_transactions_status_occurred_at", "is_void", "occurred_at"),
+        Index("ix_transactions_src_occurred_at", "src_account_id", "occurred_at"),
+        Index("ix_transactions_dest_occurred_at", "dest_account_id", "occurred_at"),
+        Index("ix_transactions_category_occurred_at", "category", "occurred_at"),
         CheckConstraint(
             "amount_minor > 0",
             name="ck_transactions_amount_positive",

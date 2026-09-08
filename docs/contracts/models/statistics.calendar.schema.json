@@ -1,0 +1,92 @@
+{
+  "$defs": {
+    "CalendarDay": {
+      "additionalProperties": false,
+      "properties": {
+        "date": {
+          "format": "date",
+          "title": "Date",
+          "type": "string"
+        },
+        "incomeAmountMinor": {
+          "title": "Incomeamountminor",
+          "type": "integer"
+        },
+        "refundAmountMinor": {
+          "title": "Refundamountminor",
+          "type": "integer"
+        },
+        "expenseAmountMinor": {
+          "title": "Expenseamountminor",
+          "type": "integer"
+        },
+        "netCashFlowMinor": {
+          "title": "Netcashflowminor",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "date",
+        "incomeAmountMinor",
+        "refundAmountMinor",
+        "expenseAmountMinor",
+        "netCashFlowMinor"
+      ],
+      "title": "CalendarDay",
+      "type": "object"
+    },
+    "Period": {
+      "additionalProperties": false,
+      "properties": {
+        "startDate": {
+          "format": "date",
+          "title": "Startdate",
+          "type": "string"
+        },
+        "endDate": {
+          "format": "date",
+          "title": "Enddate",
+          "type": "string"
+        },
+        "timezone": {
+          "const": "Asia/Shanghai",
+          "default": "Asia/Shanghai",
+          "title": "Timezone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "startDate",
+        "endDate"
+      ],
+      "title": "Period",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "period": {
+      "$ref": "#/$defs/Period"
+    },
+    "month": {
+      "title": "Month",
+      "type": "string"
+    },
+    "days": {
+      "items": {
+        "$ref": "#/$defs/CalendarDay"
+      },
+      "title": "Days",
+      "type": "array"
+    }
+  },
+  "required": [
+    "period",
+    "month",
+    "days"
+  ],
+  "title": "CalendarResponse",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/statistics.calendar.schema.json"
+}

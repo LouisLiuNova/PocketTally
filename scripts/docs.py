@@ -153,6 +153,104 @@ def compare_operations(
     return rows
 
 
+def _contract_shape(operation: dict[str, Any]) -> dict[str, Any]:
+    """提取接口契约中影响客户端生成代码的结构部分。"""
+
+    def schema_shape(schema: Any) -> Any:
+        if isinstance(schema, dict):
+            return {
+                key: schema_shape(value)
+                for key, value in schema.items()
+                if key not in {"title", "description", "examples"}
+            }
+        if isinstance(schema, list):
+            return [schema_shape(item) for item in schema]
+        return schema
+
+    parameters = []
+    for parameter in operation.get("parameters", []):
+        if isinstance(parameter, dict):
+            parameters.append(
+                {
+                    "name": parameter.get("name"),
+                    "in": parameter.get("in"),
+                    "required": parameter.get("required", False),
+                    "schema": schema_shape(parameter.get("schema", {})),
+                }
+            )
+    parameters.sort(key=lambda item: (str(item["in"]), str(item["name"])))
+    responses = {}
+    for code, response in operation.get("responses", {}).items():
+        if not isinstance(response, dict):
+            responses[code] = response
+            continue
+        responses[code] = {
+            "headers": sorted(response.get("headers", {}).keys()),
+            "content": {
+                media_type: schema_shape(media.get("schema", {}))
+                for media_type, media in response.get("content", {}).items()
+                if isinstance(media, dict)
+            },
+        }
+    body = operation.get("requestBody")
+    request_body = None
+    if isinstance(body, dict):
+        request_body = {
+            "required": body.get("required", False),
+            "content": {
+                media_type: schema_shape(media.get("schema", {}))
+                for media_type, media in body.get("content", {}).items()
+                if isinstance(media, dict)
+            },
+        }
+    return {"parameters": parameters, "requestBody": request_body, "responses": responses}
+
+
+def validate_runtime_contract(
+    design: dict[str, Any],
+    actual: dict[str, Any],
+    *,
+    actual_prefixes: tuple[str, ...] = ("/api/v1",),
+) -> None:
+    """逐接口比较设计契约与运行时契约，覆盖参数和响应结构。"""
+
+    design_paths = design.get("paths", {})
+    actual_paths = actual.get("paths", {})
+    actual_by_key: dict[tuple[str, str], dict[str, Any]] = {}
+    for path, path_item in actual_paths.items():
+        if not isinstance(path_item, dict):
+            continue
+        normalized = normalize_path(path, actual_prefixes)
+        for method, operation in path_item.items():
+            if str(method).lower() in HTTP_METHODS and isinstance(operation, dict):
+                actual_by_key[(str(method).lower(), normalized)] = operation
+    for path, path_item in design_paths.items():
+        if not isinstance(path_item, dict):
+            raise DocumentationError(f"设计契约路径无效：{path}")
+        for method, operation in path_item.items():
+            if str(method).lower() not in HTTP_METHODS or not isinstance(operation, dict):
+                continue
+            key = (str(method).lower(), normalize_path(path))
+            runtime = actual_by_key.get(key)
+            if runtime is None:
+                raise DocumentationError(f"运行时缺少接口：{method.upper()} {path}")
+            if _contract_shape(operation) != _contract_shape(runtime):
+                raise DocumentationError(
+                    f"接口契约结构漂移：{method.upper()} {path}"
+                )
+    design_keys = {
+        (str(method).lower(), normalize_path(path))
+        for path, path_item in design_paths.items()
+        if isinstance(path_item, dict)
+        for method in path_item
+        if str(method).lower() in HTTP_METHODS
+    }
+    extra = set(actual_by_key) - design_keys
+    if extra:
+        method, path = min(extra)
+        raise DocumentationError(f"设计契约缺少运行时接口：{method.upper()} {path}")
+
+
 def walk_refs(value: Any) -> Iterator[str]:
     """递归返回 JSON 或 YAML 对象中的所有引用。"""
 
@@ -489,8 +587,10 @@ def git_version() -> tuple[str, str]:
 def prepare() -> list[tuple[str, Operation]]:
     """校验事实来源并生成临时 MkDocs 输入目录。"""
 
-    openapi, _ = validate_contracts()
+    openapi, apidog = validate_contracts()
     actual = actual_openapi()
+    validate_runtime_contract(openapi, actual)
+    validate_runtime_contract(apidog, actual)
     design_operations = extract_operations(openapi)
     actual_operations = extract_operations(actual, prefixes=("/api/v1",))
     rows = compare_operations(design_operations, actual_operations)

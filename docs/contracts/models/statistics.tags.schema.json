@@ -1,0 +1,82 @@
+{
+  "$defs": {
+    "Period": {
+      "additionalProperties": false,
+      "properties": {
+        "startDate": {
+          "format": "date",
+          "title": "Startdate",
+          "type": "string"
+        },
+        "endDate": {
+          "format": "date",
+          "title": "Enddate",
+          "type": "string"
+        },
+        "timezone": {
+          "const": "Asia/Shanghai",
+          "default": "Asia/Shanghai",
+          "title": "Timezone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "startDate",
+        "endDate"
+      ],
+      "title": "Period",
+      "type": "object"
+    },
+    "TagAmount": {
+      "additionalProperties": false,
+      "properties": {
+        "tagId": {
+          "format": "uuid",
+          "title": "Tagid",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "color": {
+          "title": "Color",
+          "type": "string"
+        },
+        "netExpenseMinor": {
+          "title": "Netexpenseminor",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tagId",
+        "name",
+        "color",
+        "netExpenseMinor"
+      ],
+      "title": "TagAmount",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "period": {
+      "$ref": "#/$defs/Period"
+    },
+    "items": {
+      "items": {
+        "$ref": "#/$defs/TagAmount"
+      },
+      "title": "Items",
+      "type": "array"
+    }
+  },
+  "required": [
+    "period",
+    "items"
+  ],
+  "title": "TagsResponse",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/statistics.tags.schema.json"
+}

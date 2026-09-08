@@ -1,0 +1,96 @@
+{
+  "$defs": {
+    "Period": {
+      "additionalProperties": false,
+      "properties": {
+        "startDate": {
+          "format": "date",
+          "title": "Startdate",
+          "type": "string"
+        },
+        "endDate": {
+          "format": "date",
+          "title": "Enddate",
+          "type": "string"
+        },
+        "timezone": {
+          "const": "Asia/Shanghai",
+          "default": "Asia/Shanghai",
+          "title": "Timezone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "startDate",
+        "endDate"
+      ],
+      "title": "Period",
+      "type": "object"
+    },
+    "PeriodAmount": {
+      "additionalProperties": false,
+      "properties": {
+        "currentAmountMinor": {
+          "title": "Currentamountminor",
+          "type": "integer"
+        },
+        "previousAmountMinor": {
+          "title": "Previousamountminor",
+          "type": "integer"
+        },
+        "changeAmountMinor": {
+          "title": "Changeamountminor",
+          "type": "integer"
+        },
+        "changePercent": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Changepercent"
+        }
+      },
+      "required": [
+        "currentAmountMinor",
+        "previousAmountMinor",
+        "changeAmountMinor",
+        "changePercent"
+      ],
+      "title": "PeriodAmount",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "period": {
+      "$ref": "#/$defs/Period"
+    },
+    "previousPeriod": {
+      "$ref": "#/$defs/Period"
+    },
+    "income": {
+      "$ref": "#/$defs/PeriodAmount"
+    },
+    "netExpense": {
+      "$ref": "#/$defs/PeriodAmount"
+    },
+    "netCashFlow": {
+      "$ref": "#/$defs/PeriodAmount"
+    }
+  },
+  "required": [
+    "period",
+    "previousPeriod",
+    "income",
+    "netExpense",
+    "netCashFlow"
+  ],
+  "title": "OverviewResponse",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/statistics.overview.schema.json"
+}

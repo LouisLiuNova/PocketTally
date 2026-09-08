@@ -108,8 +108,18 @@ CREATE INDEX ix_transactions_dest_account_id
     ON transactions (dest_account_id);
 CREATE INDEX ix_transactions_refund_of_transaction_id
     ON transactions (refund_of_transaction_id);
+CREATE INDEX ix_transactions_occurred_at
+    ON transactions (occurred_at);
+CREATE INDEX ix_transactions_status_occurred_at
+    ON transactions (is_void, occurred_at);
+CREATE INDEX ix_transactions_src_occurred_at
+    ON transactions (src_account_id, occurred_at);
+CREATE INDEX ix_transactions_dest_occurred_at
+    ON transactions (dest_account_id, occurred_at);
 CREATE INDEX ix_transactions_category
     ON transactions (category);
+CREATE INDEX ix_transactions_category_occurred_at
+    ON transactions (category, occurred_at);
 CREATE INDEX ix_categories_parent_category_id
     ON categories (parent_category_id);
 CREATE INDEX ix_transaction_tags_tag_id

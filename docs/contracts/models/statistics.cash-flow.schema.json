@@ -1,0 +1,103 @@
+{
+  "$defs": {
+    "CashFlowBucket": {
+      "additionalProperties": false,
+      "properties": {
+        "startAt": {
+          "format": "date-time",
+          "title": "Startat",
+          "type": "string"
+        },
+        "endAt": {
+          "format": "date-time",
+          "title": "Endat",
+          "type": "string"
+        },
+        "incomeAmountMinor": {
+          "title": "Incomeamountminor",
+          "type": "integer"
+        },
+        "refundAmountMinor": {
+          "title": "Refundamountminor",
+          "type": "integer"
+        },
+        "expenseAmountMinor": {
+          "title": "Expenseamountminor",
+          "type": "integer"
+        },
+        "netCashFlowMinor": {
+          "title": "Netcashflowminor",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "startAt",
+        "endAt",
+        "incomeAmountMinor",
+        "refundAmountMinor",
+        "expenseAmountMinor",
+        "netCashFlowMinor"
+      ],
+      "title": "CashFlowBucket",
+      "type": "object"
+    },
+    "Period": {
+      "additionalProperties": false,
+      "properties": {
+        "startDate": {
+          "format": "date",
+          "title": "Startdate",
+          "type": "string"
+        },
+        "endDate": {
+          "format": "date",
+          "title": "Enddate",
+          "type": "string"
+        },
+        "timezone": {
+          "const": "Asia/Shanghai",
+          "default": "Asia/Shanghai",
+          "title": "Timezone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "startDate",
+        "endDate"
+      ],
+      "title": "Period",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "period": {
+      "$ref": "#/$defs/Period"
+    },
+    "granularity": {
+      "enum": [
+        "day",
+        "week",
+        "month"
+      ],
+      "title": "Granularity",
+      "type": "string"
+    },
+    "buckets": {
+      "items": {
+        "$ref": "#/$defs/CashFlowBucket"
+      },
+      "title": "Buckets",
+      "type": "array"
+    }
+  },
+  "required": [
+    "period",
+    "granularity",
+    "buckets"
+  ],
+  "title": "CashFlowResponse",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/statistics.cash-flow.schema.json"
+}

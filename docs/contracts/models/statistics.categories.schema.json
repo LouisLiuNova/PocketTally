@@ -1,0 +1,248 @@
+{
+  "$defs": {
+    "CategoryAmount": {
+      "additionalProperties": false,
+      "properties": {
+        "categoryId": {
+          "format": "uuid",
+          "title": "Categoryid",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "purpose": {
+          "const": "expense",
+          "title": "Purpose",
+          "type": "string"
+        },
+        "amountMinor": {
+          "title": "Amountminor",
+          "type": "integer"
+        },
+        "directAmountMinor": {
+          "title": "Directamountminor",
+          "type": "integer"
+        },
+        "previousAmountMinor": {
+          "title": "Previousamountminor",
+          "type": "integer"
+        },
+        "changeAmountMinor": {
+          "title": "Changeamountminor",
+          "type": "integer"
+        },
+        "changeContributionMinor": {
+          "title": "Changecontributionminor",
+          "type": "integer"
+        },
+        "children": {
+          "items": {
+            "$ref": "#/$defs/CategoryAmount"
+          },
+          "title": "Children",
+          "type": "array"
+        },
+        "timeBuckets": {
+          "items": {
+            "$ref": "#/$defs/CategoryBucket"
+          },
+          "title": "Timebuckets",
+          "type": "array"
+        }
+      },
+      "required": [
+        "categoryId",
+        "name",
+        "purpose",
+        "amountMinor",
+        "directAmountMinor",
+        "previousAmountMinor",
+        "changeAmountMinor",
+        "changeContributionMinor"
+      ],
+      "title": "CategoryAmount",
+      "type": "object"
+    },
+    "CategoryBucket": {
+      "additionalProperties": false,
+      "properties": {
+        "startAt": {
+          "format": "date-time",
+          "title": "Startat",
+          "type": "string"
+        },
+        "endAt": {
+          "format": "date-time",
+          "title": "Endat",
+          "type": "string"
+        },
+        "amountMinor": {
+          "title": "Amountminor",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "startAt",
+        "endAt",
+        "amountMinor"
+      ],
+      "title": "CategoryBucket",
+      "type": "object"
+    },
+    "ExpenseBucket": {
+      "additionalProperties": false,
+      "properties": {
+        "startAt": {
+          "format": "date-time",
+          "title": "Startat",
+          "type": "string"
+        },
+        "endAt": {
+          "format": "date-time",
+          "title": "Endat",
+          "type": "string"
+        },
+        "netExpenseMinor": {
+          "title": "Netexpenseminor",
+          "type": "integer"
+        },
+        "cumulativeNetExpenseMinor": {
+          "title": "Cumulativenetexpenseminor",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "startAt",
+        "endAt",
+        "netExpenseMinor",
+        "cumulativeNetExpenseMinor"
+      ],
+      "title": "ExpenseBucket",
+      "type": "object"
+    },
+    "OtherCategory": {
+      "additionalProperties": false,
+      "properties": {
+        "categoryIds": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Categoryids",
+          "type": "array"
+        },
+        "amounts": {
+          "items": {
+            "$ref": "#/$defs/CategoryAmount"
+          },
+          "title": "Amounts",
+          "type": "array"
+        },
+        "amountMinor": {
+          "title": "Amountminor",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "categoryIds",
+        "amounts",
+        "amountMinor"
+      ],
+      "title": "OtherCategory",
+      "type": "object"
+    },
+    "Period": {
+      "additionalProperties": false,
+      "properties": {
+        "startDate": {
+          "format": "date",
+          "title": "Startdate",
+          "type": "string"
+        },
+        "endDate": {
+          "format": "date",
+          "title": "Enddate",
+          "type": "string"
+        },
+        "timezone": {
+          "const": "Asia/Shanghai",
+          "default": "Asia/Shanghai",
+          "title": "Timezone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "startDate",
+        "endDate"
+      ],
+      "title": "Period",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "period": {
+      "$ref": "#/$defs/Period"
+    },
+    "parentCategoryId": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Parentcategoryid"
+    },
+    "granularity": {
+      "default": "month",
+      "enum": [
+        "day",
+        "week",
+        "month"
+      ],
+      "title": "Granularity",
+      "type": "string"
+    },
+    "items": {
+      "items": {
+        "$ref": "#/$defs/CategoryAmount"
+      },
+      "title": "Items",
+      "type": "array"
+    },
+    "topCategories": {
+      "items": {
+        "$ref": "#/$defs/CategoryAmount"
+      },
+      "title": "Topcategories",
+      "type": "array"
+    },
+    "other": {
+      "$ref": "#/$defs/OtherCategory"
+    },
+    "buckets": {
+      "items": {
+        "$ref": "#/$defs/ExpenseBucket"
+      },
+      "title": "Buckets",
+      "type": "array"
+    }
+  },
+  "required": [
+    "period",
+    "parentCategoryId",
+    "items",
+    "topCategories",
+    "other",
+    "buckets"
+  ],
+  "title": "CategoriesResponse",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/statistics.categories.schema.json"
+}

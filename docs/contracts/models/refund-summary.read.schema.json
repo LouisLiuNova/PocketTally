@@ -1,0 +1,40 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "originalAmountMinor": {
+      "minimum": 0,
+      "title": "Originalamountminor",
+      "type": "integer"
+    },
+    "refundedAmountMinor": {
+      "minimum": 0,
+      "title": "Refundedamountminor",
+      "type": "integer"
+    },
+    "remainingRefundableAmountMinor": {
+      "minimum": 0,
+      "title": "Remainingrefundableamountminor",
+      "type": "integer"
+    },
+    "canRefund": {
+      "title": "Canrefund",
+      "type": "boolean"
+    },
+    "activeRefundCount": {
+      "minimum": 0,
+      "title": "Activerefundcount",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "originalAmountMinor",
+    "refundedAmountMinor",
+    "remainingRefundableAmountMinor",
+    "canRefund",
+    "activeRefundCount"
+  ],
+  "title": "RefundSummary",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/refund-summary.read.schema.json"
+}

@@ -44,3 +44,10 @@ docs = [
 # some WSL kernels. Python-level capture keeps the default test command stable.
 addopts = "-q --capture=sys"
 testpaths = ["tests"]
+
+[tool.ruff]
+# FastAPI Query/Path metadata is intentionally declared in function defaults;
+# B008's general rule does not apply to these dependency marker objects.
+
+[tool.ruff.lint]
+extend-ignore = ["B008"]

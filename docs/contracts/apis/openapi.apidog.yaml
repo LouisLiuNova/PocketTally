@@ -1,1228 +1,2979 @@
 openapi: 3.1.0
 info:
-  title: PocketTally HTTP API
+  title: PocketTally API
   version: 0.1.0
-  description: PocketTally 资源、基础交易写入与支出退款 API。
-servers:
-  - url: /api/v1
-tags:
-  - name: Accounts
-    description: Account and balance management.
-  - name: Categories
-    description: Transaction category management.
-  - name: Tags
-    description: Transaction tag management.
-  - name: Transactions
-    description: Financial transaction management.
+  description: PocketTally 资源、交易查询、退款摘要与六类统计 API。
 paths:
+  /health:
+    get:
+      tags:
+      - health
+      summary: Service liveness and readiness
+      description: "返回服务存活状态、就绪状态、版本和运行时间信息。\n\nArgs:\n    context: 请求范围内的配置、资源和请求标识。\n\
+        \nReturns:\n    可兼容 JSON 的健康状态数据。"
+      operationId: health_api_v1_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  anyOf:
+                  - type: string
+                  - type: number
+                  - type: boolean
+                type: object
+                title: Response Health Api V1 Health Get
   /accounts:
     get:
       tags:
-        - Accounts
+      - accounts
+      summary: List Accounts
+      description: 按创建时间和 ID 返回全部账户。
       operationId: listAccounts
-      summary: List accounts
       responses:
         '200':
-          description: Accounts returned successfully.
+          description: Successful Response
           content:
             application/json:
               schema:
-                type: array
                 items:
-                  $ref: '#/components/schemas/account.read.schema'
+                  $ref: '#/components/schemas/AccountRead'
+                type: array
+                title: Response Listaccounts
         '422':
-          $ref: '#/components/responses/ValidationError'
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/Error'
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     post:
       tags:
-        - Accounts
+      - accounts
+      summary: Create Account Route
+      description: 创建零余额账户。
       operationId: createAccount
-      summary: Create an account
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/account.create.schema'
+              $ref: '#/components/schemas/AccountCreate'
+        required: true
       responses:
         '201':
-          description: Account created successfully.
-          headers:
-            Location:
-              description: URL of the newly created account.
-              schema:
-                type: string
-                format: uri-reference
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/account.read.schema'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: '#/components/schemas/AccountRead'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: 操作与当前数据或业务规则冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/Error'
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /accounts/{accountId}:
-    parameters:
-      - $ref: '#/components/parameters/AccountId'
     get:
       tags:
-        - Accounts
+      - accounts
+      summary: Get Account
+      description: 返回一个账户。
       operationId: getAccount
-      summary: Get an account
+      parameters:
+      - name: accountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: 账户 UUID。
+          title: Accountid
+        description: 账户 UUID。
       responses:
         '200':
-          description: Account returned successfully.
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/account.read.schema'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: '#/components/schemas/AccountRead'
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/Error'
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     patch:
       tags:
-        - Accounts
+      - accounts
+      summary: Patch Account
+      description: 部分更新一个账户。
       operationId: updateAccount
-      summary: Update an account
+      parameters:
+      - name: accountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: 账户 UUID。
+          title: Accountid
+        description: 账户 UUID。
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/account.update.schema'
+              $ref: '#/components/schemas/AccountUpdate'
       responses:
         '200':
-          description: Account updated successfully.
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/account.read.schema'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: '#/components/schemas/AccountRead'
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: 操作与当前数据或业务规则冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/Error'
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     delete:
       tags:
-        - Accounts
+      - accounts
+      summary: Remove Account
+      description: 删除未被历史交易引用的账户。
       operationId: deleteAccount
-      summary: Delete an account
+      parameters:
+      - name: accountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: 账户 UUID。
+          title: Accountid
+        description: 账户 UUID。
       responses:
         '204':
-          description: Account deleted successfully. No response body.
-        '422':
-          $ref: '#/components/responses/ValidationError'
+          description: Successful Response
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: 操作与当前数据或业务规则冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/Error'
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /categories:
     get:
       tags:
-        - Categories
+      - categories
+      summary: List Categories
+      description: 返回全部分类及其一层父分类摘要。
       operationId: listCategories
-      summary: List categories
       responses:
         '200':
-          description: Categories returned successfully.
+          description: Successful Response
           content:
             application/json:
               schema:
-                type: array
                 items:
-                  $ref: '#/components/schemas/category.read.schema'
+                  $ref: '#/components/schemas/CategoryRead'
+                type: array
+                title: Response Listcategories
         '422':
-          $ref: '#/components/responses/ValidationError'
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/Error'
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     post:
       tags:
-        - Categories
+      - categories
+      summary: Create Category Route
+      description: 创建符合树和用途规则的分类。
       operationId: createCategory
-      summary: Create a category
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/category.create.schema'
+              $ref: '#/components/schemas/CategoryCreate'
+        required: true
       responses:
         '201':
-          description: Category created successfully.
-          headers:
-            Location:
-              description: URL of the newly created category.
-              schema:
-                type: string
-                format: uri-reference
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/category.read.schema'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: '#/components/schemas/CategoryRead'
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: 操作与当前数据或业务规则冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/Error'
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /categories/{categoryId}:
-    parameters:
-      - $ref: '#/components/parameters/CategoryId'
     get:
       tags:
-        - Categories
+      - categories
+      summary: Get Category
+      description: 返回一个分类及其一层父分类摘要。
       operationId: getCategory
-      summary: Get a category
+      parameters:
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: 分类 UUID。
+          title: Categoryid
+        description: 分类 UUID。
       responses:
         '200':
-          description: Category returned successfully.
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/category.read.schema'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: '#/components/schemas/CategoryRead'
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/Error'
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     patch:
       tags:
-        - Categories
+      - categories
+      summary: Patch Category
+      description: 部分更新分类并复用树和用途校验。
       operationId: updateCategory
-      summary: Update a category
+      parameters:
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: 分类 UUID。
+          title: Categoryid
+        description: 分类 UUID。
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/category.update.schema'
+              $ref: '#/components/schemas/CategoryUpdate'
       responses:
         '200':
-          description: Category updated successfully.
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/category.read.schema'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: '#/components/schemas/CategoryRead'
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: 操作与当前数据或业务规则冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/Error'
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     delete:
       tags:
-        - Categories
+      - categories
+      summary: Remove Category
+      description: 删除没有子分类且未被历史交易引用的分类。
       operationId: deleteCategory
-      summary: Delete a category
+      parameters:
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: 分类 UUID。
+          title: Categoryid
+        description: 分类 UUID。
       responses:
         '204':
-          description: Category deleted successfully. No response body.
-        '422':
-          $ref: '#/components/responses/ValidationError'
+          description: Successful Response
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: 操作与当前数据或业务规则冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/Error'
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /tags:
     get:
       tags:
-        - Tags
+      - tags
+      summary: List Tags
+      description: 按创建时间和 ID 返回全部标签。
       operationId: listTags
-      summary: List tags
       responses:
         '200':
-          description: Tags returned successfully.
+          description: Successful Response
           content:
             application/json:
               schema:
-                type: array
                 items:
-                  $ref: '#/components/schemas/tag.read.schema'
+                  $ref: '#/components/schemas/TagRead'
+                type: array
+                title: Response Listtags
         '422':
-          $ref: '#/components/responses/ValidationError'
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/Error'
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     post:
       tags:
-        - Tags
+      - tags
+      summary: Create Tag Route
+      description: 创建标签。
       operationId: createTag
-      summary: Create a tag
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/tag.create.schema'
+              $ref: '#/components/schemas/TagCreate'
+        required: true
       responses:
         '201':
-          description: Tag created successfully.
-          headers:
-            Location:
-              description: URL of the newly created tag.
-              schema:
-                type: string
-                format: uri-reference
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/tag.read.schema'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: '#/components/schemas/TagRead'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: 操作与当前数据或业务规则冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/Error'
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /tags/{tagId}:
-    parameters:
-      - $ref: '#/components/parameters/TagId'
     get:
       tags:
-        - Tags
+      - tags
+      summary: Get Tag
+      description: 返回一个标签。
       operationId: getTag
-      summary: Get a tag
+      parameters:
+      - name: tagId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: 标签 UUID。
+          title: Tagid
+        description: 标签 UUID。
       responses:
         '200':
-          description: Tag returned successfully.
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/tag.read.schema'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: '#/components/schemas/TagRead'
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/Error'
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     patch:
       tags:
-        - Tags
+      - tags
+      summary: Patch Tag
+      description: 部分更新标签。
       operationId: updateTag
-      summary: Update a tag
+      parameters:
+      - name: tagId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: 标签 UUID。
+          title: Tagid
+        description: 标签 UUID。
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/tag.update.schema'
+              $ref: '#/components/schemas/TagUpdate'
       responses:
         '200':
-          description: Tag updated successfully.
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/tag.read.schema'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: '#/components/schemas/TagRead'
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: 操作与当前数据或业务规则冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/Error'
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     delete:
       tags:
-        - Tags
+      - tags
+      summary: Remove Tag
+      description: 删除未被历史交易引用的标签。
       operationId: deleteTag
-      summary: Delete a tag
+      parameters:
+      - name: tagId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: 标签 UUID。
+          title: Tagid
+        description: 标签 UUID。
       responses:
         '204':
-          description: Tag deleted successfully. No response body.
-        '422':
-          $ref: '#/components/responses/ValidationError'
+          description: Successful Response
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: 操作与当前数据或业务规则冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/Error'
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /transactions:
     get:
       tags:
-        - Transactions
+      - transactions
+      summary: List Transaction Routes
+      description: 按组合条件返回分页交易；旧的 ``includeVoided`` 参数已移除。
       operationId: listTransactions
-      summary: List transactions
       parameters:
-        - name: includeVoided
-          in: query
-          required: false
-          description: 是否包含已作废交易，默认仅返回有效交易。
-          schema:
-            type: boolean
-            default: false
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 20
+          title: Pagesize
+      - name: startAt
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Startat
+      - name: endAt
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Endat
+      - name: type
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/TransactionType'
+          - type: 'null'
+          title: Type
+      - name: accountId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Accountid
+      - name: sourceAccountId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Sourceaccountid
+      - name: destinationAccountId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Destinationaccountid
+      - name: categoryId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Categoryid
+      - name: includeDescendants
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Includedescendants
+      - name: tagId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Tagid
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Q
+      - name: status
+        in: query
+        required: false
+        schema:
+          enum:
+          - active
+          - voided
+          - all
+          type: string
+          default: active
+          title: Status
+      - name: refundOfTransactionId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Refundoftransactionid
+      - name: sortBy
+        in: query
+        required: false
+        schema:
+          enum:
+          - occurredAt
+          - amount
+          type: string
+          default: occurredAt
+          title: Sortby
+      - name: sortOrder
+        in: query
+        required: false
+        schema:
+          enum:
+          - asc
+          - desc
+          type: string
+          default: desc
+          title: Sortorder
       responses:
         '200':
-          description: Transactions returned successfully.
+          description: Successful Response
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/transaction.read.schema'
+                $ref: '#/components/schemas/TransactionPage'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/Error'
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     post:
       tags:
-        - Transactions
+      - transactions
+      summary: Create Transaction Route
+      description: 创建一笔经过完整矩阵校验的基础交易。
       operationId: createTransaction
-      summary: Create a transaction
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/transaction.create.schema'
+              $ref: '#/components/schemas/TransactionCreate'
       responses:
         '201':
-          description: Transaction created successfully.
-          headers:
-            Location:
-              description: URL of the newly created transaction.
-              schema:
-                type: string
-                format: uri-reference
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/transaction.read.schema'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: '#/components/schemas/TransactionRead'
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '409':
-          $ref: '#/components/responses/Conflict'
-        '500':
-          $ref: '#/components/responses/Error'
-  /transactions/{transactionId}:
-    parameters:
-      - $ref: '#/components/parameters/TransactionId'
-    get:
-      tags:
-        - Transactions
-      operationId: getTransaction
-      summary: Get a transaction
-      responses:
-        '200':
-          description: Transaction returned successfully.
+          description: 操作与当前数据或业务规则冲突。
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/transaction.read.schema'
+                $ref: '#/components/schemas/ErrorResponse'
         '422':
-          $ref: '#/components/responses/ValidationError'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/Error'
-    patch:
-      tags:
-        - Transactions
-      operationId: updateTransaction
-      summary: Update a transaction
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/transaction.update.schema'
-      responses:
-        '200':
-          description: Transaction updated successfully.
+          description: 请求参数校验失败。
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/transaction.read.schema'
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/Error'
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /transactions/refunds:
     post:
       tags:
-        - Transactions
+      - transactions
+      summary: Create Expense Refund Route
+      description: 创建由原支出派生账户和分类的退款。
       operationId: createExpenseRefund
-      summary: Create an expense refund
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpenseRefundCreate'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionRead'
+        '404':
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 操作与当前数据或业务规则冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /transactions/{transactionId}:
+    get:
+      tags:
+      - transactions
+      summary: Get Transaction Route
+      description: 返回一个交易及其有界关系摘要。
+      operationId: getTransaction
+      parameters:
+      - name: transactionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: 交易 UUID。
+          title: Transactionid
+        description: 交易 UUID。
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionRead'
+        '404':
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags:
+      - transactions
+      summary: Patch Transaction Route
+      description: 合并部分字段后校验并更新完整交易状态。
+      operationId: updateTransaction
+      parameters:
+      - name: transactionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: 交易 UUID。
+          title: Transactionid
+        description: 交易 UUID。
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/expense-refund.create.schema'
-      responses:
-        '201':
-          description: Expense refund created successfully.
-          headers:
-            Location:
-              description: URL of the newly created refund transaction.
-              schema:
-                type: string
-                format: uri-reference
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/transaction.read.schema'
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '500':
-          $ref: '#/components/responses/Error'
-  /transactions/{transactionId}/void:
-    parameters:
-      - $ref: '#/components/parameters/TransactionId'
-    post:
-      tags:
-        - Transactions
-      operationId: voidTransaction
-      summary: Void a transaction idempotently
+              $ref: '#/components/schemas/TransactionUpdate'
       responses:
         '200':
-          description: Transaction voided or existing void result returned successfully.
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/transaction.read.schema'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: '#/components/schemas/TransactionRead'
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 操作与当前数据或业务规则冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/Error'
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /transactions/{transactionId}/refund-summary:
+    get:
+      tags:
+      - transactions
+      summary: Get Refund Summary Route
+      description: 返回原支出的有界退款额度摘要。
+      operationId: getRefundSummary
+      parameters:
+      - name: transactionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: 交易 UUID。
+          title: Transactionid
+        description: 交易 UUID。
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundSummary'
+        '404':
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 操作与当前数据或业务规则冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /transactions/{transactionId}/void:
+    post:
+      tags:
+      - transactions
+      summary: Void Transaction Route
+      description: 幂等作废交易，并撤销其一次余额影响。
+      operationId: voidTransaction
+      parameters:
+      - name: transactionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: 交易 UUID。
+          title: Transactionid
+        description: 交易 UUID。
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionRead'
+        '404':
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /statistics/overview:
+    get:
+      tags:
+      - statistics
+      summary: Get Overview
+      operationId: getStatisticsOverview
+      parameters:
+      - name: startDate
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Startdate
+      - name: endDate
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Enddate
+      - name: accountId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Accountid
+      - name: categoryId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Categoryid
+      - name: includeDescendants
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Includedescendants
+      - name: tagId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Tagid
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Q
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OverviewResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /statistics/cash-flow:
+    get:
+      tags:
+      - statistics
+      summary: Get Cash Flow
+      operationId: getStatisticsCashFlow
+      parameters:
+      - name: startDate
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Startdate
+      - name: endDate
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Enddate
+      - name: granularity
+        in: query
+        required: false
+        schema:
+          enum:
+          - day
+          - week
+          - month
+          type: string
+          default: month
+          title: Granularity
+      - name: accountId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Accountid
+      - name: categoryId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Categoryid
+      - name: includeDescendants
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Includedescendants
+      - name: tagId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Tagid
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Q
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashFlowResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /statistics/expenses:
+    get:
+      tags:
+      - statistics
+      summary: Get Expenses
+      operationId: getStatisticsExpenses
+      parameters:
+      - name: startDate
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Startdate
+      - name: endDate
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Enddate
+      - name: granularity
+        in: query
+        required: false
+        schema:
+          enum:
+          - day
+          - week
+          - month
+          type: string
+          default: day
+          title: Granularity
+      - name: accountId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Accountid
+      - name: categoryId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Categoryid
+      - name: includeDescendants
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Includedescendants
+      - name: tagId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Tagid
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Q
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpensesResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /statistics/categories:
+    get:
+      tags:
+      - statistics
+      summary: Get Categories
+      operationId: getStatisticsCategories
+      parameters:
+      - name: startDate
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Startdate
+      - name: endDate
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Enddate
+      - name: parentCategoryId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Parentcategoryid
+      - name: accountId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Accountid
+      - name: categoryId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Categoryid
+      - name: includeDescendants
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Includedescendants
+      - name: tagId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Tagid
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Q
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoriesResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /statistics/tags:
+    get:
+      tags:
+      - statistics
+      summary: Get Tags
+      operationId: getStatisticsTags
+      parameters:
+      - name: startDate
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Startdate
+      - name: endDate
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Enddate
+      - name: accountId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Accountid
+      - name: categoryId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Categoryid
+      - name: includeDescendants
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Includedescendants
+      - name: tagId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Tagid
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Q
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagsResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /statistics/calendar:
+    get:
+      tags:
+      - statistics
+      summary: Get Calendar
+      operationId: getStatisticsCalendar
+      parameters:
+      - name: month
+        in: query
+        required: true
+        schema:
+          type: string
+          pattern: ^\d{4}-\d{2}$
+          title: Month
+      - name: accountId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Accountid
+      - name: categoryId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Categoryid
+      - name: includeDescendants
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Includedescendants
+      - name: tagId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Tagid
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Q
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /statistics/expense-transactions:
+    get:
+      tags:
+      - statistics
+      summary: List Expense Transactions
+      operationId: listExpenseTransactions
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 20
+          title: Pagesize
+      - name: startDate
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Startdate
+      - name: endDate
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Enddate
+      - name: accountId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Accountid
+      - name: categoryId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Categoryid
+      - name: includeDescendants
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Includedescendants
+      - name: tagId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Tagid
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Q
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseTransactionPage'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
-  parameters:
-    AccountId:
-      name: accountId
-      in: path
-      required: true
-      description: Account UUID.
-      schema:
-        type: string
-        format: uuid
-    CategoryId:
-      name: categoryId
-      in: path
-      required: true
-      description: Category UUID.
-      schema:
-        type: string
-        format: uuid
-    TagId:
-      name: tagId
-      in: path
-      required: true
-      description: Tag UUID.
-      schema:
-        type: string
-        format: uuid
-    TransactionId:
-      name: transactionId
-      in: path
-      required: true
-      description: Transaction UUID.
-      schema:
-        type: string
-        format: uuid
   schemas:
-    Error:
-      type: object
+    AccountCreate:
+      properties:
+        type:
+          $ref: '#/components/schemas/AccountType'
+        name:
+          type: string
+          minLength: 1
+          title: Name
+        cardNumber:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cardnumber
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
       additionalProperties: false
+      type: object
       required:
-        - code
-        - message
+      - type
+      - name
+      title: AccountCreate
+      description: 创建账户的请求模型。
+    AccountRead:
+      allOf:
+      - if:
+          properties:
+            type:
+              const: debit
+        then:
+          properties:
+            amount:
+              minimum: 0.0
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        type:
+          $ref: '#/components/schemas/AccountType'
+        name:
+          type: string
+          minLength: 1
+          title: Name
+        cardNumber:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cardnumber
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        amount:
+          type: number
+          title: Amount
+          description: CNY 金额；服务端接收后按 ROUND_HALF_UP 舍入到分。
+          examples:
+          - 12.34
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+        updatedAt:
+          type: string
+          format: date-time
+          title: Updatedat
+      additionalProperties: false
+      type: object
+      required:
+      - id
+      - type
+      - name
+      - cardNumber
+      - description
+      - amount
+      - createdAt
+      - updatedAt
+      title: AccountRead
+      description: 账户响应模型。
+    AccountSummary:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        type:
+          $ref: '#/components/schemas/AccountType'
+        name:
+          type: string
+          minLength: 1
+          title: Name
+      additionalProperties: false
+      type: object
+      required:
+      - id
+      - type
+      - name
+      title: AccountSummary
+      description: 事务中嵌入的账户有界摘要。
+    AccountType:
+      type: string
+      enum:
+      - debit
+      - credit
+      title: AccountType
+      description: 系统支持的账户类型。
+    AccountUpdate:
+      properties:
+        type:
+          $ref: '#/components/schemas/AccountType'
+        name:
+          type: string
+          minLength: 1
+          title: Name
+        cardNumber:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cardnumber
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+      additionalProperties: false
+      type: object
+      minProperties: 1
+      title: AccountUpdate
+      description: 部分更新账户的请求模型。
+    BalanceAdjustmentDirection:
+      type: string
+      enum:
+      - increase
+      - decrease
+      title: BalanceAdjustmentDirection
+      description: 余额调整的资金方向。
+    CalendarDay:
+      properties:
+        date:
+          type: string
+          format: date
+          title: Date
+        incomeAmountMinor:
+          type: integer
+          title: Incomeamountminor
+        refundAmountMinor:
+          type: integer
+          title: Refundamountminor
+        expenseAmountMinor:
+          type: integer
+          title: Expenseamountminor
+        netCashFlowMinor:
+          type: integer
+          title: Netcashflowminor
+      additionalProperties: false
+      type: object
+      required:
+      - date
+      - incomeAmountMinor
+      - refundAmountMinor
+      - expenseAmountMinor
+      - netCashFlowMinor
+      title: CalendarDay
+    CalendarResponse:
+      properties:
+        period:
+          $ref: '#/components/schemas/Period'
+        month:
+          type: string
+          title: Month
+        days:
+          items:
+            $ref: '#/components/schemas/CalendarDay'
+          type: array
+          title: Days
+      additionalProperties: false
+      type: object
+      required:
+      - period
+      - month
+      - days
+      title: CalendarResponse
+    CashFlowBucket:
+      properties:
+        startAt:
+          type: string
+          format: date-time
+          title: Startat
+        endAt:
+          type: string
+          format: date-time
+          title: Endat
+        incomeAmountMinor:
+          type: integer
+          title: Incomeamountminor
+        refundAmountMinor:
+          type: integer
+          title: Refundamountminor
+        expenseAmountMinor:
+          type: integer
+          title: Expenseamountminor
+        netCashFlowMinor:
+          type: integer
+          title: Netcashflowminor
+      additionalProperties: false
+      type: object
+      required:
+      - startAt
+      - endAt
+      - incomeAmountMinor
+      - refundAmountMinor
+      - expenseAmountMinor
+      - netCashFlowMinor
+      title: CashFlowBucket
+    CashFlowResponse:
+      properties:
+        period:
+          $ref: '#/components/schemas/Period'
+        granularity:
+          type: string
+          enum:
+          - day
+          - week
+          - month
+          title: Granularity
+        buckets:
+          items:
+            $ref: '#/components/schemas/CashFlowBucket'
+          type: array
+          title: Buckets
+      additionalProperties: false
+      type: object
+      required:
+      - period
+      - granularity
+      - buckets
+      title: CashFlowResponse
+    CategoriesResponse:
+      properties:
+        period:
+          $ref: '#/components/schemas/Period'
+        parentCategoryId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Parentcategoryid
+        granularity:
+          type: string
+          enum:
+          - day
+          - week
+          - month
+          title: Granularity
+          default: month
+        items:
+          items:
+            $ref: '#/components/schemas/CategoryAmount'
+          type: array
+          title: Items
+        topCategories:
+          items:
+            $ref: '#/components/schemas/CategoryAmount'
+          type: array
+          title: Topcategories
+        other:
+          $ref: '#/components/schemas/OtherCategory'
+        buckets:
+          items:
+            $ref: '#/components/schemas/ExpenseBucket'
+          type: array
+          title: Buckets
+      additionalProperties: false
+      type: object
+      required:
+      - period
+      - parentCategoryId
+      - items
+      - topCategories
+      - other
+      - buckets
+      title: CategoriesResponse
+    CategoryAmount:
+      properties:
+        categoryId:
+          type: string
+          format: uuid
+          title: Categoryid
+        name:
+          type: string
+          title: Name
+        purpose:
+          type: string
+          const: expense
+          title: Purpose
+        amountMinor:
+          type: integer
+          title: Amountminor
+        directAmountMinor:
+          type: integer
+          title: Directamountminor
+        previousAmountMinor:
+          type: integer
+          title: Previousamountminor
+        changeAmountMinor:
+          type: integer
+          title: Changeamountminor
+        changeContributionMinor:
+          type: integer
+          title: Changecontributionminor
+        children:
+          items:
+            $ref: '#/components/schemas/CategoryAmount'
+          type: array
+          title: Children
+        timeBuckets:
+          items:
+            $ref: '#/components/schemas/CategoryBucket'
+          type: array
+          title: Timebuckets
+      additionalProperties: false
+      type: object
+      required:
+      - categoryId
+      - name
+      - purpose
+      - amountMinor
+      - directAmountMinor
+      - previousAmountMinor
+      - changeAmountMinor
+      - changeContributionMinor
+      title: CategoryAmount
+    CategoryBucket:
+      properties:
+        startAt:
+          type: string
+          format: date-time
+          title: Startat
+        endAt:
+          type: string
+          format: date-time
+          title: Endat
+        amountMinor:
+          type: integer
+          title: Amountminor
+      additionalProperties: false
+      type: object
+      required:
+      - startAt
+      - endAt
+      - amountMinor
+      title: CategoryBucket
+    CategoryCreate:
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Name
+        purpose:
+          $ref: '#/components/schemas/CategoryPurpose'
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        parentCategoryId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Parentcategoryid
+        iconColor:
+          type: string
+          pattern: ^#[0-9A-Fa-f]{6}$
+          title: Iconcolor
+          default: '#ff0000'
+        iconName:
+          type: string
+          minLength: 1
+          title: Iconname
+          default: default_icon
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      - purpose
+      title: CategoryCreate
+      description: 创建分类的请求模型。
+    CategoryPurpose:
+      type: string
+      enum:
+      - income
+      - expense
+      title: CategoryPurpose
+      description: 分类可用于的交易用途。
+    CategoryRead:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        name:
+          type: string
+          minLength: 1
+          title: Name
+        purpose:
+          $ref: '#/components/schemas/CategoryPurpose'
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        parentCategory:
+          anyOf:
+          - $ref: '#/components/schemas/CategorySummary'
+          - type: 'null'
+        iconColor:
+          type: string
+          pattern: ^#[0-9A-Fa-f]{6}$
+          title: Iconcolor
+        iconName:
+          type: string
+          minLength: 1
+          title: Iconname
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+        updatedAt:
+          type: string
+          format: date-time
+          title: Updatedat
+      additionalProperties: false
+      type: object
+      required:
+      - id
+      - name
+      - purpose
+      - description
+      - parentCategory
+      - iconColor
+      - iconName
+      - createdAt
+      - updatedAt
+      title: CategoryRead
+      description: 分类响应模型，父分类仅嵌入一层摘要。
+    CategorySummary:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        name:
+          type: string
+          minLength: 1
+          title: Name
+        purpose:
+          $ref: '#/components/schemas/CategoryPurpose'
+        iconColor:
+          type: string
+          pattern: ^#[0-9A-Fa-f]{6}$
+          title: Iconcolor
+        iconName:
+          type: string
+          minLength: 1
+          title: Iconname
+      additionalProperties: false
+      type: object
+      required:
+      - id
+      - name
+      - purpose
+      - iconColor
+      - iconName
+      title: CategorySummary
+      description: 事务或分类关系中嵌入的分类有界摘要。
+    CategoryUpdate:
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        parentCategoryId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Parentcategoryid
+        iconColor:
+          type: string
+          pattern: ^#[0-9A-Fa-f]{6}$
+          title: Iconcolor
+        iconName:
+          type: string
+          minLength: 1
+          title: Iconname
+      additionalProperties: false
+      type: object
+      minProperties: 1
+      title: CategoryUpdate
+      description: 部分更新分类的请求模型。
+    ErrorResponse:
       properties:
         code:
           type: string
           minLength: 1
+          title: Code
         message:
           type: string
           minLength: 1
+          title: Message
         details:
-          description: 可选的结构化错误详情；请求校验失败时为字段错误数组。
-          oneOf:
-            - type: object
-              additionalProperties: true
-            - type: array
-              items:
-                type: object
-                additionalProperties: true
-    uuid:
-      type: string
-      format: uuid
-    nullableString:
-      type:
-        - string
-        - 'null'
-    dateTime:
-      type: string
-      format: date-time
-    transactionType:
-      type: string
-      enum:
-        - income
-        - expense
-        - expense_refund
-        - transfer
-        - balance_adjustment
-    basicTransactionType:
-      type: string
-      enum:
-        - income
-        - expense
-        - transfer
-        - balance_adjustment
-    balanceAdjustmentDirection:
-      type: string
-      enum:
-        - increase
-        - decrease
-    accountType:
-      type: string
-      enum:
-        - debit
-        - credit
-    categoryPurpose:
-      type: string
-      enum:
-        - income
-        - expense
-    account.read.schema:
-      $schema: https://json-schema.org/draft/2020-12/schema
-      $id: https://schemas.pockettally.app/models/account.read.schema.json
-      title: AccountRead
-      description: Account returned by the HTTP API.
-      type: object
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - items: {}
+            type: array
+          - type: 'null'
+          title: Details
       additionalProperties: false
-      allOf:
-        - if:
-            properties:
-              type:
-                const: debit
-          then:
-            properties:
-              amount:
-                minimum: 0
+      type: object
       required:
-        - id
-        - type
-        - name
-        - cardNumber
-        - description
-        - amount
-        - createdAt
-        - updatedAt
+      - code
+      - message
+      title: ErrorResponse
+      description: 公开接口统一返回的错误模型。
+    ExpenseBucket:
       properties:
-        id:
-          $ref: '#/components/schemas/uuid'
-        type:
-          $ref: '#/components/schemas/accountType'
-        name:
+        startAt:
           type: string
-          minLength: 1
-        cardNumber:
-          $ref: '#/components/schemas/nullableString'
-        description:
-          $ref: '#/components/schemas/nullableString'
-        amount:
-          type: number
-          description: CNY 金额；服务端内部以整数分存储。
-        createdAt:
-          $ref: '#/components/schemas/dateTime'
-        updatedAt:
-          $ref: '#/components/schemas/dateTime'
-    account.create.schema:
-      $schema: https://json-schema.org/draft/2020-12/schema
-      $id: https://schemas.pockettally.app/models/account.create.schema.json
-      title: AccountCreate
-      description: New accounts always start with a zero balance. Server-owned fields are omitted.
-      type: object
+          format: date-time
+          title: Startat
+        endAt:
+          type: string
+          format: date-time
+          title: Endat
+        netExpenseMinor:
+          type: integer
+          title: Netexpenseminor
+        cumulativeNetExpenseMinor:
+          type: integer
+          title: Cumulativenetexpenseminor
       additionalProperties: false
+      type: object
       required:
-        - type
-        - name
+      - startAt
+      - endAt
+      - netExpenseMinor
+      - cumulativeNetExpenseMinor
+      title: ExpenseBucket
+    ExpenseRefundCreate:
       properties:
-        type:
-          $ref: '#/components/schemas/accountType'
-        name:
-          type: string
-          minLength: 1
-        cardNumber:
-          $ref: '#/components/schemas/nullableString'
-        description:
-          $ref: '#/components/schemas/nullableString'
-    account.update.schema:
-      $schema: https://json-schema.org/draft/2020-12/schema
-      $id: https://schemas.pockettally.app/models/account.update.schema.json
-      title: AccountUpdate
-      description: Partial payload for updating an account.
-      type: object
-      additionalProperties: false
-      minProperties: 1
-      properties:
-        type:
-          $ref: '#/components/schemas/accountType'
-        name:
-          type: string
-          minLength: 1
-        cardNumber:
-          $ref: '#/components/schemas/nullableString'
-        description:
-          $ref: '#/components/schemas/nullableString'
-    hexColor:
-      type: string
-      pattern: ^#[0-9A-Fa-f]{6}$
-      examples:
-        - '#ff0000'
-    categorySummary:
-      type: object
-      additionalProperties: false
-      required:
-        - id
-        - name
-        - purpose
-        - iconColor
-        - iconName
-      properties:
-        id:
-          $ref: '#/components/schemas/uuid'
-        name:
-          type: string
-          minLength: 1
-        purpose:
-          $ref: '#/components/schemas/categoryPurpose'
-        iconColor:
-          $ref: '#/components/schemas/hexColor'
-        iconName:
-          type: string
-          minLength: 1
-    category.read.schema:
-      $schema: https://json-schema.org/draft/2020-12/schema
-      $id: https://schemas.pockettally.app/models/category.read.schema.json
-      title: CategoryRead
-      description: Category returned by the HTTP API. The parent is embedded as a bounded summary.
-      type: object
-      additionalProperties: false
-      required:
-        - id
-        - name
-        - purpose
-        - description
-        - parentCategory
-        - iconColor
-        - iconName
-        - createdAt
-        - updatedAt
-      properties:
-        id:
-          $ref: '#/components/schemas/uuid'
-        name:
-          type: string
-          minLength: 1
-        purpose:
-          $ref: '#/components/schemas/categoryPurpose'
-        description:
-          $ref: '#/components/schemas/nullableString'
-        parentCategory:
-          oneOf:
-            - $ref: '#/components/schemas/categorySummary'
-            - type: 'null'
-        iconColor:
-          $ref: '#/components/schemas/hexColor'
-        iconName:
-          type: string
-          minLength: 1
-        createdAt:
-          $ref: '#/components/schemas/dateTime'
-        updatedAt:
-          $ref: '#/components/schemas/dateTime'
-    category.create.schema:
-      $schema: https://json-schema.org/draft/2020-12/schema
-      $id: https://schemas.pockettally.app/models/category.create.schema.json
-      title: CategoryCreate
-      description: Payload for creating a category. Relationships are represented by IDs.
-      type: object
-      additionalProperties: false
-      required:
-        - name
-        - purpose
-      properties:
-        name:
-          type: string
-          minLength: 1
-        purpose:
-          $ref: '#/components/schemas/categoryPurpose'
-        description:
-          $ref: '#/components/schemas/nullableString'
-        parentCategoryId:
-          oneOf:
-            - $ref: '#/components/schemas/uuid'
-            - type: 'null'
-        iconColor:
-          $ref: '#/components/schemas/hexColor'
-          default: '#ff0000'
-        iconName:
-          type: string
-          minLength: 1
-          default: default_icon
-    category.update.schema:
-      $schema: https://json-schema.org/draft/2020-12/schema
-      $id: https://schemas.pockettally.app/models/category.update.schema.json
-      title: CategoryUpdate
-      description: Partial payload for updating a category. Purpose is immutable.
-      type: object
-      additionalProperties: false
-      minProperties: 1
-      properties:
-        name:
-          type: string
-          minLength: 1
-        description:
-          $ref: '#/components/schemas/nullableString'
-        parentCategoryId:
-          oneOf:
-            - $ref: '#/components/schemas/uuid'
-            - type: 'null'
-        iconColor:
-          $ref: '#/components/schemas/hexColor'
-        iconName:
-          type: string
-          minLength: 1
-    tag.read.schema:
-      $schema: https://json-schema.org/draft/2020-12/schema
-      $id: https://schemas.pockettally.app/models/tag.read.schema.json
-      title: TagRead
-      description: Tag returned by the HTTP API.
-      type: object
-      additionalProperties: false
-      required:
-        - id
-        - name
-        - description
-        - color
-        - createdAt
-        - updatedAt
-      properties:
-        id:
-          $ref: '#/components/schemas/uuid'
-        name:
-          type: string
-          minLength: 1
-        description:
-          $ref: '#/components/schemas/nullableString'
-        color:
-          $ref: '#/components/schemas/hexColor'
-        createdAt:
-          $ref: '#/components/schemas/dateTime'
-        updatedAt:
-          $ref: '#/components/schemas/dateTime'
-    tag.create.schema:
-      $schema: https://json-schema.org/draft/2020-12/schema
-      $id: https://schemas.pockettally.app/models/tag.create.schema.json
-      title: TagCreate
-      description: Payload for creating a tag.
-      type: object
-      additionalProperties: false
-      required:
-        - name
-      properties:
-        name:
-          type: string
-          minLength: 1
-        description:
-          $ref: '#/components/schemas/nullableString'
-        color:
-          $ref: '#/components/schemas/hexColor'
-          default: '#ff0000'
-    tag.update.schema:
-      $schema: https://json-schema.org/draft/2020-12/schema
-      $id: https://schemas.pockettally.app/models/tag.update.schema.json
-      title: TagUpdate
-      description: Partial payload for updating a tag.
-      type: object
-      additionalProperties: false
-      minProperties: 1
-      properties:
-        name:
-          type: string
-          minLength: 1
-        description:
-          $ref: '#/components/schemas/nullableString'
-        color:
-          $ref: '#/components/schemas/hexColor'
-    accountSummary:
-      type: object
-      additionalProperties: false
-      required:
-        - id
-        - type
-        - name
-      properties:
-        id:
-          $ref: '#/components/schemas/uuid'
-        type:
-          type: string
-          minLength: 1
-        name:
-          type: string
-          minLength: 1
-    tagSummary:
-      type: object
-      additionalProperties: false
-      required:
-        - id
-        - name
-        - color
-      properties:
-        id:
-          $ref: '#/components/schemas/uuid'
-        name:
-          type: string
-          minLength: 1
-        color:
-          $ref: '#/components/schemas/hexColor'
-    transactionSummary:
-      type: object
-      additionalProperties: false
-      required:
-        - id
-        - type
-        - amount
-        - description
-        - occurredAt
-        - createdAt
-      properties:
-        id:
-          $ref: '#/components/schemas/uuid'
-        type:
-          $ref: '#/components/schemas/transactionType'
-        amount:
-          type: number
-          exclusiveMinimum: 0
-          description: CNY 金额；服务端内部以整数分存储。
-        description:
-          $ref: '#/components/schemas/nullableString'
-        occurredAt:
-          $ref: '#/components/schemas/dateTime'
-        createdAt:
-          $ref: '#/components/schemas/dateTime'
-    transaction.read.schema:
-      $schema: https://json-schema.org/draft/2020-12/schema
-      $id: https://schemas.pockettally.app/models/transaction.read.schema.json
-      title: TransactionRead
-      description: Transaction returned by the HTTP API. Relationships are embedded as bounded read summaries.
-      type: object
-      additionalProperties: false
-      required:
-        - id
-        - type
-        - sourceAccount
-        - destinationAccount
-        - amount
-        - description
-        - category
-        - tags
-        - refundOfTransactionId
-        - refundOfTransaction
-        - balanceAdjustmentDirection
-        - isVoid
-        - voidedAt
-        - occurredAt
-        - createdAt
-        - updatedAt
-      properties:
-        id:
-          $ref: '#/components/schemas/uuid'
-        type:
-          $ref: '#/components/schemas/transactionType'
-        sourceAccount:
-          oneOf:
-            - $ref: '#/components/schemas/accountSummary'
-            - type: 'null'
-        destinationAccount:
-          oneOf:
-            - $ref: '#/components/schemas/accountSummary'
-            - type: 'null'
-        amount:
-          type: number
-          exclusiveMinimum: 0
-          description: CNY 金额；按 ROUND_HALF_UP 舍入到分后必须仍为正数。
-        description:
-          $ref: '#/components/schemas/nullableString'
-        category:
-          oneOf:
-            - $ref: '#/components/schemas/categorySummary'
-            - type: 'null'
-        tags:
-          type: array
-          items:
-            $ref: '#/components/schemas/tagSummary'
-          uniqueItems: true
         refundOfTransactionId:
-          oneOf:
-            - $ref: '#/components/schemas/uuid'
-            - type: 'null'
-        refundOfTransaction:
-          oneOf:
-            - $ref: '#/components/schemas/transactionSummary'
-            - type: 'null'
+          type: string
+          format: uuid
+          title: Refundoftransactionid
+        amount:
+          type: number
+          exclusiveMinimum: 0.0
+          title: Amount
+          description: CNY 金额；服务端接收后按 ROUND_HALF_UP 舍入到分。
+          examples:
+          - 12.34
+        occurredAt:
+          type: string
+          format: date-time
+          title: Occurredat
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+      additionalProperties: false
+      type: object
+      required:
+      - refundOfTransactionId
+      - amount
+      - occurredAt
+      title: ExpenseRefundCreate
+      description: 专用支出退款请求，账户和分类由原支出派生。
+    ExpenseTransactionItem:
+      properties:
+        transaction:
+          $ref: '#/components/schemas/TransactionSummary'
+        originalAmountMinor:
+          type: integer
+          exclusiveMinimum: 0.0
+          title: Originalamountminor
+        refundedAmountMinor:
+          type: integer
+          minimum: 0.0
+          title: Refundedamountminor
+        netExpenseMinor:
+          type: integer
+          title: Netexpenseminor
+      additionalProperties: false
+      type: object
+      required:
+      - transaction
+      - originalAmountMinor
+      - refundedAmountMinor
+      - netExpenseMinor
+      title: ExpenseTransactionItem
+    ExpenseTransactionPage:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/ExpenseTransactionItem'
+          type: array
+          title: Items
+        total:
+          type: integer
+          minimum: 0.0
+          title: Total
+        page:
+          type: integer
+          minimum: 1.0
+          title: Page
+        pageSize:
+          type: integer
+          maximum: 100.0
+          minimum: 1.0
+          title: Pagesize
+        totals:
+          $ref: '#/components/schemas/ExpenseTransactionTotals'
+      additionalProperties: false
+      type: object
+      required:
+      - items
+      - total
+      - page
+      - pageSize
+      - totals
+      title: ExpenseTransactionPage
+    ExpenseTransactionTotals:
+      properties:
+        originalAmountMinor:
+          type: integer
+          minimum: 0.0
+          title: Originalamountminor
+        refundedAmountMinor:
+          type: integer
+          minimum: 0.0
+          title: Refundedamountminor
+        netExpenseMinor:
+          type: integer
+          title: Netexpenseminor
+      additionalProperties: false
+      type: object
+      required:
+      - originalAmountMinor
+      - refundedAmountMinor
+      - netExpenseMinor
+      title: ExpenseTransactionTotals
+    ExpensesResponse:
+      properties:
+        period:
+          $ref: '#/components/schemas/Period'
+        granularity:
+          type: string
+          enum:
+          - day
+          - week
+          - month
+          title: Granularity
+        buckets:
+          items:
+            $ref: '#/components/schemas/ExpenseBucket'
+          type: array
+          title: Buckets
+        cumulativeStartMinor:
+          type: integer
+          title: Cumulativestartminor
+          default: 0
+      additionalProperties: false
+      type: object
+      required:
+      - period
+      - granularity
+      - buckets
+      title: ExpensesResponse
+    OtherCategory:
+      properties:
+        categoryIds:
+          items:
+            type: string
+            format: uuid
+          type: array
+          title: Categoryids
+        amounts:
+          items:
+            $ref: '#/components/schemas/CategoryAmount'
+          type: array
+          title: Amounts
+        amountMinor:
+          type: integer
+          title: Amountminor
+      additionalProperties: false
+      type: object
+      required:
+      - categoryIds
+      - amounts
+      - amountMinor
+      title: OtherCategory
+    OverviewResponse:
+      properties:
+        period:
+          $ref: '#/components/schemas/Period'
+        previousPeriod:
+          $ref: '#/components/schemas/Period'
+        income:
+          $ref: '#/components/schemas/PeriodAmount'
+        netExpense:
+          $ref: '#/components/schemas/PeriodAmount'
+        netCashFlow:
+          $ref: '#/components/schemas/PeriodAmount'
+      additionalProperties: false
+      type: object
+      required:
+      - period
+      - previousPeriod
+      - income
+      - netExpense
+      - netCashFlow
+      title: OverviewResponse
+    Period:
+      properties:
+        startDate:
+          type: string
+          format: date
+          title: Startdate
+        endDate:
+          type: string
+          format: date
+          title: Enddate
+        timezone:
+          type: string
+          const: Asia/Shanghai
+          title: Timezone
+          default: Asia/Shanghai
+      additionalProperties: false
+      type: object
+      required:
+      - startDate
+      - endDate
+      title: Period
+    PeriodAmount:
+      properties:
+        currentAmountMinor:
+          type: integer
+          title: Currentamountminor
+        previousAmountMinor:
+          type: integer
+          title: Previousamountminor
+        changeAmountMinor:
+          type: integer
+          title: Changeamountminor
+        changePercent:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Changepercent
+      additionalProperties: false
+      type: object
+      required:
+      - currentAmountMinor
+      - previousAmountMinor
+      - changeAmountMinor
+      - changePercent
+      title: PeriodAmount
+    RefundSummary:
+      properties:
+        originalAmountMinor:
+          type: integer
+          minimum: 0.0
+          title: Originalamountminor
+        refundedAmountMinor:
+          type: integer
+          minimum: 0.0
+          title: Refundedamountminor
+        remainingRefundableAmountMinor:
+          type: integer
+          minimum: 0.0
+          title: Remainingrefundableamountminor
+        canRefund:
+          type: boolean
+          title: Canrefund
+        activeRefundCount:
+          type: integer
+          minimum: 0.0
+          title: Activerefundcount
+      additionalProperties: false
+      type: object
+      required:
+      - originalAmountMinor
+      - refundedAmountMinor
+      - remainingRefundableAmountMinor
+      - canRefund
+      - activeRefundCount
+      title: RefundSummary
+    TagAmount:
+      properties:
+        tagId:
+          type: string
+          format: uuid
+          title: Tagid
+        name:
+          type: string
+          title: Name
+        color:
+          type: string
+          title: Color
+        netExpenseMinor:
+          type: integer
+          title: Netexpenseminor
+      additionalProperties: false
+      type: object
+      required:
+      - tagId
+      - name
+      - color
+      - netExpenseMinor
+      title: TagAmount
+    TagCreate:
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        color:
+          type: string
+          pattern: ^#[0-9A-Fa-f]{6}$
+          title: Color
+          default: '#ff0000'
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      title: TagCreate
+      description: 创建标签的请求模型。
+    TagRead:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        name:
+          type: string
+          minLength: 1
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        color:
+          type: string
+          pattern: ^#[0-9A-Fa-f]{6}$
+          title: Color
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+        updatedAt:
+          type: string
+          format: date-time
+          title: Updatedat
+      additionalProperties: false
+      type: object
+      required:
+      - id
+      - name
+      - description
+      - color
+      - createdAt
+      - updatedAt
+      title: TagRead
+      description: 标签响应模型。
+    TagSummary:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        name:
+          type: string
+          minLength: 1
+          title: Name
+        color:
+          type: string
+          pattern: ^#[0-9A-Fa-f]{6}$
+          title: Color
+      additionalProperties: false
+      type: object
+      required:
+      - id
+      - name
+      - color
+      title: TagSummary
+      description: 交易中嵌入的标签有界摘要。
+    TagUpdate:
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        color:
+          type: string
+          pattern: ^#[0-9A-Fa-f]{6}$
+          title: Color
+      additionalProperties: false
+      type: object
+      minProperties: 1
+      title: TagUpdate
+      description: 部分更新标签的请求模型。
+    TagsResponse:
+      properties:
+        period:
+          $ref: '#/components/schemas/Period'
+        items:
+          items:
+            $ref: '#/components/schemas/TagAmount'
+          type: array
+          title: Items
+      additionalProperties: false
+      type: object
+      required:
+      - period
+      - items
+      title: TagsResponse
+    TransactionCreate:
+      properties:
+        type:
+          type: string
+          enum:
+          - income
+          - expense
+          - transfer
+          - balance_adjustment
+          title: Type
+        sourceAccountId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Sourceaccountid
+        destinationAccountId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Destinationaccountid
+        amount:
+          type: number
+          exclusiveMinimum: 0.0
+          title: Amount
+          description: CNY 金额；服务端接收后按 ROUND_HALF_UP 舍入到分。
+          examples:
+          - 12.34
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        categoryId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Categoryid
+          description: 普通收入和支出必填；转账和余额调整必须为空。
+        tagIds:
+          items:
+            type: string
+            format: uuid
+          type: array
+          uniqueItems: true
+          title: Tagids
         balanceAdjustmentDirection:
-          oneOf:
-            - $ref: '#/components/schemas/balanceAdjustmentDirection'
-            - type: 'null'
+          anyOf:
+          - $ref: '#/components/schemas/BalanceAdjustmentDirection'
+          - type: 'null'
+        occurredAt:
+          type: string
+          format: date-time
+          title: Occurredat
+      additionalProperties: false
+      type: object
+      required:
+      - type
+      - amount
+      - occurredAt
+      title: TransactionCreate
+      description: 创建交易的请求模型。
+    TransactionPage:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/TransactionRead'
+          type: array
+          title: Items
+        total:
+          type: integer
+          minimum: 0.0
+          title: Total
+        page:
+          type: integer
+          minimum: 1.0
+          title: Page
+        pageSize:
+          type: integer
+          maximum: 100.0
+          minimum: 1.0
+          title: Pagesize
+      additionalProperties: false
+      type: object
+      required:
+      - items
+      - total
+      - page
+      - pageSize
+      title: TransactionPage
+    TransactionRead:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        type:
+          $ref: '#/components/schemas/TransactionType'
+        sourceAccount:
+          anyOf:
+          - $ref: '#/components/schemas/AccountSummary'
+          - type: 'null'
+        destinationAccount:
+          anyOf:
+          - $ref: '#/components/schemas/AccountSummary'
+          - type: 'null'
+        amount:
+          type: number
+          exclusiveMinimum: 0.0
+          title: Amount
+          description: CNY 金额；服务端接收后按 ROUND_HALF_UP 舍入到分。
+          examples:
+          - 12.34
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        category:
+          anyOf:
+          - $ref: '#/components/schemas/CategorySummary'
+          - type: 'null'
+        tags:
+          items:
+            $ref: '#/components/schemas/TagSummary'
+          type: array
+          uniqueItems: true
+          title: Tags
+        refundOfTransactionId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Refundoftransactionid
+        refundOfTransaction:
+          anyOf:
+          - $ref: '#/components/schemas/TransactionSummary'
+          - type: 'null'
+        balanceAdjustmentDirection:
+          anyOf:
+          - $ref: '#/components/schemas/BalanceAdjustmentDirection'
+          - type: 'null'
         isVoid:
           type: boolean
+          title: Isvoid
         voidedAt:
-          oneOf:
-            - $ref: '#/components/schemas/dateTime'
-            - type: 'null'
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Voidedat
         occurredAt:
-          $ref: '#/components/schemas/dateTime'
+          type: string
+          format: date-time
+          title: Occurredat
         createdAt:
-          $ref: '#/components/schemas/dateTime'
+          type: string
+          format: date-time
+          title: Createdat
         updatedAt:
-          $ref: '#/components/schemas/dateTime'
-    balance-adjustment.create.schema:
-      $schema: https://json-schema.org/draft/2020-12/schema
-      $id: https://schemas.pockettally.app/models/balance-adjustment.create.schema.json
+          type: string
+          format: date-time
+          title: Updatedat
+      additionalProperties: false
+      type: object
+      required:
+      - id
+      - type
+      - sourceAccount
+      - destinationAccount
+      - amount
+      - description
+      - category
+      - tags
+      - refundOfTransactionId
+      - refundOfTransaction
+      - balanceAdjustmentDirection
+      - isVoid
+      - voidedAt
+      - occurredAt
+      - createdAt
+      - updatedAt
+      title: TransactionRead
+      description: 交易响应模型，关系以有界摘要嵌入。
+    TransactionSummary:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        type:
+          $ref: '#/components/schemas/TransactionType'
+        amount:
+          type: number
+          exclusiveMinimum: 0.0
+          title: Amount
+          description: CNY 金额；服务端接收后按 ROUND_HALF_UP 舍入到分。
+          examples:
+          - 12.34
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        occurredAt:
+          type: string
+          format: date-time
+          title: Occurredat
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+      additionalProperties: false
+      type: object
+      required:
+      - id
+      - type
+      - amount
+      - description
+      - occurredAt
+      - createdAt
+      title: TransactionSummary
+      description: 退款关联交易中嵌入的有界摘要。
+    TransactionType:
+      type: string
+      enum:
+      - income
+      - expense
+      - expense_refund
+      - transfer
+      - balance_adjustment
+      title: TransactionType
+      description: 系统支持的交易类型。
+    TransactionUpdate:
+      properties:
+        type:
+          type: string
+          enum:
+          - income
+          - expense
+          - transfer
+          - balance_adjustment
+          title: Type
+        sourceAccountId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Sourceaccountid
+        destinationAccountId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Destinationaccountid
+        amount:
+          type: number
+          exclusiveMinimum: 0.0
+          title: Amount
+          description: CNY 金额；服务端接收后按 ROUND_HALF_UP 舍入到分。
+          examples:
+          - 12.34
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        categoryId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Categoryid
+          description: 合并完整状态后，普通收入和支出必填；转账和余额调整必须为空。
+        tagIds:
+          items:
+            type: string
+            format: uuid
+          type: array
+          uniqueItems: true
+          title: Tagids
+        balanceAdjustmentDirection:
+          anyOf:
+          - $ref: '#/components/schemas/BalanceAdjustmentDirection'
+          - type: 'null'
+        occurredAt:
+          type: string
+          format: date-time
+          title: Occurredat
+      additionalProperties: false
+      type: object
+      minProperties: 1
+      title: TransactionUpdate
+      description: 部分更新交易的请求模型。
+    BalanceAdjustmentCreate:
       title: BalanceAdjustmentCreate
       description: Request for recording a balance adjustment as a real transaction.
       type: object
-      additionalProperties: false
-      required:
-        - accountId
-        - direction
-        - amount
-        - occurredAt
-      properties:
-        accountId:
-          $ref: '#/components/schemas/uuid'
-        direction:
-          $ref: '#/components/schemas/balanceAdjustmentDirection'
-        amount:
-          type: number
-          exclusiveMinimum: 0
-          description: CNY 金额；按 ROUND_HALF_UP 舍入到分后必须仍为正数。
-        description:
-          $ref: '#/components/schemas/nullableString'
-        occurredAt:
-          $ref: '#/components/schemas/dateTime'
-    expense-refund.create.schema:
-      $schema: https://json-schema.org/draft/2020-12/schema
-      $id: https://schemas.pockettally.app/models/expense-refund.create.schema.json
-      title: ExpenseRefundCreate
-      description: 创建支出退款；账户、分类和类型由服务端从原支出派生。
-      type: object
-      additionalProperties: false
-      required:
-        - refundOfTransactionId
-        - amount
-        - occurredAt
-      properties:
-        refundOfTransactionId:
-          $ref: '#/components/schemas/uuid'
-        amount:
-          type: number
-          exclusiveMinimum: 0
-          description: CNY 金额；按 ROUND_HALF_UP 舍入到分后必须仍为正数。
-        occurredAt:
-          $ref: '#/components/schemas/dateTime'
-        description:
-          $ref: '#/components/schemas/nullableString'
-    transaction.create.schema:
-      $schema: https://json-schema.org/draft/2020-12/schema
-      $id: https://schemas.pockettally.app/models/transaction.create.schema.json
-      title: TransactionCreate
-      description: Payload for creating a transaction. Relationships are represented by IDs.
-      type: object
-      additionalProperties: false
-      required:
-        - type
-        - amount
-        - occurredAt
-      oneOf:
-        - title: IncomeTransactionCreate
-          required:
-            - destinationAccountId
-            - categoryId
-          properties:
-            type:
-              const: income
-            sourceAccountId:
-              type: 'null'
-            destinationAccountId:
-              $ref: '#/components/schemas/uuid'
-            categoryId:
-              $ref: '#/components/schemas/uuid'
-            balanceAdjustmentDirection:
-              type: 'null'
-        - title: ExpenseTransactionCreate
-          required:
-            - sourceAccountId
-            - categoryId
-          properties:
-            type:
-              const: expense
-            sourceAccountId:
-              $ref: '#/components/schemas/uuid'
-            destinationAccountId:
-              type: 'null'
-            categoryId:
-              $ref: '#/components/schemas/uuid'
-            balanceAdjustmentDirection:
-              type: 'null'
-        - title: TransferTransactionCreate
-          required:
-            - sourceAccountId
-            - destinationAccountId
-          properties:
-            type:
-              const: transfer
-            sourceAccountId:
-              $ref: '#/components/schemas/uuid'
-            destinationAccountId:
-              $ref: '#/components/schemas/uuid'
-            categoryId:
-              type: 'null'
-            balanceAdjustmentDirection:
-              type: 'null'
-        - title: BalanceAdjustmentTransactionCreate
-          required:
-            - sourceAccountId
-            - balanceAdjustmentDirection
-          properties:
-            type:
-              const: balance_adjustment
-            sourceAccountId:
-              $ref: '#/components/schemas/uuid'
-            destinationAccountId:
-              type: 'null'
-            categoryId:
-              type: 'null'
-            balanceAdjustmentDirection:
-              $ref: '#/components/schemas/balanceAdjustmentDirection'
-      properties:
-        type:
-          $ref: '#/components/schemas/basicTransactionType'
-        sourceAccountId:
-          oneOf:
-            - $ref: '#/components/schemas/uuid'
-            - type: 'null'
-        destinationAccountId:
-          oneOf:
-            - $ref: '#/components/schemas/uuid'
-            - type: 'null'
-        amount:
-          type: number
-          exclusiveMinimum: 0
-          description: CNY 金额；按 ROUND_HALF_UP 舍入到分后必须仍为正数。
-        description:
-          $ref: '#/components/schemas/nullableString'
-        categoryId:
-          oneOf:
-            - $ref: '#/components/schemas/uuid'
-            - type: 'null'
-          description: 普通收入和支出必填；转账和余额调整必须为空。
-        tagIds:
-          type: array
-          items:
-            $ref: '#/components/schemas/uuid'
-          uniqueItems: true
-          default: []
-        balanceAdjustmentDirection:
-          oneOf:
-            - $ref: '#/components/schemas/balanceAdjustmentDirection'
-            - type: 'null'
-          description: 余额调整必须指定 increase 或 decrease；其他交易必须为空。
-        occurredAt:
-          $ref: '#/components/schemas/dateTime'
-    transaction.update.schema:
-      $schema: https://json-schema.org/draft/2020-12/schema
-      $id: https://schemas.pockettally.app/models/transaction.update.schema.json
-      title: TransactionUpdate
-      description: Partial payload for updating a transaction. Relationships are represented by IDs.
-      type: object
-      additionalProperties: false
-      minProperties: 1
-      properties:
-        type:
-          $ref: '#/components/schemas/basicTransactionType'
-        sourceAccountId:
-          oneOf:
-            - $ref: '#/components/schemas/uuid'
-            - type: 'null'
-        destinationAccountId:
-          oneOf:
-            - $ref: '#/components/schemas/uuid'
-            - type: 'null'
-        amount:
-          type: number
-          exclusiveMinimum: 0
-          description: CNY 金额；按 ROUND_HALF_UP 舍入到分后必须仍为正数。
-        description:
-          $ref: '#/components/schemas/nullableString'
-        categoryId:
-          oneOf:
-            - $ref: '#/components/schemas/uuid'
-            - type: 'null'
-          description: PATCH 合并完整状态后，普通收入和支出必填；转账和余额调整必须为空。
-        tagIds:
-          type: array
-          items:
-            $ref: '#/components/schemas/uuid'
-          uniqueItems: true
-        balanceAdjustmentDirection:
-          oneOf:
-            - $ref: '#/components/schemas/balanceAdjustmentDirection'
-            - type: 'null'
-          description: 余额调整必须指定 increase 或 decrease；其他交易必须为空。
-        occurredAt:
-          $ref: '#/components/schemas/dateTime'
-  responses:
-    Error:
-      description: Unexpected error.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    ValidationError:
-      description: Request validation failed.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    NotFound:
-      description: The requested resource was not found.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    Conflict:
-      description: The operation conflicts with existing data or business rules.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
+servers:
+- url: /api/v1

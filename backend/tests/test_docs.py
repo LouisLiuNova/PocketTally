@@ -1,6 +1,7 @@
 """文档站生成器测试。"""
 
 import importlib.util
+from copy import deepcopy
 from pathlib import Path
 from types import ModuleType
 
@@ -71,6 +72,27 @@ def test_extract_operations_rejects_invalid_contract() -> None:
 
     with pytest.raises(docs.DocumentationError, match="缺少 paths"):
         docs.extract_operations({"openapi": "3.1.0"})
+
+
+def test_validate_runtime_contract_covers_parameter_and_response_shapes() -> None:
+    """验证契约漂移检查不只比较路径清单。"""
+
+    design = {
+        "paths": {
+            "/items": {
+                "get": {
+                    "operationId": "listItems",
+                    "parameters": [{"name": "page", "in": "query", "required": False, "schema": {"type": "integer"}}],
+                    "responses": {"200": {"content": {"application/json": {"schema": {"type": "array", "items": {"type": "string"}}}}}},
+                }
+            }
+        }
+    }
+    actual = {"paths": {"/api/v1/items": deepcopy(design["paths"]["/items"])}}
+    docs.validate_runtime_contract(design, actual)
+    actual["paths"]["/api/v1/items"]["get"]["parameters"][0]["schema"]["type"] = "string"
+    with pytest.raises(docs.DocumentationError, match="结构漂移"):
+        docs.validate_runtime_contract(design, actual)
 
 
 def test_implemented_api_status_codes_match_static_openapi() -> None:

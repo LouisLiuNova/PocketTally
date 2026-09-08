@@ -1,0 +1,166 @@
+{
+  "$defs": {
+    "ExpenseTransactionItem": {
+      "additionalProperties": false,
+      "properties": {
+        "transaction": {
+          "$ref": "#/$defs/TransactionSummary"
+        },
+        "originalAmountMinor": {
+          "exclusiveMinimum": 0,
+          "title": "Originalamountminor",
+          "type": "integer"
+        },
+        "refundedAmountMinor": {
+          "minimum": 0,
+          "title": "Refundedamountminor",
+          "type": "integer"
+        },
+        "netExpenseMinor": {
+          "title": "Netexpenseminor",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "transaction",
+        "originalAmountMinor",
+        "refundedAmountMinor",
+        "netExpenseMinor"
+      ],
+      "title": "ExpenseTransactionItem",
+      "type": "object"
+    },
+    "ExpenseTransactionTotals": {
+      "additionalProperties": false,
+      "properties": {
+        "originalAmountMinor": {
+          "minimum": 0,
+          "title": "Originalamountminor",
+          "type": "integer"
+        },
+        "refundedAmountMinor": {
+          "minimum": 0,
+          "title": "Refundedamountminor",
+          "type": "integer"
+        },
+        "netExpenseMinor": {
+          "title": "Netexpenseminor",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "originalAmountMinor",
+        "refundedAmountMinor",
+        "netExpenseMinor"
+      ],
+      "title": "ExpenseTransactionTotals",
+      "type": "object"
+    },
+    "TransactionSummary": {
+      "additionalProperties": false,
+      "description": "退款关联交易中嵌入的有界摘要。",
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/TransactionType"
+        },
+        "amount": {
+          "description": "CNY 金额；服务端接收后按 ROUND_HALF_UP 舍入到分。",
+          "examples": [
+            12.34
+          ],
+          "exclusiveMinimum": 0,
+          "title": "Amount",
+          "type": "number"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Description"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "title": "Occurredat",
+          "type": "string"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "amount",
+        "description",
+        "occurredAt",
+        "createdAt"
+      ],
+      "title": "TransactionSummary",
+      "type": "object"
+    },
+    "TransactionType": {
+      "description": "系统支持的交易类型。",
+      "enum": [
+        "income",
+        "expense",
+        "expense_refund",
+        "transfer",
+        "balance_adjustment"
+      ],
+      "title": "TransactionType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "items": {
+      "items": {
+        "$ref": "#/$defs/ExpenseTransactionItem"
+      },
+      "title": "Items",
+      "type": "array"
+    },
+    "total": {
+      "minimum": 0,
+      "title": "Total",
+      "type": "integer"
+    },
+    "page": {
+      "minimum": 1,
+      "title": "Page",
+      "type": "integer"
+    },
+    "pageSize": {
+      "maximum": 100,
+      "minimum": 1,
+      "title": "Pagesize",
+      "type": "integer"
+    },
+    "totals": {
+      "$ref": "#/$defs/ExpenseTransactionTotals"
+    }
+  },
+  "required": [
+    "items",
+    "total",
+    "page",
+    "pageSize",
+    "totals"
+  ],
+  "title": "ExpenseTransactionPage",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/expense-transactions.page.schema.json"
+}
