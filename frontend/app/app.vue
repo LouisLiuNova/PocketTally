@@ -34,7 +34,7 @@ const selected = ref<Transaction | null>(null)
 const refundSummary = ref<RefundSummary | null>(null)
 const refundLoading = ref(false)
 const transactionEditor = ref<{ editing?: Transaction; refund?: Transaction; accountId?: string } | null>(null)
-const resourceEditor = ref<{ kind: 'accounts' | 'categories' | 'tags'; item?: Account | Category | Tag } | null>(null)
+const resourceEditor = ref<{ kind: 'accounts' | 'categories' | 'tags'; item?: Account | Category | Tag; initialParentCategoryId?: string } | null>(null)
 const confirmation = ref<{ title: string; text: string; path: string; method: 'POST' | 'DELETE' } | null>(null)
 const actionError = ref('')
 const busy = ref(false)
@@ -114,6 +114,7 @@ async function openTransaction(transaction: Transaction | string) {
 function deleteResource(kind: 'accounts' | 'categories' | 'tags', item: Account | Category | Tag) {
   actionError.value = ''; confirmation.value = { title: `删除「${item.name}」`, text: '仅未被引用的资源可以删除。有关联交易或子分类时，账本会保留资源并提示原因。', path: `/api/v1/${kind}/${item.id}`, method: 'DELETE' }
 }
+function createCategory(parentCategoryId?: string) { resourceEditor.value = { kind: 'categories', initialParentCategoryId: parentCategoryId } }
 function voidSelected() {
   if (!selected.value) return
   actionError.value = ''; confirmation.value = { title: '作废这笔交易', text: '作废后撤销余额影响并保留审计记录。有有效退款的支出须先作废退款。', path: `/api/v1/transactions/${selected.value.id}/void`, method: 'POST' }
@@ -209,7 +210,7 @@ onBeforeUnmount(() => { clearTimeout(transactionTimer); window.matchMedia('(pref
           </section>
 
           <section v-if="activeView === '分类与标签'" class="taxonomy-grid">
-            <article class="panel"><div class="panel-head"><h2>分类</h2><UButton label="新建分类" @click="resourceEditor = { kind: 'categories' }" /></div><p v-if="!categories.length" class="empty-state">创建收入、支出分类，让每笔收支有归属。</p><div v-for="category in categories" :key="category.id" class="resource-row"><span><i class="color-dot" :style="{ background: category.iconColor }" /><strong>{{ category.name }}</strong><small>{{ category.purpose === 'income' ? '收入' : '支出' }} · {{ category.parentCategory ? `上级：${category.parentCategory.name}` : '顶级分类' }}</small></span><div><button class="text-link" @click="resourceEditor = { kind: 'categories', item: category }">编辑</button><button class="text-link danger" @click="deleteResource('categories', category)">删除</button></div></div></article>
+            <CategoryTree :categories="categories" @create="createCategory" @edit="category => resourceEditor = { kind: 'categories', item: category }" @delete="category => deleteResource('categories', category)" />
             <article class="panel"><div class="panel-head"><h2>标签</h2><UButton label="新建标签" @click="resourceEditor = { kind: 'tags' }" /></div><p v-if="!tags.length" class="empty-state">标签可选，用来标记项目、旅行或其他用途。</p><div v-for="tag in tags" :key="tag.id" class="resource-row"><span><i class="color-dot" :style="{ background: tag.color }" />{{ tag.name }}</span><div><button class="text-link" @click="resourceEditor = { kind: 'tags', item: tag }">编辑</button><button class="text-link danger" @click="deleteResource('tags', tag)">删除</button></div></div></article>
           </section>
 

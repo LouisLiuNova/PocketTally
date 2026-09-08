@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { Account, Category, Tag } from '~/types/ledger'
 import { errorMessage } from '~/composables/useLedger'
-const props = defineProps<{ kind: 'accounts' | 'categories' | 'tags'; item?: Account | Category | Tag; categories: Category[] }>()
+const props = defineProps<{ kind: 'accounts' | 'categories' | 'tags'; item?: Account | Category | Tag; categories: Category[]; initialParentCategoryId?: string }>()
 const emit = defineEmits<{ close: []; saved: [] }>()
 const names = { accounts: '账户', categories: '分类', tags: '标签' }
 const item = props.item
-const form = reactive({ name: item?.name || '', description: item?.description || '', type: (item as Account)?.type || 'debit', purpose: (item as Category)?.purpose || 'expense', parentCategoryId: (item as Category)?.parentCategory?.id || '', color: (item as Tag)?.color || (item as Category)?.iconColor || '#005CAF', cardNumber: (item as Account)?.cardNumber || '' })
+const form = reactive({ name: item?.name || '', description: item?.description || '', type: (item as Account)?.type || 'debit', purpose: (item as Category)?.purpose || 'expense', parentCategoryId: (item as Category)?.parentCategory?.id || props.initialParentCategoryId || '', color: (item as Tag)?.color || (item as Category)?.iconColor || '#005CAF', cardNumber: (item as Account)?.cardNumber || '' })
 const busy = ref(false)
 const error = ref('')
 const moveConfirmed = ref(false)
@@ -21,6 +21,17 @@ const parents = computed(() => props.categories.filter(c => {
   }
   return true
 }))
+const selectedParent = computed(() => props.categories.find(category => category.id === form.parentCategoryId))
+const selectedParentPath = computed(() => {
+  if (!selectedParent.value) return '顶级分类'
+  const names = [selectedParent.value.name]; const seen = new Set([selectedParent.value.id]); let current = selectedParent.value
+  while (current.parentCategory && !seen.has(current.parentCategory.id)) {
+    const parent = props.categories.find(category => category.id === current.parentCategory?.id)
+    if (!parent) break
+    names.unshift(parent.name); seen.add(parent.id); current = parent
+  }
+  return `${form.purpose === 'income' ? '收入' : '支出'} / ${names.join(' / ')}`
+})
 watch(() => form.purpose, () => { form.parentCategoryId = '' })
 watch(() => form.parentCategoryId, () => { moveConfirmed.value = false })
 async function save() {
@@ -52,6 +63,7 @@ async function save() {
       <template v-if="kind === 'categories'">
         <label>用途<select v-model="form.purpose" :disabled="!!item"><option value="expense">支出</option><option value="income">收入</option></select></label>
         <label>父分类<select v-model="form.parentCategoryId"><option value="">顶级分类</option><option v-for="c in parents" :key="c.id" :value="c.id">{{ c.name }}</option></select></label>
+        <p class="hint parent-path">父分类路径：{{ selectedParentPath }}</p>
         <label v-if="moving" class="check-label"><input v-model="moveConfirmed" type="checkbox">确认将此分类及其所有子分类一起移动</label>
       </template>
       <label v-if="kind !== 'accounts'">颜色<input v-model="form.color" type="color"></label>
