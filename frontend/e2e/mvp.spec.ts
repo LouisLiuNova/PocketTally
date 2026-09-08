@@ -4,7 +4,9 @@ test('真实账本：资源、收支、转账、调账、退款、作废和持�
   const suffix = Date.now().toString()
   const wallet = `钱包${suffix}`, bank = `银行${suffix}`, expense = `餐饮${suffix}`, income = `工资${suffix}`, tag = `日常${suffix}`
   const errors: string[] = []
+  const apiRequests: string[] = []
   page.on('pageerror', error => errors.push(error.message))
+  page.on('request', request => { if (request.url().includes('/api/v1/')) apiRequests.push(request.url()) })
   await page.goto('/')
   await expect(page.getByRole('button', { name: '记一笔', exact: true })).toBeEnabled()
   await page.getByRole('button', { name: '账户', exact: true }).click()
@@ -76,6 +78,15 @@ test('真实账本：资源、收支、转账、调账、退款、作废和持�
   await expect(page.getByText('已作废', { exact: true })).toBeVisible()
   await page.keyboard.press('Escape')
   await create('transfer', '100', `转账${suffix}`)
+  await page.getByRole('button', { name: '统计分析', exact: true }).click()
+  await expect(page.getByText('普通收入', { exact: true })).toBeVisible()
+  await expect(page.locator('.category-stat').filter({ hasText: expense })).toContainText('¥70.00')
+  await page.locator('.category-stat').filter({ hasText: expense }).click()
+  await expect(page.locator('.drill-panel')).toContainText('净支出 ¥70.00')
+  expect(apiRequests.some(url => url.includes('/statistics/overview'))).toBe(true)
+  expect(apiRequests.some(url => url.includes('/statistics/expense-transactions'))).toBe(true)
+  expect(apiRequests.some(url => url.includes('/transactions?page=1&pageSize=20'))).toBe(true)
+  expect(apiRequests.some(url => url.includes('includeVoided'))).toBe(false)
   await page.getByRole('button', { name: '账户', exact: true }).click()
   await expect(page.locator('.balance-card').filter({ hasText: wallet })).toContainText('¥930.00')
   await expect(page.locator('.balance-card').filter({ hasText: bank })).toContainText('¥100.00')

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { kindLabels, type Account, type Category, type Tag, type Transaction, type Kind } from '~/types/ledger'
-import { minor, money, localInput } from '~/utils/money'
+import { kindLabels, type Account, type Category, type Tag, type Transaction, type Kind, type RefundSummary } from '~/types/ledger'
+import { minor, money, localInput, shanghaiIso } from '~/utils/money'
 import { errorMessage } from '~/composables/useLedger'
-const props = defineProps<{ accounts: Account[]; categories: Category[]; tags: Tag[]; transactions: Transaction[]; editing?: Transaction; refund?: Transaction; accountId?: string }>()
+const props = defineProps<{ accounts: Account[]; categories: Category[]; tags: Tag[]; refundSummary?: RefundSummary | null; editing?: Transaction; refund?: Transaction; accountId?: string }>()
 const emit = defineEmits<{ close: []; saved: [] }>()
 const busy = ref(false)
 const error = ref('')
@@ -15,10 +15,10 @@ const form = reactive({
   categoryId: props.editing?.category?.id || '', tagIds: props.editing?.tags.map(t => t.id) || [],
   balanceAdjustmentDirection: props.editing?.balanceAdjustmentDirection || 'increase',
 })
-const hasRefunds = computed(() => props.editing && props.transactions.some(t => !t.isVoid && t.refundOfTransactionId === props.editing!.id))
+const hasRefunds = computed(() => props.editing?.type === 'expense' && (props.refundSummary?.activeRefundCount || 0) > 0)
 const locked = computed(() => !!hasRefunds.value || props.editing?.type === 'expense_refund')
 const categoryOptions = computed(() => props.categories.filter(c => c.purpose === form.type))
-const remaining = computed(() => props.refund ? minor(props.refund.amount) - props.transactions.filter(t => !t.isVoid && t.refundOfTransactionId === props.refund!.id).reduce((sum, t) => sum + minor(t.amount), 0) : 0)
+const remaining = computed(() => props.refund ? (props.refundSummary?.remainingRefundableAmountMinor || 0) : 0)
 watch(() => form.type, () => { form.categoryId = '' })
 async function save() {
   if (busy.value) return
@@ -27,13 +27,14 @@ async function save() {
   try { amount = minor(form.amount) } catch (e) { error.value = (e as Error).message; return }
   if (amount <= 0) { error.value = '请输入大于 0 的金额'; return }
   if (props.refund && amount > remaining.value) { error.value = '退款不能超过剩余可退金额'; return }
-  if (!form.occurredAt || Number.isNaN(new Date(form.occurredAt).getTime())) { error.value = '请选择有效的发生时间'; return }
+  let occurredAt: string
+  try { occurredAt = shanghaiIso(form.occurredAt) } catch (e) { error.value = (e as Error).message; return }
   if (!locked.value && !props.refund) {
     if (['income', 'expense'].includes(form.type) && !form.categoryId) { error.value = '请先创建并选择相应用途的分类'; return }
     if (form.type === 'transfer' && form.sourceAccountId === form.destinationAccountId) { error.value = '转账必须选择两个不同账户'; return }
     if (!(form.type === 'income' ? form.destinationAccountId : form.sourceAccountId)) { error.value = '请先创建并选择账户'; return }
   }
-  const meta = { description: form.description.trim() || null, occurredAt: new Date(form.occurredAt).toISOString() }
+  const meta = { description: form.description.trim() || null, occurredAt }
   let body: object
   if (props.refund) body = { ...meta, amount: amount / 100, refundOfTransactionId: props.refund.id }
   else if (locked.value) body = { ...meta, tagIds: form.tagIds }
