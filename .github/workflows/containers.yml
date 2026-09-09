@@ -28,9 +28,10 @@ jobs:
       - name: Validate backend
         working-directory: backend
         run: |
-          uv sync --frozen
+          uv sync --frozen --group docs
           uv run pytest -q
           uvx ruff check .
+          uv run --group docs python ../scripts/docs.py check
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
