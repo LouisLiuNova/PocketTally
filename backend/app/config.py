@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     log_json: bool = False
     log_file: str | None = None
     database_path: Path = Path("data/pocket-tally.sqlite3")
+    backup_directory: Path = Path("backups")
 
 
 @lru_cache

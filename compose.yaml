@@ -1,0 +1,130 @@
+name: pockettally
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  stop_grace_period: 20s
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  logging:
+    driver: local
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  permissions:
+    image: alpine:3.22.2
+    restart: "no"
+    user: "0:0"
+    environment:
+      POCKET_TALLY_UID: ${POCKET_TALLY_UID:-10001}
+      POCKET_TALLY_GID: ${POCKET_TALLY_GID:-10001}
+    volumes:
+      - type: bind
+        source: ${POCKET_TALLY_DATA_DIR:-./data}
+        target: /data
+      - type: bind
+        source: ${POCKET_TALLY_BACKUP_DIR:-./backups}
+        target: /backups
+    command:
+      - /bin/sh
+      - -eu
+      - -c
+      - |
+        case "$${POCKET_TALLY_UID}" in ''|*[!0-9]*) echo "POCKET_TALLY_UID 必须是正整数" >&2; exit 1 ;; esac
+        case "$${POCKET_TALLY_GID}" in ''|*[!0-9]*) echo "POCKET_TALLY_GID 必须是正整数" >&2; exit 1 ;; esac
+        if [ "$${POCKET_TALLY_UID}" -le 0 ] || [ "$${POCKET_TALLY_GID}" -le 0 ]; then
+          echo "POCKET_TALLY_UID/GID 必须大于 0，以保证业务容器不使用 root 身份" >&2
+          exit 1
+        fi
+        chown -R "$${POCKET_TALLY_UID}:$${POCKET_TALLY_GID}" /data /backups
+        chmod 0700 /data /backups
+
+  backend:
+    <<: *service-defaults
+    image: ${POCKET_TALLY_BACKEND_IMAGE:-ghcr.io/louisliunova/pockettally-backend}:${POCKET_TALLY_IMAGE_TAG:-latest}
+    build:
+      context: ./backend
+      args:
+        APP_VERSION: ${POCKET_TALLY_APP_VERSION:-0.1.0}
+        VCS_REF: ${POCKET_TALLY_VCS_REF:-local}
+    user: ${POCKET_TALLY_UID:-10001}:${POCKET_TALLY_GID:-10001}
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    environment:
+      POCKET_TALLY_ENVIRONMENT: production
+      POCKET_TALLY_DEBUG: "false"
+      POCKET_TALLY_HOST: 0.0.0.0
+      POCKET_TALLY_PORT: "8000"
+      POCKET_TALLY_LOG_LEVEL: ${POCKET_TALLY_LOG_LEVEL:-INFO}
+      POCKET_TALLY_LOG_JSON: "true"
+      POCKET_TALLY_DATABASE_PATH: /data/pocket-tally.sqlite3
+      POCKET_TALLY_BACKUP_DIRECTORY: /backups
+    volumes:
+      - type: bind
+        source: ${POCKET_TALLY_DATA_DIR:-./data}
+        target: /data
+      - type: bind
+        source: ${POCKET_TALLY_BACKUP_DIR:-./backups}
+        target: /backups
+    expose:
+      - "8000"
+    depends_on:
+      permissions:
+        condition: service_completed_successfully
+
+  frontend:
+    <<: *service-defaults
+    image: ${POCKET_TALLY_FRONTEND_IMAGE:-ghcr.io/louisliunova/pockettally-frontend}:${POCKET_TALLY_IMAGE_TAG:-latest}
+    build:
+      context: ./frontend
+      args:
+        APP_VERSION: ${POCKET_TALLY_APP_VERSION:-0.1.0}
+        VCS_REF: ${POCKET_TALLY_VCS_REF:-local}
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    environment:
+      HOST: 0.0.0.0
+      PORT: "3000"
+      NODE_ENV: production
+      NUXT_API_BASE: http://backend:8000
+    ports:
+      - "${POCKET_TALLY_BIND_ADDRESS:-0.0.0.0}:${POCKET_TALLY_HTTP_PORT:-54425}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  backup:
+    <<: *service-defaults
+    profiles:
+      - tools
+    image: ${POCKET_TALLY_BACKEND_IMAGE:-ghcr.io/louisliunova/pockettally-backend}:${POCKET_TALLY_IMAGE_TAG:-latest}
+    build:
+      context: ./backend
+      args:
+        APP_VERSION: ${POCKET_TALLY_APP_VERSION:-0.1.0}
+        VCS_REF: ${POCKET_TALLY_VCS_REF:-local}
+    entrypoint:
+      - pocket-tally-backup
+    user: ${POCKET_TALLY_UID:-10001}:${POCKET_TALLY_GID:-10001}
+    restart: "no"
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    environment:
+      POCKET_TALLY_DATABASE_PATH: /data/pocket-tally.sqlite3
+      POCKET_TALLY_BACKUP_DIRECTORY: /backups
+    volumes:
+      - type: bind
+        source: ${POCKET_TALLY_DATA_DIR:-./data}
+        target: /data
+      - type: bind
+        source: ${POCKET_TALLY_BACKUP_DIR:-./backups}
+        target: /backups
+    depends_on:
+      permissions:
+        condition: service_completed_successfully

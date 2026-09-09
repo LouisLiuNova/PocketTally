@@ -16,6 +16,7 @@
 
 - [x] 按 Issue #14 完成 Nuxt 工作台：接入真实资源、分页交易、退款摘要、六类服务端统计和消费下钻 API，支持核心记账、退款、编辑、作废、组合筛选和上海时区，并提供独立账本的浏览器端到端验收。
 - [x] 按 Issue #20 建立 Chromium 桌面兼容性验收矩阵，固定覆盖 1280、1440 和 1920 三档宽度、五个主页面、关键弹窗、空状态、长文本、分页、多时间桶统计、明暗主题及错误输入保留；Firefox、WebKit、移动端专用矩阵和 CI 不属于当前阻断范围。
+- [x] 建立适用于 macOS ARM64 与 Linux x86_64 的 Docker Compose 内网部署、双架构镜像流水线、SQLite 一致备份与停机恢复流程；当前无鉴权，只允许可信内网访问，不发布公网入口。
 
 - [x] 将当前已实现的基础交易类型限制为 `income`、`expense`、`transfer` 和 `balance_adjustment`，并要求交易金额为有限正数。
 - [x] 要求创建交易提供 `occurred_at`，并在交易读取结果中返回；文档区分 `occurredAt`、`createdAt` 和 `updatedAt`。
@@ -49,6 +50,11 @@
 - [x] 按 Issue #15 提供分页交易、退款摘要、六类统计与下钻接口；前端不下载全部交易自行聚合。
 - [x] 按 Issue #19 将分类管理升级为用途 Tab、可展开多层分类树和分类详情检查器；支持子分类创建、移动确认、删除冲突、搜索祖先展开、异常链路保护及 ARIA 键盘访问。
 - [x] 按 Issue #17 补齐前端纯键盘主流程、弹窗焦点约束与恢复、错误提示、重复提交和自动化无障碍验收；Chromium 矩阵覆盖创建账户/分类、调账、支出、详情、退款、作废、筛选和统计下钻。
+
+### P1：v0.2 公网单用户发布
+
+- [ ] 按 [Issue #22](https://github.com/LouisLiuNova/PocketTally/issues/22) 完成公网发布前的单用户鉴权安全边界；先形成威胁模型并决定技术方案，鉴权验收前不得部署公网 VPS、配置公网端口转发或把 Caddy/HTTPS 当作身份验证替代品。该 Issue 已挂入 [`v0.2 公网单用户发布`](https://github.com/LouisLiuNova/PocketTally/milestone/1) Milestone。
+- [ ] Issue #22 验收通过后，再分别建立 VPS、Caddy、可信代理头与 HTTPS 的实施任务；本阶段不预选应用内登录、Caddy Basic Auth 或外部身份代理。
 
 ## 从当前设计中去除
 

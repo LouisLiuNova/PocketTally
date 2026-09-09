@@ -10,7 +10,11 @@ from loguru import logger
 from sqlalchemy import Engine
 
 from app.config import Settings
-from app.database import create_database_engine, initialize_database
+from app.database import (
+    create_database_engine,
+    database_process_lock,
+    initialize_database,
+)
 from app.logging import configure_logging
 
 
@@ -38,18 +42,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # 测试运行器负责临时输出流，避免替换其日志接收器。
     if settings.environment != "test":
         configure_logging(settings)
-    engine = create_database_engine(settings.database_path)
-    resources = AppResources(started_at=datetime.now(UTC), engine=engine)
-    app.state.resources = resources
+    with database_process_lock(settings.database_path):
+        engine = create_database_engine(settings.database_path)
+        resources = AppResources(started_at=datetime.now(UTC), engine=engine)
+        app.state.resources = resources
 
-    logger.info("Application startup begins")
-    try:
-        initialize_database(engine)
-        resources.ready = True
-        logger.info("Application startup complete")
-        yield
-    finally:
-        resources.ready = False
-        logger.info("Application shutdown begins")
-        engine.dispose()
-        logger.info("Application shutdown complete")
+        logger.info("Application startup begins")
+        try:
+            initialize_database(engine)
+            resources.ready = True
+            logger.info("Application startup complete")
+            yield
+        finally:
+            resources.ready = False
+            logger.info("Application shutdown begins")
+            engine.dispose()
+            logger.info("Application shutdown complete")

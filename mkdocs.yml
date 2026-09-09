@@ -22,6 +22,7 @@ nav:
   - 业务规则: business-rules.md
   - 十万笔统计性能验收: statistics-performance.md
   - 通用前端测试方案与指示: frontend-testing-plan.md
+  - Docker Compose 内网部署: deployment.md
   - 数据模型:
       - 数据库模型: data-models.md
       - HTTP 模型: http-models.md

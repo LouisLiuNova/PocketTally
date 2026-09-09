@@ -1,6 +1,10 @@
-"""SQLite Engine 创建与数据库初始化。"""
+"""SQLite Engine 创建、进程锁与数据库初始化。"""
 
+import fcntl
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
+from typing import BinaryIO
 
 from sqlalchemy import URL, Engine, event, text
 from sqlmodel import SQLModel, create_engine
@@ -73,6 +77,10 @@ REQUIRED_INDEXES = (
 )
 
 
+class DatabaseLockError(RuntimeError):
+    """表示同一个 SQLite 账本已被另一个服务进程占用。"""
+
+
 def resolve_database_path(database_path: Path) -> Path:
     """解析并准备本地 SQLite 数据库路径。
 
@@ -89,6 +97,38 @@ def resolve_database_path(database_path: Path) -> Path:
     path = path.resolve()
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
+
+
+@contextmanager
+def database_process_lock(database_path: Path) -> Iterator[BinaryIO]:
+    """在服务运行或恢复期间独占一个账本的进程锁。
+
+    Args:
+        database_path: 需要保护的 SQLite 数据库路径。
+
+    Yields:
+        持有排他锁的锁文件。
+
+    Raises:
+        DatabaseLockError: 账本已被另一个进程锁定时抛出。
+    """
+
+    database = resolve_database_path(database_path)
+    lock_path = Path(f"{database}.lock")
+    lock_file = lock_path.open("a+b")
+    try:
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as error:
+            raise DatabaseLockError(
+                "账本正在被 PocketTally 服务使用，请先停止后端"
+            ) from error
+        yield lock_file
+    finally:
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        finally:
+            lock_file.close()
 
 
 def create_database_engine(database_path: Path) -> Engine:
@@ -161,7 +201,9 @@ def initialize_database(engine: Engine) -> None:
 __all__ = (
     "LEGACY_BALANCE_TRIGGERS",
     "REQUIRED_INDEXES",
+    "DatabaseLockError",
     "create_database_engine",
+    "database_process_lock",
     "initialize_database",
     "resolve_database_path",
 )

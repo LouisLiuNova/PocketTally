@@ -34,6 +34,21 @@ bun run build
 bun run preview
 ```
 
+## Docker Compose 内网部署
+
+当前提供兼容 macOS ARM64 与 Linux x86_64 的前后端独立镜像和 Compose 配置。首次从
+源码启动：
+
+```bash
+cp .env.example .env
+mkdir -p data backups
+docker compose up -d --build
+```
+
+默认访问 `http://<宿主机局域网IP>:54425`，只有前端端口对宿主机开放。当前版本没有
+登录鉴权，禁止公网端口转发和公网 VPS 部署。完整的配置、升级、日志及 SQLite
+备份恢复流程见[《Docker Compose 内网部署》](docs/deployment.md)。
+
 当前适用于单用户本地运行，未加入登录鉴权。前端已按 Issue #14 接入后端分页交易、退款摘要、六类统计和消费下钻接口；不会下载全部交易自行聚合，也不再使用已移除的 `includeVoided`。交易时间输入、列表展示和统计日期边界统一使用 `Asia/Shanghai`。
 
 ## 验证
@@ -76,6 +91,7 @@ uv run --group docs python ../scripts/docs.py check
 - [业务规则](docs/business-rules.md)
 - [十万笔统计性能验收](docs/statistics-performance.md)
 - [通用前端测试方案与指示](docs/frontend-testing-plan.md)
+- [Docker Compose 内网部署](docs/deployment.md)
 - [待办事项](TODO.md)
 - [历史方案与决策背景](TODO-IMP.md)
 
