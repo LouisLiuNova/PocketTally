@@ -80,6 +80,15 @@ function siblingPosition(node: CategoryTreeNode) {
   const siblings = props.categories.filter(category => category.purpose === purpose.value && parentId(category) === parentId(node.category))
   return { position: Math.max(1, siblings.findIndex(category => category.id === node.category.id) + 1), size: siblings.length }
 }
+function handlePurposeKeydown(event: KeyboardEvent, value: Category['purpose']) {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+  event.preventDefault()
+  const values: Category['purpose'][] = ['expense', 'income']
+  const index = values.indexOf(value)
+  const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? values.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + values.length) % values.length
+  purpose.value = values[nextIndex]
+  nextTick(() => document.querySelector<HTMLButtonElement>('[data-purpose="' + values[nextIndex] + '"]')?.focus())
+}
 
 watch(purpose, () => {
   search.value = ''; previousSearchExpansion.value = null
@@ -115,7 +124,7 @@ watch(search, value => { if (value) expandedIds.value = new Set([...expandedIds.
 <template>
   <section class="category-workspace" aria-label="分类管理">
     <div class="taxonomy-tabs" role="tablist" aria-label="分类用途">
-      <button v-for="item in [{ value: 'expense', label: '支出分类' }, { value: 'income', label: '收入分类' }]" :key="item.value" role="tab" :aria-selected="purpose === item.value" :class="{ active: purpose === item.value }" @click="purpose = item.value as Category['purpose']">{{ item.label }}<span>{{ props.categories.filter(category => category.purpose === item.value).length }}</span></button>
+      <button v-for="item in [{ value: 'expense', label: '支出分类' }, { value: 'income', label: '收入分类' }]" :key="item.value" :data-purpose="item.value" role="tab" :tabindex="purpose === item.value ? 0 : -1" :aria-selected="purpose === item.value" :class="{ active: purpose === item.value }" @click="purpose = item.value as Category['purpose']" @keydown="handlePurposeKeydown($event, item.value as Category['purpose'])">{{ item.label }}<span>{{ props.categories.filter(category => category.purpose === item.value).length }}</span></button>
     </div>
     <div class="category-tree-layout">
       <article class="panel category-tree-panel">

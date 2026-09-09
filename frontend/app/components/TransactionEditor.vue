@@ -53,11 +53,11 @@ async function save() {
 </script>
 
 <template>
-  <form class="composer" @submit.prevent="save">
+  <form class="composer" :aria-busy="busy" @submit.prevent="save">
     <header><div><p class="eyebrow">记录真实的每一笔</p><h2>{{ refund ? '支出退款' : editing ? '编辑交易' : '记一笔' }}</h2></div><button type="button" aria-label="关闭" :disabled="busy" @click="emit('close')">×</button></header>
     <p v-if="refund" class="info-strip">{{ refund.description || '原支出' }} · 剩余可退 {{ money(remaining) }}，退回 {{ refund.sourceAccount?.name }}。</p>
     <p v-if="locked" class="info-strip">此交易仅可修改说明、发生时间和标签。</p>
-    <fieldset :disabled="busy">
+    <fieldset :disabled="busy" :aria-disabled="busy">
       <label v-if="!refund">交易类型<select v-model="form.type" :disabled="!!editing"><option v-for="kind in (['expense', 'income', 'transfer', 'balance_adjustment'] as const)" :key="kind" :value="kind">{{ kindLabels[kind] }}</option><option v-if="form.type === 'expense_refund'" value="expense_refund">退款</option></select></label>
       <label>金额（元）<input v-model="form.amount" inputmode="decimal" placeholder="0.00" :disabled="locked" required></label>
       <template v-if="!refund && !locked">
@@ -71,7 +71,7 @@ async function save() {
       <label>说明<input v-model="form.description" placeholder="记下这笔交易的用途"></label>
       <div v-if="!refund && tags.length" class="tag-picker"><label v-for="tag in tags" :key="tag.id" class="check-label"><input v-model="form.tagIds" type="checkbox" :value="tag.id">{{ tag.name }}</label></div>
     </fieldset>
-    <p v-if="error" role="alert" class="error-box">{{ error }}</p>
-    <div class="composer-actions"><span>保存后同步账户余额</span><UButton type="submit" :loading="busy" :disabled="busy" label="保存交易" /></div>
+    <p v-if="error" role="alert" aria-live="assertive" class="error-box">{{ error }}</p>
+    <div class="composer-actions"><span>保存后同步账户余额</span><UButton type="submit" :loading="busy" :aria-busy="busy" :disabled="busy" label="保存交易" /></div>
   </form>
 </template>

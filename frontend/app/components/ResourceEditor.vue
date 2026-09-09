@@ -51,9 +51,9 @@ async function save() {
 }
 </script>
 <template>
-  <form class="composer" @submit.prevent="save">
+  <form class="composer" :aria-busy="busy" @submit.prevent="save">
     <header><h2>{{ item ? '编辑' : '新建' }}{{ names[kind] }}</h2><button type="button" aria-label="关闭" :disabled="busy" @click="emit('close')">×</button></header>
-    <fieldset :disabled="busy">
+    <fieldset :disabled="busy" :aria-disabled="busy">
       <label>名称<input v-model="form.name" required autofocus></label>
       <template v-if="kind === 'accounts'">
         <label>账户类型<select v-model="form.type"><option value="debit">借记账户（余额不可为负）</option><option value="credit">信用账户（允许负余额）</option></select></label>
@@ -69,7 +69,7 @@ async function save() {
       <label v-if="kind !== 'accounts'">颜色<input v-model="form.color" type="color"></label>
       <label>说明<input v-model="form.description"></label>
     </fieldset>
-    <p v-if="error" role="alert" class="error-box">{{ error }}</p>
-    <div class="composer-actions"><span>名称不能重复</span><UButton type="submit" label="保存" :loading="busy" :disabled="busy" /></div>
+    <p v-if="error" role="alert" aria-live="assertive" class="error-box">{{ error }}</p>
+    <div class="composer-actions"><span>名称不能重复</span><UButton type="submit" label="保存" :loading="busy" :aria-busy="busy" :disabled="busy" /></div>
   </form>
 </template>
