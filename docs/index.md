@@ -12,6 +12,7 @@ v0.1.0 是首个发布版本和首个已发布的 SQLite 数据库基线，只�
 
 | 内容 | 用途 |
 | --- | --- |
+| [参与开发](development.md) | 查看本地启动、构建、质量检查和文档维护流程。 |
 | [业务规则](business-rules.md) | 查看已生效、部分落地和待决策的账本规则。 |
 | [通用前端测试方案与指示](frontend-testing-plan.md) | 查看前端基础检查、E2E、Chromium 桌面矩阵和验收标准。 |
 | [Docker Compose 内网部署](deployment.md) | 查看内网启动、镜像发布、升级及 SQLite 备份恢复。 |
