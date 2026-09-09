@@ -1,7 +1,8 @@
 # Docker Compose 内网部署
 
-PocketTally 当前提供 `frontend`、`backend` 两个业务容器和一个按需备份工具，支持
-macOS ARM64 与 Linux x86_64。SQLite 数据和备份均保存在宿主机绑定目录中。
+PocketTally v0.1.0 提供 `frontend`、`backend` 两个业务容器和一个按需备份工具，支持
+macOS ARM64 与 Linux x86_64。SQLite 数据和备份均保存在宿主机绑定目录中。v0.1.0
+是首个已发布的 SQLite 数据库基线。
 
 > [!WARNING]
 > 当前版本没有登录鉴权，只允许部署在可信内网。不得在路由器上转发端口，不得给容器
@@ -14,7 +15,8 @@ macOS ARM64 与 Linux x86_64。SQLite 数据和备份均保存在宿主机绑定
 - macOS 使用 Apple Silicon；Linux 使用 x86_64。镜像同时支持
   `linux/arm64` 和 `linux/amd64`。
 - 宿主防火墙只允许可信局域网访问 TCP `54425`。
-- 首次正式保存数据前，先确定 `data` 和 `backups` 所在磁盘会被宿主机备份。
+- 首次正式保存数据前，先确定 `data` 和 `backups` 所在磁盘会被宿主机备份，并准备一块
+  独立磁盘或另一台设备保存已校验的备份副本。
 
 检查默认端口是否已被占用：
 
@@ -25,14 +27,16 @@ lsof -nP -iTCP:54425 -sTCP:LISTEN
 没有输出表示当前没有监听进程。若系统没有 `lsof`，也可以直接启动 Compose；Docker
 会在端口冲突时拒绝启动，随后在 `.env` 中更换 `POCKET_TALLY_HTTP_PORT`。
 
-## 首次从源码启动
+## 使用 v0.1.0 正式镜像首次启动
 
-当前尚未发布首个版本镜像，因此首次部署从源码构建：
+正式部署必须固定 `POCKET_TALLY_IMAGE_TAG=0.1.0`，不得依赖可变的 `latest`。
+`.env.example` 已提供该固定值：
 
 ```bash
 cp .env.example .env
 mkdir -p data backups
-docker compose up -d --build
+docker compose pull frontend backend
+docker compose up -d --no-build
 ```
 
 Linux 用户建议把 `.env` 中的 UID/GID 改为当前用户，便于在宿主机管理文件：
@@ -52,9 +56,21 @@ docker compose ps
 curl --fail http://127.0.0.1:54425/api/v1/health
 ```
 
+首次保存真实数据前，创建空账本基线备份并校验命令输出的实际文件名：
+
+```bash
+docker compose run --rm backup create
+docker compose run --rm backup verify <上一步输出的备份文件名>
+```
+
+把校验通过的文件复制到独立存储后，才开始录入真实数据。
+
 同一局域网的设备访问 `http://<宿主机局域网IP>:54425`。Compose 只发布前端端口；
 FastAPI 的 `8000` 端口只在 Compose 网络内可见。若其他设备无法访问，应先检查宿主防火墙，
 不要通过公网端口转发解决。
+
+需要检查当前源码而不是部署发行版本时，可以使用 `docker compose up -d --build`。源码
+构建不等于正式镜像部署，也不得用于绕过固定版本、备份或可信内网边界。
 
 ## 配置
 
@@ -67,7 +83,7 @@ FastAPI 的 `8000` 端口只在 Compose 网络内可见。若其他设备无法�
 | `POCKET_TALLY_DATA_DIR` | `./data` | SQLite 数据目录，可改为绝对路径。 |
 | `POCKET_TALLY_BACKUP_DIR` | `./backups` | 一致快照目录，可改为绝对路径。 |
 | `POCKET_TALLY_UID` / `POCKET_TALLY_GID` | `10001` | Linux 宿主机上的文件所有者；必须大于 0。 |
-| `POCKET_TALLY_IMAGE_TAG` | `latest` | 正式部署应改为明确版本，如 `0.1.0`。 |
+| `POCKET_TALLY_IMAGE_TAG` | `0.1.0` | 正式部署固定版本；不得改用可变的 `latest`。 |
 
 数据库固定保存为数据目录中的 `pocket-tally.sqlite3`。不要手工编辑数据库，也不要让其他
 程序写入该文件。
@@ -120,10 +136,10 @@ curl --fail http://127.0.0.1:54425/api/v1/health
 > 备份只有在另一块磁盘或另一台设备上存在副本时，才能抵御宿主磁盘故障。至少定期把
 > `backups` 中已校验的文件同步到独立存储。
 
-## 使用正式镜像升级与回退
+## 正式镜像地址、升级与回退
 
-推送与后端项目版本一致的 `vX.Y.Z` Git 标签后，流水线会同时发布公开的 amd64/arm64
-镜像。Compose 默认使用 GHCR；Docker Hub 保存同版本副本。
+v0.1.0 标签流水线同时发布公开的 amd64/arm64 镜像。Compose 默认使用 GHCR；Docker
+Hub 保存同版本副本。正式部署必须使用以下仓库的 `0.1.0` 标签：
 
 GHCR 镜像：
 
@@ -135,7 +151,7 @@ Docker Hub 副本：
 - `iridium191/pocket-tally-frontend`
 - `iridium191/pocket-tally-backend`
 
-升级前先创建并校验备份，然后在 `.env` 中设置明确版本：
+升级前先创建并校验备份，然后在 `.env` 中设置明确版本。v0.1.0 的配置为：
 
 ```dotenv
 POCKET_TALLY_IMAGE_TAG=0.1.0
@@ -146,11 +162,16 @@ docker compose run --rm backup create
 docker compose pull frontend backend
 docker compose up -d --no-build
 docker compose ps
+curl --fail http://127.0.0.1:54425/api/v1/health
 ```
 
-回退时把 `POCKET_TALLY_IMAGE_TAG` 改回上一个已验证版本，重新执行 `pull` 和 `up`。
-当前项目尚未建立版本化数据库迁移；若未来版本声明数据库不向后兼容，应按对应发行说明
-恢复匹配版本的 SQLite 备份，而不能只回退容器镜像。
+回退时把 `POCKET_TALLY_IMAGE_TAG` 改回上一个已验证版本，重新执行 `pull` 和 `up`，再做
+健康检查。v0.1.0 是首个发布版本，没有更早的发行镜像可回退；若首次部署失败，应停止服务
+并恢复开始录入前已校验的基线备份。
+
+当前项目尚未建立版本化数据库迁移。后续 Schema 变更前必须建立迁移，或在对应发行说明
+中明确兼容、升级前备份与恢复策略。未来版本若声明数据库不向后兼容，必须恢复匹配版本
+的 SQLite 备份，不能只回退容器镜像。
 
 ## 镜像发布准备
 

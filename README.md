@@ -34,20 +34,35 @@ bun run build
 bun run preview
 ```
 
-## Docker Compose 内网部署
+## v0.1.0 Docker Compose 内网部署
 
-当前提供兼容 macOS ARM64 与 Linux x86_64 的前后端独立镜像和 Compose 配置。首次从
-源码启动：
+v0.1.0 是 PocketTally 首个发布版本，也是首个已发布的 SQLite 数据库基线。正式部署只
+支持个人单用户、本地或可信内网使用；当前没有登录鉴权，禁止公网端口转发和公网 VPS
+部署。
+
+使用已发布镜像时固定版本，不要依赖会随新版本变化的 `latest`：
 
 ```bash
 cp .env.example .env
 mkdir -p data backups
-docker compose up -d --build
+docker compose pull frontend backend
+docker compose up -d --no-build
+docker compose ps
+curl --fail http://127.0.0.1:54425/api/v1/health
 ```
 
-默认访问 `http://<宿主机局域网IP>:54425`，只有前端端口对宿主机开放。当前版本没有
-登录鉴权，禁止公网端口转发和公网 VPS 部署。完整的配置、升级、日志及 SQLite
-备份恢复流程见[《Docker Compose 内网部署》](docs/deployment.md)。
+`.env.example` 已固定 `POCKET_TALLY_IMAGE_TAG=0.1.0`。默认访问
+`http://<宿主机局域网IP>:54425`，只有前端端口对宿主机开放。首次保存真实数据前必须
+创建备份并完成完整性校验，同时把已校验副本保存到另一块磁盘或另一台设备。当前没有
+版本化数据库迁移；未来 Schema 变更前必须先建立迁移，或在对应发行说明中明确兼容、
+备份与恢复策略。完整流程见[《Docker Compose 内网部署》](docs/deployment.md)，版本支持
+边界与已知限制见 [v0.1.0 发行说明](docs/releases/v0.1.0.md)。
+
+需要从当前源码自行构建时，改用：
+
+```bash
+docker compose up -d --build
+```
 
 当前适用于单用户本地运行，未加入登录鉴权。前端已按 Issue #14 接入后端分页交易、退款摘要、六类统计和消费下钻接口；不会下载全部交易自行聚合，也不再使用已移除的 `includeVoided`。交易时间输入、列表展示和统计日期边界统一使用 `Asia/Shanghai`。
 
@@ -92,6 +107,7 @@ uv run --group docs python ../scripts/docs.py check
 - [十万笔统计性能验收](docs/statistics-performance.md)
 - [通用前端测试方案与指示](docs/frontend-testing-plan.md)
 - [Docker Compose 内网部署](docs/deployment.md)
+- [v0.1.0 发行说明](docs/releases/v0.1.0.md)
 - [待办事项](TODO.md)
 - [历史方案与决策背景](TODO-IMP.md)
 
