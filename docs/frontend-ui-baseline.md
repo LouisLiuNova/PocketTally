@@ -8,7 +8,7 @@
 - UI 主体系固定为 `@nuxt/ui 4.11.1`、Nuxt 4、Tailwind CSS 4、TypeScript 和 Bun。
 - 不引入 `shadcn-vue`、`shadcn-nuxt` 或其他职责重叠的完整组件库。
 - 账务 API、请求体、金额单位、Asia/Shanghai 时区、退款规则和 SQLite 工作流不属于 UI 迁移范围。
-- 四套配色和 Light/Dark/System 的现有运行时选择继续由 `data-palette`、`data-theme` 和本地偏好控制；完整语义配色收敛由 Issue #27 负责。
+- 八套配色和 Light/Dark/System 的运行时选择由 `data-palette`、`data-theme`、Nuxt UI color mode class 和本地偏好共同保持一致；完整角色、对比度与扩展规则见[前端语义主题与配色契约](frontend-theme.md)。
 
 Nuxt UI 的全局主题应优先通过 `app.config.ts`、`--ui-*` token、Tailwind theme、组件 variant、slot、`ui` 和 `class` 扩展。页面只在业务布局或专属数据可视化无法由组件合理表达时保留局部 CSS。
 

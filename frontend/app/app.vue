@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { kindLabels, type Account, type Category, type ExpenseTransactionPage, type Granularity, type RefundSummary, type Tag, type Transaction } from '~/types/ledger'
 import { errorMessage, type StatisticsQuery, type TransactionQuery } from '~/composables/useLedger'
+import {
+  APPEARANCE_PALETTES,
+  APPEARANCE_STORAGE_KEY,
+  parseStoredAppearance,
+  type PaletteName,
+  type ThemePreference,
+} from '~/constants/appearance'
 import { localInput, minor, money } from '~/utils/money'
 
 const ledger = useLedger()
@@ -38,8 +45,9 @@ const resourceEditor = ref<{ kind: 'accounts' | 'categories' | 'tags'; item?: Ac
 const confirmation = ref<{ title: string; text: string; path: string; method: 'POST' | 'DELETE' } | null>(null)
 const actionError = ref('')
 const busy = ref(false)
-const theme = ref('system')
-const palette = ref('ruri')
+const colorMode = useColorMode()
+const theme = ref<ThemePreference>('system')
+const palette = ref<PaletteName>('ruri')
 const showAppearance = ref(false)
 const drill = ref<{ title: string; data: ExpenseTransactionPage } | null>(null)
 const drillLoading = ref(false)
@@ -141,9 +149,11 @@ async function openExpenseDrill(title: string, query: Record<string, string | bo
   finally { drillLoading.value = false }
 }
 function applyAppearance() {
-  document.documentElement.dataset.theme = theme.value === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme.value
   document.documentElement.dataset.palette = palette.value
-  try { localStorage.setItem('pockettally-appearance', JSON.stringify({ theme: theme.value, palette: palette.value })) } catch { /* 隐私模式仍允许切换外观。 */ }
+  colorMode.preference = theme.value
+  document.documentElement.dataset.theme = colorMode.value
+  document.documentElement.style.colorScheme = colorMode.value
+  try { localStorage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify({ theme: theme.value, palette: palette.value })) } catch { /* 隐私模式仍允许切换外观。 */ }
 }
 
 let transactionTimer: ReturnType<typeof setTimeout> | undefined
@@ -154,11 +164,20 @@ watch([search, txStart, txEnd, typeFilter, accountFilter, categoryFilter, tagFil
 watch(txPage, () => { if (loaded.value) void refreshTransactions() })
 watch([statsPreset, customStart, customEnd, granularity, calendarMonth, categoryParentId], () => { if (loaded.value) void refreshStatistics() })
 watch([theme, palette], () => { if (import.meta.client) applyAppearance() })
-onMounted(() => {
-  try { const savedAppearance = JSON.parse(localStorage.getItem('pockettally-appearance') || '{}'); theme.value = savedAppearance.theme || 'system'; palette.value = savedAppearance.palette || 'ruri' } catch { /* 忽略损坏的偏好。 */ }
-  applyAppearance(); window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyAppearance); void refreshAll()
+watch(() => colorMode.value, (value) => {
+  if (!import.meta.client) return
+  document.documentElement.dataset.theme = value
+  document.documentElement.style.colorScheme = value
 })
-onBeforeUnmount(() => { clearTimeout(transactionTimer); window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', applyAppearance) })
+onMounted(() => {
+  let savedAppearance = parseStoredAppearance(null)
+  try { savedAppearance = parseStoredAppearance(localStorage.getItem(APPEARANCE_STORAGE_KEY)) } catch { /* 隐私模式仍允许使用默认外观。 */ }
+  theme.value = savedAppearance.theme
+  palette.value = savedAppearance.palette
+  applyAppearance()
+  void refreshAll()
+})
+onBeforeUnmount(() => { clearTimeout(transactionTimer) })
 </script>
 
 <template>
@@ -171,7 +190,7 @@ onBeforeUnmount(() => { clearTimeout(transactionTimer); window.matchMedia('(pref
       </aside>
       <main>
         <header class="topbar"><div><p class="eyebrow">{{ today }}</p><h1>{{ activeView === '总览' ? '我的账本' : activeView }}</h1></div><div class="top-actions"><UButton color="neutral" variant="ghost" icon="i-lucide-sun-moon" aria-label="外观设置" @click="showAppearance = !showAppearance" /><UButton color="neutral" variant="outline" label="刷新" :loading="loading" :aria-busy="loading" @click="refreshAll" /><UButton icon="i-lucide-plus" label="记一笔" :disabled="!loaded || loading || !!loadError" @click="transactionEditor = {}" /></div></header>
-        <div v-if="showAppearance" class="view-toolbar"><label>主题 <select v-model="theme"><option value="system">跟随系统</option><option value="light">亮色</option><option value="dark">暗色</option></select></label><label>配色 <select v-model="palette"><option value="ruri">瑠璃浅葱</option><option value="toki">朱鷺色</option><option value="matsuba">松葉色</option><option value="fuji">藤紫</option></select></label></div>
+        <div v-if="showAppearance" class="view-toolbar"><label>主题 <select v-model="theme"><option value="system">跟随系统</option><option value="light">亮色</option><option value="dark">暗色</option></select></label><label>配色 <select v-model="palette"><option v-for="item in APPEARANCE_PALETTES" :key="item.value" :value="item.value">{{ item.label }}</option></select></label></div>
         <p v-if="notice" role="status" class="info-strip">{{ notice }}<button class="text-link" aria-label="关闭提示" @click="notice = ''">×</button></p>
         <div v-if="loadError || queryError" role="alert" class="error-box">{{ loadError || queryError }} {{ loaded && loadError ? '以下为上次成功读取的数据。' : '' }}<UButton label="重试" color="neutral" @click="refreshAll" /></div>
         <p v-if="loading" role="status" class="empty-state">正在从账本服务同步分页流水与统计…</p>

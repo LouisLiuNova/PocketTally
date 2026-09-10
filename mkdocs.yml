@@ -24,6 +24,7 @@ nav:
   - 十万笔统计性能验收: statistics-performance.md
   - 通用前端测试方案与指示: frontend-testing-plan.md
   - Nuxt UI 接入基线与组件映射: frontend-ui-baseline.md
+  - 前端语义主题与配色契约: frontend-theme.md
   - Docker Compose 内网部署: deployment.md
   - 发行说明:
       - v0.1.0: releases/v0.1.0.md

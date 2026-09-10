@@ -16,6 +16,7 @@ v0.1.0 是首个发布版本和首个已发布的 SQLite 数据库基线，只�
 | [业务规则](business-rules.md) | 查看已生效、部分落地和待决策的账本规则。 |
 | [通用前端测试方案与指示](frontend-testing-plan.md) | 查看前端基础检查、E2E、Chromium 桌面矩阵和验收标准。 |
 | [Nuxt UI 接入基线与组件映射](frontend-ui-baseline.md) | 查看 Issue #33 的组件映射、主题边界和 CSS/构建体积基线。 |
+| [前端语义主题与配色契约](frontend-theme.md) | 查看八套配色、亮暗模式、语义 token、对比度和扩展规则。 |
 | [Docker Compose 内网部署](deployment.md) | 查看内网启动、镜像发布、升级及 SQLite 备份恢复。 |
 | [v0.1.0 发行说明](releases/v0.1.0.md) | 查看版本支持边界、已知限制、固定镜像部署和备份要求。 |
 | [数据库模型](data-models.md) | 查看表、字段、约束说明和 ER 关系图。 |
