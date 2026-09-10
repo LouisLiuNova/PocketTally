@@ -1,4 +1,9 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
+
+async function selectNuxtUiOption(page: Page, label: string, option: string) {
+  await page.getByLabel(label, { exact: true }).click()
+  await page.getByRole('option', { name: option, exact: true }).click()
+}
 
 test('真实账本：资源、收支、转账、调账、退款、作废和持久化', async ({ page }) => {
   const suffix = Date.now().toString()
@@ -20,7 +25,7 @@ test('真实账本：资源、收支、转账、调账、退款、作废和持�
   for (const [name, purpose] of [[expense, 'expense'], [income, 'income']]) {
     await page.getByRole('button', { name: '新建分类', exact: true }).click()
     await page.getByLabel('名称', { exact: true }).fill(name!)
-    await page.getByRole('combobox', { name: '用途', exact: true }).selectOption(purpose!)
+    await selectNuxtUiOption(page, '用途', purpose === 'income' ? '收入' : '支出')
     await page.getByRole('button', { name: '保存', exact: true }).click()
     if (purpose === 'income') await page.getByRole('tab', { name: /收入分类/ }).click()
     await expect(page.getByText(name!, { exact: true })).toBeVisible()
@@ -115,13 +120,13 @@ test('资源维护、子树移动确认、错误保留输入与服务恢复', as
   for (const name of [`父A${suffix}`, `父B${suffix}`, `子${suffix}`]) {
     await page.getByRole('button', { name: '新建分类', exact: true }).click()
     await page.getByLabel('名称', { exact: true }).fill(name)
-    if (name.startsWith('子')) await page.getByLabel('父分类').selectOption({ label: `父A${suffix}` })
+    if (name.startsWith('子')) await selectNuxtUiOption(page, '父分类', `父A${suffix}`)
     await page.getByRole('button', { name: '保存', exact: true }).click()
     await expect(page.getByText(name, { exact: true })).toBeVisible()
   }
   const child = page.locator('.resource-row').filter({ has: page.getByText(`子${suffix}`, { exact: true }) })
   await child.getByRole('button', { name: '编辑', exact: true }).click()
-  await page.getByLabel('父分类').selectOption({ label: `父B${suffix}` })
+  await selectNuxtUiOption(page, '父分类', `父B${suffix}`)
   await page.getByRole('button', { name: '保存', exact: true }).click()
   await expect(page.getByRole('alert')).toContainText('请确认移动分类')
   await page.getByLabel('确认将此分类及其所有子分类一起移动').check()

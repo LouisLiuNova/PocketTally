@@ -1,13 +1,17 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
-:root { color-scheme:light; --ink:#172521; --muted:#5e7068; --line:#e8ece9; --paper:#f4f6f4; --card:#fff; --brand:#005caf; --brand-soft:#33a6b8; --brand-dark:#004d91; --nav:#102c37; --ui-color-primary-500:#007a5c; }
+@theme static {
+  --font-sans: "Inter", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+}
+
+:root { color-scheme:light; --ink:#172521; --muted:#5e7068; --line:#e8ece9; --paper:#f4f6f4; --card:#fff; --brand:#005caf; --brand-soft:#33a6b8; --brand-dark:#004d91; --nav:#102c37; --ui-radius:0.75rem; --ui-color-primary-500:var(--brand); --ui-color-primary-600:var(--brand-dark); }
 :root[data-palette="toki"] { --brand:#c73e3a; --brand-soft:#f4a7b9; --brand-dark:#96312e; --nav:#321f22; }
 :root[data-palette="matsuba"] { --brand:#42602d; --brand-soft:#86a697; --brand-dark:#304723; --nav:#1c2c20; }
 :root[data-palette="fuji"] { --brand:#6f5c9a; --brand-soft:#b28fce; --brand-dark:#534475; --nav:#282338; }
 :root[data-theme="dark"] { color-scheme:dark; --ink:#e8eeec; --muted:#a7b7b1; --line:#33413c; --paper:#121816; --card:#1b2421; }
 * { box-sizing:border-box; }
-body { margin:0; background:var(--paper); color:var(--ink); font-family:"Inter","PingFang SC","Noto Sans SC",system-ui,sans-serif; }
+body { margin:0; background:var(--paper); color:var(--ink); font-family:var(--font-sans); }
 button { font:inherit; }
 :where(button, input, select, textarea, [tabindex]):focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
 .app-shell { min-height:100vh; display:grid; grid-template-columns:240px 1fr; }
