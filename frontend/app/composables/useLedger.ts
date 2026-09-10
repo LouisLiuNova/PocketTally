@@ -1,7 +1,4 @@
-import type {
-  Account, CalendarStatistics, CashFlow, Category, CategoryStatistics, Expenses,
-  Granularity, Overview, Page, Tag, TagStatistics, Transaction,
-} from '~/types/ledger'
+import type { Account, Category, Granularity, Tag } from '~/types/ledger'
 
 export function errorMessage(error: any): string {
   const data = error?.data
@@ -13,71 +10,58 @@ export function errorMessage(error: any): string {
 }
 
 export interface TransactionQuery {
-  page: number; pageSize: number; startAt?: string; endAt?: string; type?: string; accountId?: string
-  categoryId?: string; includeDescendants?: boolean; tagId?: string; q?: string; status?: string
+  page: number
+  pageSize: number
+  startAt?: string
+  endAt?: string
+  type?: string
+  accountId?: string
+  categoryId?: string
+  includeDescendants?: boolean
+  tagId?: string
+  q?: string
+  status?: string
 }
 
 export interface StatisticsQuery {
-  startDate: string; endDate: string; granularity: Granularity; month: string; parentCategoryId?: string
+  startDate: string
+  endDate: string
+  granularity: Granularity
+  month: string
+  parentCategoryId?: string
 }
 
 export function useLedger() {
   const accounts = ref<Account[]>([])
   const categories = ref<Category[]>([])
   const tags = ref<Tag[]>([])
-  const transactions = ref<Transaction[]>([])
-  const transactionTotal = ref(0)
-  const overview = ref<Overview | null>(null)
-  const cashFlow = ref<CashFlow | null>(null)
-  const expenses = ref<Expenses | null>(null)
-  const categoryStatistics = ref<CategoryStatistics | null>(null)
-  const tagStatistics = ref<TagStatistics | null>(null)
-  const calendar = ref<CalendarStatistics | null>(null)
   const loading = ref(false)
   const loadError = ref('')
   const loaded = ref(false)
+  let request: Promise<void> | null = null
 
   async function refreshResources() {
-    const [a, c, t] = await Promise.all([
-      $fetch<Account[]>('/api/v1/accounts'), $fetch<Category[]>('/api/v1/categories'), $fetch<Tag[]>('/api/v1/tags'),
-    ])
-    accounts.value = a; categories.value = c; tags.value = t
-  }
-
-  async function loadTransactions(query: TransactionQuery) {
-    const result = await $fetch<Page<Transaction>>('/api/v1/transactions', { query })
-    transactions.value = result.items
-    transactionTotal.value = result.total
-  }
-
-  async function loadStatistics(query: StatisticsQuery) {
-    const period = { startDate: query.startDate, endDate: query.endDate }
-    const withGranularity = { ...period, granularity: query.granularity }
-    const [summary, flow, expenseTrend, categoryData, tagData, calendarData] = await Promise.all([
-      $fetch<Overview>('/api/v1/statistics/overview', { query: period }),
-      $fetch<CashFlow>('/api/v1/statistics/cash-flow', { query: withGranularity }),
-      $fetch<Expenses>('/api/v1/statistics/expenses', { query: withGranularity }),
-      $fetch<CategoryStatistics>('/api/v1/statistics/categories', { query: { ...withGranularity, parentCategoryId: query.parentCategoryId } }),
-      $fetch<TagStatistics>('/api/v1/statistics/tags', { query: period }),
-      $fetch<CalendarStatistics>('/api/v1/statistics/calendar', { query: { month: query.month } }),
-    ])
-    overview.value = summary; cashFlow.value = flow; expenses.value = expenseTrend
-    categoryStatistics.value = categoryData; tagStatistics.value = tagData; calendar.value = calendarData
-  }
-
-  async function refresh(transactionQuery: TransactionQuery, statisticsQuery: StatisticsQuery) {
-    if (loading.value) return
-    loading.value = true; loadError.value = ''
-    try {
-      await Promise.all([refreshResources(), loadTransactions(transactionQuery), loadStatistics(statisticsQuery)])
+    if (request) return request
+    loading.value = true
+    loadError.value = ''
+    request = Promise.all([
+      $fetch<Account[]>('/api/v1/accounts'),
+      $fetch<Category[]>('/api/v1/categories'),
+      $fetch<Tag[]>('/api/v1/tags'),
+    ]).then(([accountData, categoryData, tagData]) => {
+      accounts.value = accountData
+      categories.value = categoryData
+      tags.value = tagData
       loaded.value = true
-    } catch (error) { loadError.value = errorMessage(error) }
-    finally { loading.value = false }
+    }).catch((error) => {
+      loadError.value = errorMessage(error)
+      throw error
+    }).finally(() => {
+      loading.value = false
+      request = null
+    })
+    return request
   }
 
-  return {
-    accounts, categories, tags, transactions, transactionTotal, overview, cashFlow, expenses,
-    categoryStatistics, tagStatistics, calendar, loading, loadError, loaded,
-    refreshResources, loadTransactions, loadStatistics, refresh,
-  }
+  return { accounts, categories, tags, loading, loadError, loaded, refreshResources }
 }

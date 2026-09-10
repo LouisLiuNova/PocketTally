@@ -19,13 +19,29 @@ Nuxt UI 的全局主题应优先通过 `app.config.ts`、`--ui-*` token、Tailwi
 | `UApp`、`UButton`、`UModal`、`UIcon` | 继续使用并统一语义色、variant 和默认尺寸 | 主操作使用 `primary`，次要操作使用 `neutral`，破坏性操作使用 `error` | #33、#25 |
 | 原生表单、`.composer` 字段样式 | `UForm`、`UFormField`、`UInput`、`USelect`、`UTextarea`、`UCheckbox` | Issue #33 先迁移 `ResourceEditor`；业务校验仍由现有服务逻辑负责 | #33、#34、#35 |
 | `.panel`、指标卡和资源卡片 | `UCard` | 后续页面迁移时使用；业务图表内部布局可继续局部实现 | #34、#35、#36 |
-| 自有用途 Tab 和筛选 Tab | `UTabs` | 信息架构和 URL query 先由 #31 确定 | #31、#35、#36 |
+| 自有用途 Tab 和筛选 Tab | `UTabs` | #31 已确定信息架构和 URL query；控件迁移按业务页面任务实施 | #31、#35、#36 |
 | 自有分页按钮 | `UPagination` | 交易列表迁移时替换，保留服务端分页语义 | #34 |
 | 自有侧边导航、Header、Breadcrumb | `USidebar`/`UDashboardSidebar`、`UHeader`、`UBreadcrumb` | 应用壳层统一改造，不在 #33 提前重写 | #30 |
 | 自有确认弹窗和详情弹层 | `UModal`、`USlideover`、`UPopover`、`UTooltip` | 已有 `UModal` 保留；详情抽屉和提示由业务页面任务决定 | #32、#34、#35 |
 | `.error-box`、`.info-strip`、成功提示 | `UAlert`、`useToast` | 表单和服务端错误使用 `UAlert`；全局操作反馈由 #32 统一 | #32、#33 |
 | 分类树 | 自有树交互 + Nuxt UI 基础控件 | 保留树的层级保护、键盘导航和异常节点表达；不得复制通用 Dialog/Button 行为 | #19、#35 |
 | 现金流趋势、统计图表、日历布局 | 自有业务可视化 + 主题 token | 保留服务端统计语义和可访问文本降级，不引入重复图表组件库 | #28、#36 |
+
+## Issue #31 路由与页面边界
+
+工作台使用 Nuxt 文件路由提供 `/`、`/transactions`、`/accounts`、
+`/categories`、`/statistics` 和 `/settings`。导航选中态、页面标题和后续
+Breadcrumb 标签由同一份路由元数据生成；不再使用组件内部状态模拟页面。
+
+总览只承担当前余额、当前月摘要、简短趋势、Top 分类、近期流水和首次使用引导；
+统计分析承担时间筛选、比较、趋势、分类、Tag、日历和明细下钻。页面按需读取数据，
+访问交易页不会同时请求六类统计接口。
+
+交易筛选通过 `q`、`page`、`start`、`end`、`type`、`accountId`、
+`categoryId`、`tagId` 和 `status` 保存；统计筛选通过 `preset`、`start`、
+`end`、`granularity`、`month` 和 `parentCategoryId` 保存。默认值省略，非法或
+重复参数回退并从地址中移除；弹窗、消息和表单草稿不写入 URL。完整浏览器验收见
+[通用前端测试方案与指示](frontend-testing-plan.md)。
 
 ## Issue #33 代表性迁移
 

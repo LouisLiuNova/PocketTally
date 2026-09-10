@@ -26,7 +26,7 @@ button { font:inherit; }
 .brand { display:flex; align-items:center; gap:11px; padding:0 10px 32px; font-size:19px; font-weight:750; letter-spacing:-.02em; color:var(--ui-text-inverted); }
 .brand-mark { width:34px; height:34px; border-radius:11px; display:grid; place-items:center; background:var(--brand-soft); font-size:20px; box-shadow:0 8px 20px color-mix(in srgb,var(--ui-text) 12%,transparent); }
 nav { display:grid; gap:6px; }
-.nav-item { width:100%; border:0; background:transparent; color:var(--ui-text-muted); display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; cursor:pointer; text-align:left; font-weight:560; }
+.nav-item { width:100%; border:0; background:transparent; color:var(--ui-text-muted); display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; cursor:pointer; text-align:left; text-decoration:none; font-weight:560; }
 .nav-item:hover { background:var(--pt-primary-container); color:var(--ui-text-inverted); }
 .nav-item.active { background:color-mix(in srgb,var(--brand) 42%,var(--nav)); color:var(--pt-on-primary-container); box-shadow:inset 3px 0 var(--brand-soft); }
 .nav-item svg { width:19px; height:19px; }

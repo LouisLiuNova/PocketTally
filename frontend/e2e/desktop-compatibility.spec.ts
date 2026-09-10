@@ -3,7 +3,7 @@ import { assertDialogWithinViewport, assertNoHorizontalOverflow, assertNoPageErr
 import { seedDesktopLedger } from './helpers/ledger-fixtures'
 
 test.describe('Chromium 桌面兼容性矩阵', () => {
-  test('空账本和五个主页面无布局阻断', async ({ page }) => {
+  test('空账本和六个主页面无布局阻断', async ({ page }) => {
     const errors: string[] = []
     page.on('pageerror', error => errors.push(error.message))
     await page.goto('/')
@@ -14,8 +14,8 @@ test.describe('Chromium 桌面兼容性矩阵', () => {
       await expect(page.getByText('欢迎来到你的账本')).toBeVisible()
     }
 
-    for (const label of ['总览', '交易', '账户', '分类与标签', '统计分析']) {
-      await page.getByRole('button', { name: label, exact: true }).click()
+    for (const label of ['总览', '交易', '账户', '分类与标签', '统计分析', '设置']) {
+      await page.getByRole('link', { name: label, exact: true }).click()
       await assertNoHorizontalOverflow(page)
       await expect(page.locator('main')).toBeVisible()
     }
@@ -40,7 +40,7 @@ test.describe('Chromium 桌面兼容性矩阵', () => {
     await expect(page.getByRole('button', { name: '记一笔', exact: true })).toBeEnabled()
     await assertNoHorizontalOverflow(page)
 
-    await page.getByRole('button', { name: '交易', exact: true }).click()
+    await page.getByRole('link', { name: '交易', exact: true }).click()
     await expect(page.getByText(/服务端共 \d+ 笔/)).toBeVisible()
     await expect(page.getByRole('button', { name: '下一页', exact: true })).toBeVisible()
     await page.getByRole('button', { name: '下一页', exact: true }).click()
@@ -62,8 +62,12 @@ test.describe('Chromium 桌面兼容性矩阵', () => {
     await page.getByRole('button', { name: '取消', exact: true }).click()
     await page.keyboard.press('Escape')
 
-    await page.getByRole('button', { name: '账户', exact: true }).click()
+    await page.getByRole('link', { name: '账户', exact: true }).click()
     const walletCard = page.locator('.balance-card').filter({ hasText: fixture.wallet.name })
+    await walletCard.getByRole('button', { name: '流水', exact: true }).click()
+    await expect.poll(() => new URL(page.url()).searchParams.get('accountId')).toBe(fixture.wallet.id)
+    await page.goBack()
+    await expect(page).toHaveURL(/\/accounts$/)
     await walletCard.getByRole('button', { name: '删除', exact: true }).click()
     await assertDialogWithinViewport(page)
     await page.getByRole('button', { name: '取消', exact: true }).click()
@@ -78,15 +82,29 @@ test.describe('Chromium 桌面兼容性矩阵', () => {
     await page.unroute('**/api/v1/accounts')
     await page.getByRole('button', { name: '关闭', exact: true }).click()
 
-    await page.getByRole('button', { name: '分类与标签', exact: true }).click()
+    await page.getByRole('link', { name: '分类与标签', exact: true }).click()
     await expect(page.getByText(fixture.longName, { exact: true })).toBeVisible()
     await assertNoHorizontalOverflow(page)
 
-    await page.getByRole('button', { name: '统计分析', exact: true }).click()
+    await page.getByRole('link', { name: '统计分析', exact: true }).click()
     await page.getByRole('button', { name: '近 12 个月', exact: true }).click()
+    await expect.poll(() => new URL(page.url()).searchParams.get('preset')).toBe('twelve_months')
     await page.getByLabel('粒度').selectOption('month')
+    await expect.poll(() => new URL(page.url()).searchParams.get('granularity')).toBe('month')
     await expect(page.getByText('现金流趋势', { exact: true })).toBeVisible()
     await assertNoHorizontalOverflow(page)
+
+    await page.locator('.bucket-button').first().click()
+    await expect(page).toHaveURL(/\/transactions\?.*start=.*end=/)
+    await page.goBack()
+    await expect(page.getByLabel('粒度')).toHaveValue('month')
+
+    await page.locator('.calendar-grid button').first().click()
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/transactions')
+    expect(new URL(page.url()).searchParams.get('start')).toBeNull()
+    expect(new URL(page.url()).searchParams.get('end')).toMatch(/^\d{4}-\d{2}-02$/)
+    await page.goBack()
+    await expect(page.getByRole('button', { name: '近 12 个月', exact: true })).toHaveClass(/active/)
 
     await page.locator('.category-stat').first().click()
     await expect(page.locator('.drill-panel')).toBeVisible()

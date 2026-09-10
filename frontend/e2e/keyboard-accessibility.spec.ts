@@ -26,14 +26,14 @@ test('纯键盘完成核心记账、退款作废、筛选和统计下钻', async
   await page.goto('/')
   await expect(page.getByRole('button', { name: '记一笔', exact: true })).toBeEnabled()
 
-  await activate(page.getByRole('button', { name: '账户', exact: true }))
+  await activate(page.getByRole('link', { name: '账户', exact: true }))
   const accountTrigger = page.getByRole('button', { name: '新建账户', exact: true })
   await activate(accountTrigger)
   await typeText(page.getByLabel('名称', { exact: true }), wallet)
   await saveDialog(page, '保存')
   await expect(page.getByText(wallet, { exact: true })).toBeVisible()
 
-  await activate(page.getByRole('button', { name: '分类与标签', exact: true }))
+  await activate(page.getByRole('link', { name: '分类与标签', exact: true }))
   const categoryTrigger = page.getByRole('button', { name: '新建分类', exact: true })
   await activate(categoryTrigger)
   await typeText(page.getByLabel('名称', { exact: true }), category)
@@ -56,7 +56,7 @@ test('纯键盘完成核心记账、退款作废、筛选和统计下钻', async
   await saveDialog(page, '保存交易')
   await expect(page.getByRole('button', { name: '保存交易', exact: true })).toBeHidden()
 
-  await activate(page.getByRole('button', { name: '交易', exact: true }))
+  await activate(page.getByRole('link', { name: '交易', exact: true }))
   await typeText(page.getByLabel('搜索交易'), expense)
   const expenseRow = page.getByRole('button').filter({ hasText: expense }).first()
   await expect(expenseRow).toBeVisible()
@@ -87,7 +87,7 @@ test('纯键盘完成核心记账、退款作废、筛选和统计下钻', async
   await page.getByLabel('状态筛选').selectOption('voided')
   await expect(page.getByRole('button').filter({ hasText: refund }).first()).toContainText('已作废')
 
-  await activate(page.getByRole('button', { name: '统计分析', exact: true }))
+  await activate(page.getByRole('link', { name: '统计分析', exact: true }))
   const categoryStat = page.locator('.category-stat').filter({ hasText: category }).first()
   await expect(categoryStat).toBeVisible()
   await activate(categoryStat)
@@ -100,7 +100,7 @@ test('弹窗焦点约束与恢复、方向键 Tab 和失败重复提交反馈', 
 
   await page.goto('/')
   await expect(page.getByRole('button', { name: '记一笔', exact: true })).toBeEnabled()
-  await activate(page.getByRole('button', { name: '账户', exact: true }))
+  await activate(page.getByRole('link', { name: '账户', exact: true }))
 
   const trigger = page.getByRole('button', { name: '新建账户', exact: true })
   await activate(trigger)
@@ -138,7 +138,7 @@ test('弹窗焦点约束与恢复、方向键 Tab 和失败重复提交反馈', 
   await page.unroute('**/api/v1/accounts')
   await page.keyboard.press('Escape')
 
-  await activate(page.getByRole('button', { name: '分类与标签', exact: true }))
+  await activate(page.getByRole('link', { name: '分类与标签', exact: true }))
   const tabs = page.getByRole('tab')
   await tabs.first().focus()
   await tabs.first().press('ArrowRight')
