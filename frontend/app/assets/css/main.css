@@ -22,11 +22,11 @@ body { margin:0; background:var(--paper); color:var(--ink); font-family:var(--fo
 button { font:inherit; }
 :where(button, input, select, textarea, [tabindex]):focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
 .app-shell { min-height:100vh; }
-.app-sidebar { background:var(--pt-surface-inverted); }
+.app-sidebar { --ui-text-inverted:#fff; background:var(--pt-surface-inverted); color:var(--ui-text-inverted); }
 .shell-brand { min-width:0; display:flex; align-items:center; gap:10px; color:inherit; font-size:18px; font-weight:750; letter-spacing:-.02em; text-decoration:none; }
 .shell-brand-mark { width:34px; height:34px; flex:0 0 34px; border-radius:10px; display:grid; place-items:center; background:var(--pt-brand-300); color:var(--pt-brand-900); font-size:20px; }
 .ledger-status { min-width:0; width:100%; display:grid; gap:3px; }
-.ledger-status-item { min-width:0; width:100%; justify-content:flex-start; color:color-mix(in srgb,currentColor 78%,transparent); cursor:default; }
+.ledger-status-item { min-width:0; width:100%; justify-content:flex-start; color:color-mix(in srgb,var(--ui-text-inverted) 78%,transparent); cursor:default; }
 .ledger-status-item [data-slot="label"] { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
 .ledger-status[data-collapsed="true"] { justify-items:center; }
 .ledger-status[data-collapsed="true"] .ledger-status-item { width:auto; justify-content:center; }
