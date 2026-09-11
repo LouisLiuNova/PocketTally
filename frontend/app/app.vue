@@ -118,7 +118,6 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
                     </button>
                   </div>
                 </UTooltip>
-                <span class="sidebar-theme-label">{{ currentThemeMode.label }}</span>
               </div>
             </div>
           </div>
