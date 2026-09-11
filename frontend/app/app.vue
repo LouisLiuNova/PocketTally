@@ -33,7 +33,7 @@ const navigationItems = computed(() => APP_ROUTES.map(item => ({
 const breadcrumbItems = computed(() => currentRoute.value.path === '/'
   ? [{ label: currentRoute.value.breadcrumb, icon: currentRoute.value.icon }]
   : [
-      { label: '总览', icon: APP_ROUTES[0].icon, to: '/' },
+      { label: '总览', icon: APP_ROUTES[0].icon, to: '/', 'aria-label': '返回总览' },
       { label: currentRoute.value.breadcrumb, icon: currentRoute.value.icon },
     ])
 const today = new Intl.DateTimeFormat('zh-CN', { dateStyle: 'full', timeZone: 'Asia/Shanghai' }).format(new Date())
@@ -132,7 +132,8 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
         </template>
 
         <template #body>
-          <UContainer class="page-container" :ui="{ base: 'w-full max-w-[1580px] mx-auto px-0' }">
+          <main>
+            <UContainer class="page-container" :ui="{ base: 'w-full max-w-[1580px] mx-auto px-0' }">
             <div v-if="workspace.showAppearance.value" class="view-toolbar">
               <label>主题 <select v-model="workspace.theme.value"><option value="system">跟随系统</option><option value="light">亮色</option><option value="dark">暗色</option></select></label>
               <label>配色 <select v-model="workspace.palette.value"><option v-for="item in APPEARANCE_PALETTES" :key="item.value" :value="item.value">{{ item.label }}</option></select></label>
@@ -145,8 +146,9 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
             </div>
             <p v-if="workspace.loading.value && !workspace.loaded.value" role="status" class="empty-state">正在从账本服务同步资源…</p>
 
-            <NuxtPage />
-          </UContainer>
+              <NuxtPage />
+            </UContainer>
+          </main>
         </template>
       </UDashboardPanel>
     </UDashboardGroup>
