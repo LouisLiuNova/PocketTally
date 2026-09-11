@@ -41,7 +41,7 @@ const selectedPalette = computed(() => APPEARANCE_PALETTES.find(item => item.val
         color="primary"
         indicator="start"
         legend="主题模式"
-        :ui="{ root: 'settings-theme-group', fieldset: 'settings-theme-options', item: 'settings-theme-option', wrapper: 'settings-theme-copy' }"
+        :ui="{ root: 'settings-theme-group', legend: 'sr-only', fieldset: 'settings-theme-options', item: 'settings-theme-option', wrapper: 'settings-theme-copy' }"
       >
         <template #label="{ item }">
           <span class="settings-theme-label">
