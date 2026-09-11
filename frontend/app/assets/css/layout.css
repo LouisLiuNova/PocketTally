@@ -129,13 +129,11 @@
 }
 
 .page-flow.taxonomy-grid {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-areas:
-    "taxonomy"
-    "tags";
+  grid-template-columns: minmax(0, 1.75fr) minmax(300px, .9fr);
+  grid-template-areas: "taxonomy tags";
   gap: var(--pt-layout-grid-gap);
   margin: 0;
-  align-items: start;
+  align-items: stretch;
 }
 
 .category-workspace {
@@ -145,13 +143,20 @@
 
 .taxonomy-tags {
   grid-area: tags;
-  width: min(100%, 760px);
+  width: auto;
+  margin-top: 63px;
+  align-self: stretch;
 }
 
 .category-workspace .category-tree-layout {
-  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+  grid-template-columns: minmax(0, 1.35fr) minmax(240px, .65fr);
   gap: var(--pt-layout-grid-gap);
-  align-items: start;
+  align-items: stretch;
+}
+
+.category-workspace .category-tree-panel,
+.category-workspace .category-inspector {
+  align-self: stretch;
 }
 
 .analytics-grid {
@@ -238,6 +243,10 @@
   .analytics-tags,
   .analytics-calendar {
     grid-area: auto;
+  }
+
+  .taxonomy-tags {
+    margin-top: 0;
   }
 
   .account-card-grid {
