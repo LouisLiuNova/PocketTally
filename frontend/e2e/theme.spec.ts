@@ -23,18 +23,21 @@ function contrast(first: string, second: string) {
 }
 
 test('八套配色在亮暗模式下共享完整且可读的语义 token', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/settings')
   await expect(page.getByRole('button', { name: '记一笔', exact: true })).toBeEnabled()
-  await page.getByRole('button', { name: '外观设置', exact: true }).click()
-  const themeSelect = page.getByLabel('主题')
-  const paletteSelect = page.getByLabel('配色')
-  await expect(paletteSelect.locator('option')).toHaveCount(8)
-  expect(await paletteSelect.locator('option').allTextContents()).toEqual(APPEARANCE_PALETTES.map(item => item.label))
+  const themeOption = (label: string) => page.locator('.settings-theme-option').filter({ hasText: label })
+  const paletteOption = (palette: typeof PALETTE_NAMES[number]) => {
+    const item = APPEARANCE_PALETTES.find(candidate => candidate.value === palette)!
+    return page.getByRole('button', { name: `选择${item.label}配色，${item.description}`, exact: true })
+  }
+  await expect(page.locator('.palette-choice')).toHaveCount(APPEARANCE_PALETTES.length)
+  await expect(page.locator('.palette-choice-copy strong')).toHaveText(APPEARANCE_PALETTES.map(item => item.label))
 
   for (const palette of PALETTE_NAMES) {
-    await paletteSelect.selectOption(palette)
+    await paletteOption(palette).click()
+    await expect(paletteOption(palette)).toHaveAttribute('aria-pressed', 'true')
     for (const theme of themes) {
-      await themeSelect.selectOption(theme)
+      await themeOption(theme === 'light' ? '亮色' : '暗色').click()
       await expect(page.locator('html')).toHaveAttribute('data-palette', palette)
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
       await expect(page.locator('html')).toHaveClass(new RegExp(`(^|\\s)${theme}(\\s|$)`))
@@ -98,16 +101,28 @@ test('新旧偏好可恢复，未知字段独立回退且首屏属性稳定', as
 
 test('跟随系统实时切换，显式主题不受系统变化影响', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' })
-  await page.goto('/')
+  await page.goto('/settings')
   await expect(page.getByRole('button', { name: '记一笔', exact: true })).toBeEnabled()
-  await page.getByRole('button', { name: '外观设置', exact: true }).click()
-  await page.getByLabel('主题').selectOption('system')
+  await page.locator('.settings-theme-option').filter({ hasText: '跟随系统' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
 
   await page.emulateMedia({ colorScheme: 'light' })
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
 
-  await page.getByLabel('主题').selectOption('dark')
+  await page.locator('.settings-theme-option').filter({ hasText: '暗色' }).click()
   await page.emulateMedia({ colorScheme: 'light' })
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+})
+
+test('侧边栏开关即时切换明暗模式并保持可访问语义', async ({ page }) => {
+  await page.goto('/')
+  const darkModeSwitch = page.getByRole('switch', { name: '切换到暗色模式', exact: true })
+  await expect(darkModeSwitch).toBeVisible()
+  await expect(darkModeSwitch).toHaveAttribute('aria-checked', 'false')
+  await darkModeSwitch.click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await expect(page.getByRole('switch', { name: '切换到亮色模式', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await expect(page.getByRole('switch', { name: '切换到亮色模式', exact: true })).toHaveAttribute('aria-checked', 'true')
 })

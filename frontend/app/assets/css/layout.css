@@ -398,6 +398,10 @@
   font-size: 11px;
 }
 
+.palette-choice--selected .palette-choice-copy small {
+  color: var(--pt-on-primary-container);
+}
+
 .palette-choice-check {
   color: var(--brand);
   font-size: 18px;
