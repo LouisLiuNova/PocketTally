@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { zh_cn } from '@nuxt/ui/locale'
 import { APP_ROUTES, appRoute } from '~/constants/navigation'
 import { APPEARANCE_PALETTES } from '~/constants/appearance'
 import { ledgerWorkspaceKey } from '~/composables/useLedgerWorkspace'
@@ -10,64 +11,145 @@ const route = useRoute()
 const workspace = createLedgerWorkspace()
 provide(ledgerWorkspaceKey, workspace)
 
+const appLocale = {
+  ...zh_cn,
+  messages: {
+    ...zh_cn.messages,
+    dashboardSidebar: {
+      title: '主导航',
+      description: 'PocketTally 页面导航',
+    },
+  },
+}
+
 const currentRoute = computed(() => appRoute(route.path))
+const navigationItems = computed(() => APP_ROUTES.map(item => ({
+  label: item.label,
+  icon: item.icon,
+  to: item.path,
+  active: route.path === item.path,
+  'aria-label': item.label,
+})))
+const breadcrumbItems = computed(() => currentRoute.value.path === '/'
+  ? [{ label: currentRoute.value.breadcrumb, icon: currentRoute.value.icon }]
+  : [
+      { label: '总览', icon: APP_ROUTES[0].icon, to: '/' },
+      { label: currentRoute.value.breadcrumb, icon: currentRoute.value.icon },
+    ])
 const today = new Intl.DateTimeFormat('zh-CN', { dateStyle: 'full', timeZone: 'Asia/Shanghai' }).format(new Date())
 
 useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
 </script>
 
 <template>
-  <UApp>
-    <div class="app-shell">
-      <aside class="sidebar">
-        <div class="brand">
-          <div class="brand-mark"><UIcon name="i-lucide-circle-dollar-sign" /></div>
-          <span class="brand-label">PocketTally</span>
-        </div>
-        <nav aria-label="主导航">
-          <NuxtLink
-            v-for="item in APP_ROUTES"
-            :key="item.path"
-            :to="item.path"
-            class="nav-item"
-            :class="{ active: route.path === item.path }"
-            :aria-label="item.label"
-            :aria-current="route.path === item.path ? 'page' : undefined"
-          >
-            <UIcon :name="item.icon" />
-            <span class="nav-label">{{ item.label }}</span>
+  <UApp :locale="appLocale">
+    <UDashboardGroup class="app-shell" storage="local" storage-key="pockettally-shell" unit="rem">
+      <UDashboardSidebar
+        id="primary"
+        class="app-sidebar bg-inverted text-inverted"
+        collapsible
+        resizable
+        :default-size="15"
+        :min-size="12"
+        :max-size="20"
+        :collapsed-size="4"
+        :ui="{
+          header: 'border-b border-white/10',
+          body: 'gap-3',
+          footer: 'border-t border-white/10',
+          content: 'bg-inverted text-inverted sm:max-w-72',
+        }"
+      >
+        <template #header="{ collapsed }">
+          <NuxtLink v-if="!collapsed" to="/" class="shell-brand" aria-label="PocketTally 首页">
+            <span class="shell-brand-mark" aria-hidden="true"><UIcon name="i-lucide-circle-dollar-sign" /></span>
+            <span>PocketTally</span>
           </NuxtLink>
-        </nav>
-        <div class="sidebar-foot"><p class="hint">个人账本 · CNY<br>统计边界 · Asia/Shanghai</p></div>
-      </aside>
+          <UTooltip :text="collapsed ? '展开主导航' : '折叠主导航'" :content="{ side: 'right' }">
+            <UDashboardSidebarCollapse
+              class="hidden lg:inline-flex"
+              :class="collapsed ? 'mx-auto' : 'ml-auto'"
+              :aria-label="collapsed ? '展开主导航' : '折叠主导航'"
+            />
+          </UTooltip>
+        </template>
 
-      <UMain class="app-main">
-        <UContainer class="page-container" :ui="{ base: 'w-full max-w-[1580px] mx-auto px-4 sm:px-6 lg:px-8' }">
-        <header class="topbar">
-          <div><p class="eyebrow">{{ today }}</p><h1>{{ currentRoute.title }}</h1></div>
-          <div class="top-actions">
-            <UButton color="neutral" variant="ghost" icon="i-lucide-sun-moon" aria-label="外观设置" @click="workspace.showAppearance.value = !workspace.showAppearance.value" />
-            <UButton color="neutral" variant="outline" label="刷新" :loading="workspace.loading.value" :aria-busy="workspace.loading.value" @click="workspace.refreshWorkspace" />
-            <UButton icon="i-lucide-plus" label="记一笔" :disabled="!workspace.loaded.value || workspace.loading.value || !!workspace.loadError.value" @click="workspace.transactionEditor.value = {}" />
+        <template #default="{ collapsed }">
+          <UNavigationMenu
+            aria-label="主导航"
+            :items="navigationItems"
+            orientation="vertical"
+            color="primary"
+            variant="pill"
+            highlight
+            :collapsed="collapsed"
+            :tooltip="{ delayDuration: 0, content: { side: 'right' } }"
+            :ui="{
+              link: 'min-h-11 text-inverted hover:text-inverted focus-visible:before:outline-white/80',
+              linkLeadingIcon: 'size-5 text-inverted/70 group-hover:text-inverted group-data-[active]:text-inverted',
+            }"
+          />
+        </template>
+
+        <template #footer="{ collapsed }">
+          <div class="ledger-status" :data-collapsed="collapsed">
+            <UTooltip text="个人账本" :delay-duration="0" :ignore-non-keyboard-focus="false" :content="{ side: 'right' }">
+              <UButton class="ledger-status-item" color="neutral" variant="ghost" icon="i-lucide-book-open" :label="collapsed ? undefined : '个人账本'" aria-label="个人账本" />
+            </UTooltip>
+            <UTooltip text="货币：CNY" :delay-duration="0" :ignore-non-keyboard-focus="false" :content="{ side: 'right' }">
+              <UButton class="ledger-status-item" color="neutral" variant="ghost" icon="i-lucide-circle-dollar-sign" :label="collapsed ? undefined : '货币：CNY'" aria-label="货币：CNY" />
+            </UTooltip>
+            <UTooltip text="统计边界：Asia/Shanghai" :delay-duration="0" :ignore-non-keyboard-focus="false" :content="{ side: 'right' }">
+              <UButton class="ledger-status-item" color="neutral" variant="ghost" icon="i-lucide-clock-3" :label="collapsed ? undefined : '统计边界：Asia/Shanghai'" aria-label="统计边界：Asia/Shanghai" />
+            </UTooltip>
           </div>
-        </header>
+        </template>
+      </UDashboardSidebar>
 
-        <div v-if="workspace.showAppearance.value" class="view-toolbar">
-          <label>主题 <select v-model="workspace.theme.value"><option value="system">跟随系统</option><option value="light">亮色</option><option value="dark">暗色</option></select></label>
-          <label>配色 <select v-model="workspace.palette.value"><option v-for="item in APPEARANCE_PALETTES" :key="item.value" :value="item.value">{{ item.label }}</option></select></label>
-        </div>
-        <p v-if="workspace.notice.value" role="status" class="info-strip">{{ workspace.notice.value }}<button class="text-link" aria-label="关闭提示" @click="workspace.notice.value = ''">×</button></p>
-        <div v-if="workspace.loadError.value || workspace.detailError.value" role="alert" class="error-box">
-          {{ workspace.loadError.value || workspace.detailError.value }}
-          {{ workspace.loaded.value && workspace.loadError.value ? '以下为上次成功读取的数据。' : '' }}
-          <UButton label="重试" color="neutral" @click="workspace.refreshWorkspace" />
-        </div>
-        <p v-if="workspace.loading.value && !workspace.loaded.value" role="status" class="empty-state">正在从账本服务同步资源…</p>
+      <UDashboardPanel class="app-main">
+        <template #header>
+          <UDashboardNavbar :title="currentRoute.title" :ui="{ root: 'h-auto min-h-20 py-3', left: 'items-start', title: 'sr-only' }">
+            <template #toggle>
+              <UDashboardSidebarToggle aria-label="打开主导航" />
+            </template>
+            <template #left>
+              <div class="min-w-0">
+                <p class="eyebrow">{{ today }}</p>
+                <h1>{{ currentRoute.title }}</h1>
+                <UBreadcrumb :items="breadcrumbItems" class="mt-1" :ui="{ link: 'text-xs' }" />
+              </div>
+            </template>
+            <template #right>
+              <div class="top-actions">
+                <UTooltip text="外观设置">
+                  <UButton color="neutral" variant="ghost" icon="i-lucide-sun-moon" aria-label="外观设置" @click="workspace.showAppearance.value = !workspace.showAppearance.value" />
+                </UTooltip>
+                <UButton color="neutral" variant="outline" icon="i-lucide-refresh-cw" label="刷新" :loading="workspace.loading.value" :aria-busy="workspace.loading.value" @click="workspace.refreshWorkspace" />
+                <UButton icon="i-lucide-plus" label="记一笔" :disabled="!workspace.loaded.value || workspace.loading.value || !!workspace.loadError.value" @click="workspace.transactionEditor.value = {}" />
+              </div>
+            </template>
+          </UDashboardNavbar>
+        </template>
 
-          <NuxtPage />
-        </UContainer>
-      </UMain>
-    </div>
+        <template #body>
+          <UContainer class="page-container" :ui="{ base: 'w-full max-w-[1580px] mx-auto px-0' }">
+            <div v-if="workspace.showAppearance.value" class="view-toolbar">
+              <label>主题 <select v-model="workspace.theme.value"><option value="system">跟随系统</option><option value="light">亮色</option><option value="dark">暗色</option></select></label>
+              <label>配色 <select v-model="workspace.palette.value"><option v-for="item in APPEARANCE_PALETTES" :key="item.value" :value="item.value">{{ item.label }}</option></select></label>
+            </div>
+            <p v-if="workspace.notice.value" role="status" class="info-strip">{{ workspace.notice.value }}<button class="text-link" aria-label="关闭提示" @click="workspace.notice.value = ''">×</button></p>
+            <div v-if="workspace.loadError.value || workspace.detailError.value" role="alert" class="error-box">
+              {{ workspace.loadError.value || workspace.detailError.value }}
+              {{ workspace.loaded.value && workspace.loadError.value ? '以下为上次成功读取的数据。' : '' }}
+              <UButton label="重试" color="neutral" @click="workspace.refreshWorkspace" />
+            </div>
+            <p v-if="workspace.loading.value && !workspace.loaded.value" role="status" class="empty-state">正在从账本服务同步资源…</p>
+
+            <NuxtPage />
+          </UContainer>
+        </template>
+      </UDashboardPanel>
+    </UDashboardGroup>
 
     <UModal :open="!!workspace.transactionEditor.value" :dismissible="true" title="交易表单" @update:open="value => { if (!value) workspace.transactionEditor.value = null }">
       <template #content>

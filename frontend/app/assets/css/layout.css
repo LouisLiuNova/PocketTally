@@ -9,7 +9,6 @@
   max-width: none;
   min-width: 0;
   margin: 0;
-  padding: 0 0 48px;
 }
 
 .page-container,
@@ -259,10 +258,6 @@
 }
 
 @media (max-width: 720px) {
-  .app-main {
-    padding-bottom: 88px;
-  }
-
   .metric-grid,
   .account-card-grid {
     grid-template-columns: minmax(0, 1fr);
