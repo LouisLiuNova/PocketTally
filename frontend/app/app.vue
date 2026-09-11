@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { zh_cn } from '@nuxt/ui/locale'
 import { APP_ROUTES, appRoute } from '~/constants/navigation'
+import type { ThemePreference } from '~/constants/appearance'
 import { ledgerWorkspaceKey } from '~/composables/useLedgerWorkspace'
 import { kindLabels } from '~/types/ledger'
 import { localInput, money } from '~/utils/money'
@@ -22,6 +23,14 @@ const appLocale = {
 }
 
 const currentRoute = computed(() => appRoute(route.path))
+const themeModes: Array<{ value: ThemePreference; label: string; icon: string }> = [
+  { value: 'system', label: '跟随系统', icon: 'i-lucide-monitor' },
+  { value: 'light', label: '亮色', icon: 'i-lucide-sun' },
+  { value: 'dark', label: '暗色', icon: 'i-lucide-moon' },
+]
+const currentThemeMode = computed(() => themeModes.find(mode => mode.value === workspace.theme.value) || themeModes[0])
+const themeModeIndex = computed(() => Math.max(0, themeModes.findIndex(mode => mode.value === workspace.theme.value)))
+const themeModeThumbClass = computed(() => `sidebar-theme-switch-thumb--${themeModeIndex.value}`)
 const navigationItems = computed(() => APP_ROUTES.map(item => ({
   label: item.label,
   icon: item.icon,
@@ -45,7 +54,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
     <UDashboardGroup class="app-shell" storage="local" storage-key="pockettally-shell" unit="rem">
       <UDashboardSidebar
         id="primary"
-        class="app-sidebar bg-inverted text-inverted"
+        class="app-sidebar"
         collapsible
         resizable
         :default-size="15"
@@ -53,10 +62,10 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
         :max-size="20"
         :collapsed-size="4"
         :ui="{
-          header: 'border-b border-white/10',
+          header: 'border-b border-default',
           body: 'gap-3',
-          footer: 'border-t border-white/10',
-          content: 'bg-inverted text-inverted sm:max-w-72',
+          footer: 'border-t border-default',
+          content: 'bg-default text-default sm:max-w-72',
         }"
       >
         <template #header="{ collapsed }">
@@ -66,7 +75,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
           </NuxtLink>
           <UTooltip :text="collapsed ? '展开主导航' : '折叠主导航'" :content="{ side: 'right' }">
             <UDashboardSidebarCollapse
-              class="hidden lg:inline-flex"
+              class="sidebar-collapse-button hidden lg:inline-flex"
               :class="collapsed ? 'mx-auto' : 'ml-auto'"
               :aria-label="collapsed ? '展开主导航' : '折叠主导航'"
             />
@@ -85,23 +94,32 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
               :collapsed="collapsed"
               :tooltip="{ delayDuration: 0, content: { side: 'right' } }"
               :ui="{
-                link: 'min-h-11 text-inverted hover:text-inverted focus-visible:before:outline-white/80',
-                linkLeadingIcon: 'size-5 text-inverted/70 group-hover:text-inverted group-data-[active]:text-inverted',
+                link: 'min-h-11 text-default hover:text-highlighted focus-visible:before:outline-[var(--pt-focus-ring)]',
+                linkLeadingIcon: 'size-5 text-dimmed group-hover:text-default group-data-[active]:text-default',
               }"
             />
             <div class="sidebar-theme-control">
-              <UTooltip :text="workspace.isDarkMode.value ? '切换到亮色模式' : '切换到暗色模式'" :delay-duration="0" :content="{ side: 'right' }">
-                <USwitch
-                  :model-value="workspace.isDarkMode.value"
-                  checked-icon="i-lucide-moon"
-                  unchecked-icon="i-lucide-sun"
-                  label="暗色模式"
-                  color="primary"
-                  size="lg"
-                  :aria-label="workspace.isDarkMode.value ? '切换到亮色模式' : '切换到暗色模式'"
-                  @update:model-value="workspace.setDarkMode"
-                />
-              </UTooltip>
+              <div class="sidebar-theme-switch-row">
+                <UTooltip :text="`主题模式：${currentThemeMode.label}`" :delay-duration="0" :content="{ side: 'right' }">
+                  <div class="sidebar-theme-switch" role="radiogroup" aria-label="主题模式">
+                    <span class="sidebar-theme-switch-thumb" :class="themeModeThumbClass" aria-hidden="true" />
+                    <button
+                      v-for="mode in themeModes"
+                      :key="mode.value"
+                      class="sidebar-theme-switch-option"
+                      type="button"
+                      role="radio"
+                      :aria-checked="workspace.theme.value === mode.value"
+                      :aria-label="mode.label"
+                      :title="mode.label"
+                      @click="workspace.theme.value = mode.value"
+                    >
+                      <UIcon :name="mode.icon" aria-hidden="true" />
+                    </button>
+                  </div>
+                </UTooltip>
+                <span class="sidebar-theme-label">{{ currentThemeMode.label }}</span>
+              </div>
             </div>
           </div>
         </template>
