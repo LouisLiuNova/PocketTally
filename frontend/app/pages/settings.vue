@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { APPEARANCE_PALETTES, type ThemePreference } from '~/constants/appearance'
+import { APPEARANCE_PALETTES, type PaletteName, type ThemePreference } from '~/constants/appearance'
 import type { MessageLevel } from '~/utils/messages'
 
 const workspace = useLedgerWorkspace()
@@ -11,6 +11,11 @@ const themeOptions: Array<{ value: ThemePreference; label: string; description: 
 ]
 
 const selectedPalette = computed(() => APPEARANCE_PALETTES.find(item => item.value === workspace.palette.value))
+const paletteOptions = APPEARANCE_PALETTES.map(item => ({
+  ...item,
+  label: `${item.label} ${item.description}`,
+  displayLabel: item.label,
+}))
 const messages = useAppMessages()
 const previewLevels: Array<{ level: MessageLevel; label: string; title: string; description: string }> = [
   { level: 'info', label: '触发信息', title: '信息示例', description: '这是一个短生命周期的信息 Toast，默认约 4 秒后消失。' },
@@ -37,6 +42,22 @@ function triggerPreview(item: typeof previewLevels[number]) {
 
 function clearPreviewMessages() {
   previewLevels.forEach(item => messages.dismiss(previewMessageId(item.level)))
+}
+
+function selectPaletteWithArrow(event: KeyboardEvent) {
+  if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key)) return
+  const target = event.target as HTMLElement
+  if (target.getAttribute('role') !== 'radio' || !target.closest('.palette-choice')) return
+
+  event.preventDefault()
+  event.stopPropagation()
+  const current = target.getAttribute('value') as PaletteName
+  const currentIndex = APPEARANCE_PALETTES.findIndex(item => item.value === current)
+  const offset = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1
+  const nextIndex = (currentIndex + offset + APPEARANCE_PALETTES.length) % APPEARANCE_PALETTES.length
+  const nextPalette = APPEARANCE_PALETTES[nextIndex]!.value
+  workspace.palette.value = nextPalette
+  nextTick(() => document.querySelector<HTMLButtonElement>(`.palette-choice [role="radio"][value="${nextPalette}"]`)?.focus())
 }
 </script>
 
@@ -90,29 +111,35 @@ function clearPreviewMessages() {
           <span class="settings-current-palette">当前：{{ selectedPalette?.label }}</span>
         </div>
       </template>
-      <div class="palette-grid" aria-label="配色预设">
-        <UButton
-          v-for="item in APPEARANCE_PALETTES"
-          :key="item.value"
-          class="palette-choice"
-          :class="{ 'palette-choice--selected': workspace.palette.value === item.value }"
-          color="neutral"
-          variant="outline"
-          :aria-pressed="workspace.palette.value === item.value"
-          :aria-label="`选择${item.label}配色，${item.description}`"
-          @click="workspace.palette.value = item.value"
-        >
-          <span class="palette-swatch" aria-hidden="true">
-            <i :style="{ backgroundColor: item.preview[0] }" />
-            <i :style="{ backgroundColor: item.preview[1] }" />
+      <URadioGroup
+        v-model="workspace.palette.value"
+        :items="paletteOptions"
+        value-key="value"
+        variant="card"
+        orientation="horizontal"
+        indicator="hidden"
+        color="primary"
+        legend="配色预设"
+        :ui="{ root: 'palette-picker', legend: 'sr-only', fieldset: 'palette-grid', item: 'palette-choice', wrapper: 'palette-choice-wrapper', label: 'palette-choice-label', description: 'sr-only' }"
+        @keydown.capture="selectPaletteWithArrow"
+      >
+        <template #label="{ item }">
+          <span class="palette-preview" :data-palette-preview="item.value" aria-hidden="true">
+            <span class="palette-preview-sidebar"><i /></span>
+            <span class="palette-preview-main">
+              <span class="palette-preview-toolbar"><i /><i /></span>
+              <span class="palette-preview-cards"><i /><i /></span>
+              <span class="palette-preview-chart"><i /><i /><i /><i /></span>
+              <span class="palette-preview-action" />
+            </span>
           </span>
           <span class="palette-choice-copy">
-            <strong>{{ item.label }}</strong>
-            <small>{{ item.description }}</small>
+            <strong aria-hidden="true">{{ item.displayLabel }}</strong>
+            <span class="sr-only">{{ item.description }}</span>
+            <UIcon v-if="workspace.palette.value === item.value" name="i-lucide-check" class="palette-choice-check" aria-hidden="true" />
           </span>
-          <UIcon v-if="workspace.palette.value === item.value" name="i-lucide-check" class="palette-choice-check" aria-hidden="true" />
-        </UButton>
-      </div>
+        </template>
+      </URadioGroup>
       <p class="settings-selection-status" role="status">已选择「{{ selectedPalette?.label }}」配色</p>
     </UCard>
 

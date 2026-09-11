@@ -25,7 +25,6 @@ export interface AppearancePalette {
   value: PaletteName
   label: string
   seed: string
-  preview: readonly [string, string]
   description: string
 }
 
@@ -35,14 +34,14 @@ export const DEFAULT_APPEARANCE: AppearancePreference = {
 }
 
 export const APPEARANCE_PALETTES: readonly AppearancePalette[] = [
-  { value: 'ruri', label: '瑠璃浅葱', seed: '#005CAF', preview: ['#075EB1', '#D5E3FF'], description: '清晰、可靠的默认蓝' },
-  { value: 'toki', label: '朱鷺色', seed: '#C73E3A', preview: ['#B02D2B', '#FFDAD6'], description: '柔和、温暖的红' },
-  { value: 'matsuba', label: '松葉色', seed: '#42602D', preview: ['#3C6A1C', '#BBF293'], description: '稳定、自然的绿' },
-  { value: 'fuji', label: '藤紫', seed: '#6F5C9A', preview: ['#694FA3', '#EADDFF'], description: '柔和、个性的紫' },
-  { value: 'yamabuki', label: '山吹', seed: '#FFA400', preview: ['#855300', '#FFDDB7'], description: '明快、积极的金黄' },
-  { value: 'asagi', label: '浅葱', seed: '#48929B', preview: ['#006972', '#8CF2FF'], description: '清爽、冷静的青蓝' },
-  { value: 'konkikyo', label: '紺桔梗', seed: '#191F45', preview: ['#4B57A9', '#DEE0FF'], description: '克制、专业的靛蓝' },
-  { value: 'kurumi', label: '胡桃', seed: '#A86F4C', preview: ['#96490C', '#FFDBC8'], description: '自然、沉稳的暖棕' },
+  { value: 'ruri', label: '瑠璃浅葱', seed: '#005CAF', description: '清晰、可靠的默认蓝' },
+  { value: 'toki', label: '朱鷺色', seed: '#C73E3A', description: '柔和、温暖的红' },
+  { value: 'matsuba', label: '松葉色', seed: '#42602D', description: '稳定、自然的绿' },
+  { value: 'fuji', label: '藤紫', seed: '#6F5C9A', description: '柔和、个性的紫' },
+  { value: 'yamabuki', label: '山吹', seed: '#FFA400', description: '明快、积极的金黄' },
+  { value: 'asagi', label: '浅葱', seed: '#48929B', description: '清爽、冷静的青蓝' },
+  { value: 'konkikyo', label: '紺桔梗', seed: '#191F45', description: '克制、专业的靛蓝' },
+  { value: 'kurumi', label: '胡桃', seed: '#A86F4C', description: '自然、沉稳的暖棕' },
 ] as const
 
 const themeSet = new Set<string>(THEME_PREFERENCES)

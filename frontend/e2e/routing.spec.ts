@@ -20,7 +20,9 @@ test('六个页面可直接访问，标题与导航选中态来自路由', async
   }
   await expect(page.getByRole('heading', { name: '主题模式', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '外观设置', exact: true })).toHaveCount(0)
-  await expect(page.getByRole('switch', { name: /切换到(暗色|亮色)模式/ })).toBeVisible()
+  const themeGroup = page.getByRole('radiogroup', { name: '主题模式', exact: true })
+  await expect(themeGroup).toBeVisible()
+  await expect(themeGroup.getByRole('radio')).toHaveCount(3)
 })
 
 test('交易筛选可规范化、刷新及前进后退恢复', async ({ page }) => {

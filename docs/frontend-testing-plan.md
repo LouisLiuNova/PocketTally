@@ -141,8 +141,19 @@ git diff --check
 3. 每个页面确认 `document.documentElement.scrollWidth` 不超过视口宽度。
 4. 确认页面主体可见，空账本时显示空状态提示。
 5. 进入设置页，切换跟随系统、亮色和暗色主题；确认侧栏下方三档图标滑动开关同步更新，并在收起导航后仍可见。
-6. 执行 `theme.spec.ts`，检查八套配色、亮暗 token、对比度、偏好恢复、首屏属性和顶栏入口移除。
+6. 执行 `theme.spec.ts`，检查八套配色、亮暗 token、对比度、偏好恢复、首屏属性和 GitHub Appearance 式配色选择器。
 7. 检查页面没有未处理的 JavaScript 错误。
+
+### 5.1.1 Issue #43 主题专项
+
+`theme.spec.ts` 额外执行以下阻断验收：
+
+1. 设置页恰好包含八个按 registry 顺序排列的具名 palette radio，支持整卡点击、Tab、方向键和 Space；
+2. 选中 radio、2px 边界、勾选、状态文案和 `pockettally-appearance` 同步，且任意时刻只有一项选中；
+3. 八个微型界面分别读取候选 palette 的正式 token，Light、Dark、System 解析变化会同时更新预览，不改变根 palette；
+4. 八套暗色分别遍历六个主页面，检查主题属性、横向溢出、纯白或纯黑表面和页面异常；
+5. Chromium 1440 对六页 × 八 palette 执行 axe `color-contrast` 扫描；三档 Chromium 同时保留业务、路由、键盘和弹层覆盖；
+6. `primary/on-primary`、`container/on-container` 和普通文字达到 4.5:1；必要边界、Focus Ring 与账务图形达到 3:1；Focus Ring 分别对 page、card、muted、elevated、accented 检查。
 
 ### 5.2 常规数据和长文本
 
