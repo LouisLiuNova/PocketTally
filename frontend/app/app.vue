@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { zh_cn } from '@nuxt/ui/locale'
 import { APP_ROUTES, appRoute } from '~/constants/navigation'
-import { APPEARANCE_PALETTES } from '~/constants/appearance'
 import { ledgerWorkspaceKey } from '~/composables/useLedgerWorkspace'
 import { kindLabels } from '~/types/ledger'
 import { localInput, money } from '~/utils/money'
@@ -75,20 +74,36 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
         </template>
 
         <template #default="{ collapsed }">
-          <UNavigationMenu
-            aria-label="主导航"
-            :items="navigationItems"
-            orientation="vertical"
-            color="primary"
-            variant="pill"
-            highlight
-            :collapsed="collapsed"
-            :tooltip="{ delayDuration: 0, content: { side: 'right' } }"
-            :ui="{
-              link: 'min-h-11 text-inverted hover:text-inverted focus-visible:before:outline-white/80',
-              linkLeadingIcon: 'size-5 text-inverted/70 group-hover:text-inverted group-data-[active]:text-inverted',
-            }"
-          />
+          <div class="sidebar-main" :data-collapsed="collapsed">
+            <UNavigationMenu
+              aria-label="主导航"
+              :items="navigationItems"
+              orientation="vertical"
+              color="primary"
+              variant="pill"
+              highlight
+              :collapsed="collapsed"
+              :tooltip="{ delayDuration: 0, content: { side: 'right' } }"
+              :ui="{
+                link: 'min-h-11 text-inverted hover:text-inverted focus-visible:before:outline-white/80',
+                linkLeadingIcon: 'size-5 text-inverted/70 group-hover:text-inverted group-data-[active]:text-inverted',
+              }"
+            />
+            <div class="sidebar-theme-control">
+              <UTooltip :text="workspace.isDarkMode.value ? '切换到亮色模式' : '切换到暗色模式'" :delay-duration="0" :content="{ side: 'right' }">
+                <USwitch
+                  :model-value="workspace.isDarkMode.value"
+                  checked-icon="i-lucide-moon"
+                  unchecked-icon="i-lucide-sun"
+                  label="暗色模式"
+                  color="primary"
+                  size="lg"
+                  :aria-label="workspace.isDarkMode.value ? '切换到亮色模式' : '切换到暗色模式'"
+                  @update:model-value="workspace.setDarkMode"
+                />
+              </UTooltip>
+            </div>
+          </div>
         </template>
 
         <template #footer="{ collapsed }">
@@ -121,9 +136,6 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
             </template>
             <template #right>
               <div class="top-actions">
-                <UTooltip text="外观设置">
-                  <UButton color="neutral" variant="ghost" icon="i-lucide-sun-moon" aria-label="外观设置" @click="workspace.showAppearance.value = !workspace.showAppearance.value" />
-                </UTooltip>
                 <UButton color="neutral" variant="outline" icon="i-lucide-refresh-cw" label="刷新" :loading="workspace.loading.value" :aria-busy="workspace.loading.value" @click="workspace.refreshWorkspace" />
                 <UButton icon="i-lucide-plus" label="记一笔" :disabled="!workspace.loaded.value || workspace.loading.value || !!workspace.loadError.value" @click="workspace.transactionEditor.value = {}" />
               </div>
@@ -134,10 +146,6 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
         <template #body>
           <main>
             <UContainer class="page-container" :ui="{ base: 'w-full max-w-[1580px] mx-auto px-0' }">
-            <div v-if="workspace.showAppearance.value" class="view-toolbar">
-              <label>主题 <select v-model="workspace.theme.value"><option value="system">跟随系统</option><option value="light">亮色</option><option value="dark">暗色</option></select></label>
-              <label>配色 <select v-model="workspace.palette.value"><option v-for="item in APPEARANCE_PALETTES" :key="item.value" :value="item.value">{{ item.label }}</option></select></label>
-            </div>
             <p v-if="workspace.notice.value" role="status" class="info-strip">{{ workspace.notice.value }}<button class="text-link" aria-label="关闭提示" @click="workspace.notice.value = ''">×</button></p>
             <div v-if="workspace.loadError.value || workspace.detailError.value" role="alert" class="error-box">
               {{ workspace.loadError.value || workspace.detailError.value }}

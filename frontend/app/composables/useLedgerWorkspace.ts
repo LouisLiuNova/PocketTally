@@ -24,7 +24,10 @@ export function createLedgerWorkspace() {
   const colorMode = useColorMode()
   const theme = ref<ThemePreference>('system')
   const palette = ref<PaletteName>('ruri')
-  const showAppearance = ref(false)
+  const isDarkMode = computed({
+    get: () => colorMode.value === 'dark',
+    set: value => { theme.value = value ? 'dark' : 'light' },
+  })
 
   async function refreshWorkspace() {
     try {
@@ -117,6 +120,10 @@ export function createLedgerWorkspace() {
     }
   }
 
+  function setDarkMode(value: boolean) {
+    isDarkMode.value = value
+  }
+
   watch([theme, palette], () => {
     if (import.meta.client) applyAppearance()
   })
@@ -154,7 +161,8 @@ export function createLedgerWorkspace() {
     refreshRevision,
     theme,
     palette,
-    showAppearance,
+    isDarkMode,
+    setDarkMode,
     refreshWorkspace,
     saved,
     openTransaction,
