@@ -206,7 +206,7 @@
 }
 
 .settings-page {
-  width: min(100%, 720px);
+  width: 100%;
   padding: 8px 0;
 }
 
