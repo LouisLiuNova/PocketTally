@@ -22,6 +22,13 @@
   margin-bottom: var(--pt-layout-flow-gap);
 }
 
+.settings-message-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
 .page-flow {
   display: grid;
   gap: var(--pt-layout-flow-gap);

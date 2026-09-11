@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { APPEARANCE_PALETTES, type ThemePreference } from '~/constants/appearance'
+import type { MessageLevel } from '~/utils/messages'
 
 const workspace = useLedgerWorkspace()
 
@@ -10,6 +11,33 @@ const themeOptions: Array<{ value: ThemePreference; label: string; description: 
 ]
 
 const selectedPalette = computed(() => APPEARANCE_PALETTES.find(item => item.value === workspace.palette.value))
+const messages = useAppMessages()
+const previewLevels: Array<{ level: MessageLevel; label: string; title: string; description: string }> = [
+  { level: 'info', label: '触发信息', title: '信息示例', description: '这是一个短生命周期的信息 Toast，默认约 4 秒后消失。' },
+  { level: 'success', label: '触发成功', title: '成功示例', description: '这是一个保存或操作成功后的 Toast，默认约 4 秒后消失。' },
+  { level: 'warning', label: '触发警告', title: '警告示例', description: '这是一个较长生命周期的警告 Toast，默认约 8 秒后消失。' },
+  { level: 'error', label: '触发错误', title: '错误示例', description: '这是一个需要持续处理的错误 UAlert，不会自动消失。' },
+]
+
+function previewMessageId(level: MessageLevel) {
+  return `settings-message-preview-${level}`
+}
+
+function triggerPreview(item: typeof previewLevels[number]) {
+  const id = previewMessageId(item.level)
+  messages.push({
+    id,
+    level: item.level,
+    title: item.title,
+    description: item.description,
+    persistent: item.level === 'error',
+    action: item.level === 'error' ? { label: '再次触发', onSelect: () => triggerPreview(item) } : undefined,
+  })
+}
+
+function clearPreviewMessages() {
+  previewLevels.forEach(item => messages.dismiss(previewMessageId(item.level)))
+}
 </script>
 
 <template>
@@ -86,6 +114,31 @@ const selectedPalette = computed(() => APPEARANCE_PALETTES.find(item => item.val
         </UButton>
       </div>
       <p class="settings-selection-status" role="status">已选择「{{ selectedPalette?.label }}」配色</p>
+    </UCard>
+
+    <UCard class="settings-card" variant="outline">
+      <template #header>
+        <div class="settings-card-heading">
+          <div>
+            <h3>消息反馈预览</h3>
+            <p>手动触发各级别反馈，审阅 Toast、持久 UAlert、关闭按钮和操作按钮的效果。</p>
+          </div>
+          <UIcon name="i-lucide-message-square-more" aria-hidden="true" />
+        </div>
+      </template>
+      <div class="settings-message-actions" aria-label="消息等级预览操作">
+        <UButton
+          v-for="item in previewLevels"
+          :key="item.level"
+          :color="item.level"
+          variant="soft"
+          :label="item.label"
+          :aria-label="`${item.label}：${item.description}`"
+          @click="triggerPreview(item)"
+        />
+        <UButton color="neutral" variant="outline" label="清空预览消息" @click="clearPreviewMessages" />
+      </div>
+      <UAlert color="neutral" variant="subtle" icon="i-lucide-eye" title="审阅提示" description="信息、成功和警告显示在右下角 Toast；错误显示在页面内容顶部并持续保留。切换亮色/暗色与八套配色可检查语义色 token。" />
     </UCard>
   </section>
 </template>
