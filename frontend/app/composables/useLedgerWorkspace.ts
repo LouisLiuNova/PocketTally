@@ -1,6 +1,7 @@
 import type { InjectionKey } from 'vue'
 import type { Account, Category, RefundSummary, Tag, Transaction } from '~/types/ledger'
 import { errorMessage } from '~/composables/useLedger'
+import { useAppMessages } from '~/composables/useAppMessages'
 import {
   APPEARANCE_STORAGE_KEY,
   parseStoredAppearance,
@@ -10,9 +11,8 @@ import {
 
 export function createLedgerWorkspace() {
   const ledger = useLedger()
-  const notice = ref('')
+  const messages = useAppMessages()
   const selected = ref<Transaction | null>(null)
-  const detailError = ref('')
   const refundSummary = ref<RefundSummary | null>(null)
   const refundLoading = ref(false)
   const transactionEditor = ref<{ editing?: Transaction; refund?: Transaction; accountId?: string } | null>(null)
@@ -24,39 +24,64 @@ export function createLedgerWorkspace() {
   const colorMode = useColorMode()
   const theme = ref<ThemePreference>('system')
   const palette = ref<PaletteName>('ruri')
+  const resourceSyncMessageId = 'workspace-resource-sync'
 
-  async function refreshWorkspace() {
+  async function syncResources() {
     try {
       await ledger.refreshResources()
+      messages.dismiss(resourceSyncMessageId)
+      return true
     } catch {
-      return
+      const description = ledger.loaded.value
+        ? `${ledger.loadError.value} 以下为上次成功读取的数据。`
+        : ledger.loadError.value
+      messages.push({
+        id: resourceSyncMessageId,
+        level: 'error',
+        title: '账本服务同步失败',
+        description,
+        action: { label: '重试', onSelect: () => void refreshWorkspace() },
+      })
+      return false
     }
-    refreshRevision.value++
+  }
+
+  async function refreshWorkspace() {
+    const refreshed = await syncResources()
+    if (refreshed) refreshRevision.value++
+    return refreshed
   }
 
   async function saved() {
     const selectedId = selected.value?.id
     transactionEditor.value = null
     resourceEditor.value = null
-    notice.value = '已保存到本地账本'
+    messages.push({ id: 'operation-saved', level: 'success', title: '保存成功', description: '已保存到本地账本。' })
     await refreshWorkspace()
     if (selectedId) await openTransaction(selectedId)
   }
 
   async function openTransaction(transaction: Transaction | string) {
-    detailError.value = ''
+    const transactionId = typeof transaction === 'string' ? transaction : transaction.id
     refundSummary.value = null
     refundLoading.value = true
     try {
       selected.value = typeof transaction === 'string'
         ? await $fetch<Transaction>(`/api/v1/transactions/${transaction}`)
         : transaction
+      messages.dismiss(`transaction-detail-${transactionId}`)
       if (selected.value.type === 'expense') {
         refundSummary.value = await $fetch<RefundSummary>(`/api/v1/transactions/${selected.value.id}/refund-summary`)
       }
     } catch (error) {
-      detailError.value = errorMessage(error)
       selected.value = null
+      messages.push({
+        id: `transaction-detail-${transactionId}`,
+        level: 'error',
+        title: '交易详情读取失败',
+        description: errorMessage(error),
+        action: { label: '重试', onSelect: () => void openTransaction(transactionId) },
+      })
     } finally {
       refundLoading.value = false
     }
@@ -94,7 +119,7 @@ export function createLedgerWorkspace() {
     try {
       await $fetch(confirmation.value.path, { method: confirmation.value.method, retry: 0 })
       confirmation.value = null
-      notice.value = '操作成功'
+      messages.push({ id: 'operation-success', level: 'success', title: '操作成功', description: '账本操作已完成。' })
       await refreshWorkspace()
       if (selected.value) await openTransaction(selected.value.id)
     } catch (error) {
@@ -135,14 +160,12 @@ export function createLedgerWorkspace() {
     theme.value = savedAppearance.theme
     palette.value = savedAppearance.palette
     applyAppearance()
-    void ledger.refreshResources().catch(() => undefined)
+    void syncResources()
   })
 
   return {
     ...ledger,
-    notice,
     selected,
-    detailError,
     refundSummary,
     refundLoading,
     transactionEditor,

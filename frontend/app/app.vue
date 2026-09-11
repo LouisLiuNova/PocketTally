@@ -3,12 +3,14 @@ import { zh_cn } from '@nuxt/ui/locale'
 import { APP_ROUTES, appRoute } from '~/constants/navigation'
 import type { ThemePreference } from '~/constants/appearance'
 import { ledgerWorkspaceKey } from '~/composables/useLedgerWorkspace'
+import { MESSAGE_ICONS, type AppMessage } from '~/utils/messages'
 import { kindLabels } from '~/types/ledger'
 import { localInput, money } from '~/utils/money'
 import { accountNames, signedAmount } from '~/utils/transactionDisplay'
 
 const route = useRoute()
 const workspace = createLedgerWorkspace()
+const messages = useAppMessages()
 provide(ledgerWorkspaceKey, workspace)
 
 const appLocale = {
@@ -46,11 +48,15 @@ const breadcrumbItems = computed(() => currentRoute.value.path === '/'
     ])
 const today = new Intl.DateTimeFormat('zh-CN', { dateStyle: 'full', timeZone: 'Asia/Shanghai' }).format(new Date())
 
+function alertActions(message: AppMessage) {
+  return message.action ? [{ label: message.action.label, onClick: message.action.onSelect }] : undefined
+}
+
 useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
 </script>
 
 <template>
-  <UApp :locale="appLocale">
+  <UApp :locale="appLocale" :toaster="{ position: 'bottom-right', duration: 4000, max: 5, expand: true }">
     <UDashboardGroup class="app-shell" storage="local" storage-key="pockettally-shell" unit="rem">
       <UDashboardSidebar
         id="primary"
@@ -163,11 +169,20 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
         <template #body>
           <main>
             <UContainer class="page-container" :ui="{ base: 'w-full max-w-[1580px] mx-auto px-0' }">
-            <p v-if="workspace.notice.value" role="status" class="info-strip">{{ workspace.notice.value }}<button class="text-link" aria-label="关闭提示" @click="workspace.notice.value = ''">×</button></p>
-            <div v-if="workspace.loadError.value || workspace.detailError.value" role="alert" class="error-box">
-              {{ workspace.loadError.value || workspace.detailError.value }}
-              {{ workspace.loaded.value && workspace.loadError.value ? '以下为上次成功读取的数据。' : '' }}
-              <UButton label="重试" color="neutral" @click="workspace.refreshWorkspace" />
+            <div v-if="messages.persistent.value.length" class="message-alert-stack" aria-label="需要处理的消息">
+              <UAlert
+                v-for="message in messages.persistent.value"
+                :key="message.id"
+                :color="message.level"
+                variant="soft"
+                :icon="MESSAGE_ICONS[message.level]"
+                :title="message.title"
+                :description="message.description"
+                :actions="alertActions(message)"
+                close
+                role="alert"
+                @update:open="value => { if (!value) messages.dismiss(message.id) }"
+              />
             </div>
             <p v-if="workspace.loading.value && !workspace.loaded.value" role="status" class="empty-state">正在从账本服务同步资源…</p>
 
@@ -229,7 +244,10 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
       </template>
     </UModal>
     <UModal :open="!!workspace.confirmation.value" :dismissible="!workspace.busy.value" :title="workspace.confirmation.value?.title" @update:open="value => { if (!value && !workspace.busy.value) workspace.confirmation.value = null }">
-      <template #body><p>{{ workspace.confirmation.value?.text }}</p><p v-if="workspace.actionError.value" role="alert" class="error-box">{{ workspace.actionError.value }}</p></template>
+      <template #body>
+        <p>{{ workspace.confirmation.value?.text }}</p>
+        <UAlert v-if="workspace.actionError.value" color="error" variant="soft" icon="i-lucide-circle-alert" title="操作失败" :description="workspace.actionError.value" role="alert" />
+      </template>
       <template #footer><UButton label="取消" color="neutral" :disabled="workspace.busy.value" @click="workspace.confirmation.value = null" /><UButton label="确认操作" color="error" :loading="workspace.busy.value" :aria-busy="workspace.busy.value" :disabled="workspace.busy.value" @click="workspace.confirmAction" /></template>
     </UModal>
   </UApp>
