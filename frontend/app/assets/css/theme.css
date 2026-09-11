@@ -129,16 +129,7 @@ body { background: var(--pt-surface-page); color: var(--ui-text); }
   box-shadow: 0 0 0 1px var(--pt-surface-card);
 }
 
-/* 旧页面结构在 #30、#34—#36 迁移前统一消费语义 token。 */
-.sidebar { background: var(--pt-surface-inverted); color: var(--ui-text); border-right: 1px solid var(--ui-border-muted); }
-:root:not(.dark) .sidebar { color: var(--ui-text-inverted); }
-.brand, .profile strong { color: inherit; }
-.brand-mark { background: var(--pt-brand-300); color: var(--pt-brand-900); box-shadow: none; }
-.nav-item { color: color-mix(in srgb, currentColor 72%, transparent); }
-.nav-item:hover { background: color-mix(in srgb, var(--ui-primary) 16%, transparent); color: inherit; }
-.nav-item.active { background: var(--pt-primary-container); color: var(--pt-on-primary-container); box-shadow: inset 3px 0 var(--pt-focus-ring); font-weight: 700; }
-.sidebar-foot { border-color: var(--ui-border-muted); }
-.sidebar .hint { color: inherit; opacity: .72; }
+/* #30 之后业务页面仍通过这些语义 token 逐步迁移。 */
 
 .metric-card, .panel, .balance-card, .appearance-popover, .search-field, .filter-chip,
 .composer, .composer input, .composer select, .view-toolbar input, .view-toolbar select,

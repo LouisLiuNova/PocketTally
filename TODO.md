@@ -19,6 +19,7 @@
 - [x] 按 Issue #20 建立 Chromium 桌面兼容性验收矩阵，固定覆盖 1280、1440 和 1920 三档宽度、五个主页面、关键弹窗、空状态、长文本、分页、多时间桶统计、明暗主题及错误输入保留；Firefox、WebKit、移动端专用矩阵和 CI 不属于当前阻断范围。
 - [x] 建立适用于 macOS ARM64 与 Linux x86_64 的 Docker Compose 内网部署、双架构镜像流水线、SQLite 一致备份与停机恢复流程；当前无鉴权，只允许可信内网访问，不发布公网入口。
 - [x] 按 Issue #23 同步 v0.1.0 发布文档、首个 SQLite 数据库基线、固定版本镜像部署、备份要求、鉴权规划边界和发行说明草稿。
+- [x] 按 Issue #30 使用 Nuxt UI Dashboard、NavigationMenu、Breadcrumb、Tooltip 与 Slideover 重构统一应用壳层；宽屏支持可调整和折叠的侧栏，窄屏使用可访问的滑出导航，并以紧凑状态指示器保留账本、CNY 与 Asia/Shanghai 语义。
 - [x] 按 Issue #31 将工作台迁移为六个 Nuxt 文件路由，区分总览与统计分析职责，并使用 URL query 保存交易和统计的用户可见筛选状态。
 - [x] 按 Issue #40 统一六个业务页面的 `UMain`/`UContainer` 内容约束、页面流和响应式命名网格区域；保留分类树与统计可视化的业务专属交互，并完成三档 Chromium 布局验收。
 

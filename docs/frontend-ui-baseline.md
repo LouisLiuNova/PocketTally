@@ -9,13 +9,13 @@ Issue #40 统一的是页面容器、页面流和网格约束，不改变业务�
 
 | 场景 | 复用能力 | 保留的自有实现与原因 |
 | --- | --- | --- |
-| 应用内容入口与宽度 | `UMain`、`UContainer`，通过 `ui.base` 固定内容最大宽度和响应式内边距 | 侧栏保留现有语义导航和移动端底部导航；其交互已经由当前浏览器验收覆盖，不为布局重构引入 `UDashboardSidebar` 的持久化/折叠状态 |
+| 应用内容入口与宽度 | `UDashboardGroup`、`UDashboardSidebar`、`UDashboardPanel`、`UDashboardNavbar` 和 `UContainer` | #30 负责应用壳层、侧栏折叠与窄屏 Slideover；#40 只约束面板内部的内容宽度、页面流和业务网格 |
 | 页面流与业务网格 | `UPageGrid` 或等价的 `page-grid` 作为语义化 Grid 入口，Tailwind/CSS 使用 `minmax(0, 1fr)`、`min-width: 0` 和命名 `grid-template-areas` | 每个页面的区域比例属于业务信息架构：总览的趋势/分类/近期流水和统计的趋势/分类/日历不能抽象成相同列数；分类页让分类树与详情组成主工作区，标签作为右侧次级资源区并与详情底边对齐，避免卡片漂移 |
 | 交易筛选和账户卡 | Nuxt UI 按钮与现有输入控件，统一网格容器和断点 | 筛选项的 URL query 提交语义、账户卡操作语义属于 #31 与后续业务页面 Issue，不在本 Issue 重写为完整表单组件 |
 | 分类树、现金流趋势、统计日历 | Nuxt UI 主题 token 与基础控件 | 分类树键盘导航、层级保护、异常节点表达和服务端统计降级文本是业务专属交互，保留自有布局避免组件替换造成语义回归 |
 | 设置页 | 共享页面流与表单控件 | 保持工具页视觉，不套用业务 `panel` 卡片容器 |
 
-六个路由页面都放在同一个 `UMain`/`UContainer` 内容约束内；页面内部统一使用 `page-flow` 间距，业务网格通过命名区域组织，并在中小视口回退为单列或双列。空态、加载态、错误态和长文本仍作为页面流子项参与相同的最小宽度约束。该布局重构不新增 CSS/UI/布局依赖，也不改变 API、URL query、金额、时区或退款语义。
+六个路由页面都放在同一个 `UDashboardPanel`/`UContainer` 内容约束内；页面内部统一使用 `page-flow` 间距，业务网格通过命名区域组织，并在中小视口回退为单列或双列。空态、加载态、错误态和长文本仍作为页面流子项参与相同的最小宽度约束。该布局重构不新增 CSS/UI/布局依赖，也不改变 API、URL query、金额、时区或退款语义。
 
 ## 技术边界
 
@@ -35,7 +35,7 @@ Nuxt UI 的全局主题应优先通过 `app.config.ts`、`--ui-*` token、Tailwi
 | `.panel`、指标卡和资源卡片 | `UCard` | 后续页面迁移时使用；业务图表内部布局可继续局部实现 | #34、#35、#36 |
 | 自有用途 Tab 和筛选 Tab | `UTabs` | #31 已确定信息架构和 URL query；控件迁移按业务页面任务实施 | #31、#35、#36 |
 | 自有分页按钮 | `UPagination` | 交易列表迁移时替换，保留服务端分页语义 | #34 |
-| 自有侧边导航、Header、Breadcrumb | `USidebar`/`UDashboardSidebar`、`UHeader`、`UBreadcrumb` | 应用壳层统一改造，不在 #33 提前重写 | #30 |
+| 应用壳层、侧边导航、Header、Breadcrumb | `UDashboardGroup`、`UDashboardSidebar`、`UDashboardPanel`、`UDashboardNavbar`、`UNavigationMenu`、`UBreadcrumb`、`UTooltip` | #30 已完成；页面标题、Breadcrumb 和选中态统一来自路由元数据，窄屏导航由 Sidebar 的 Slideover 模式提供 | #30 |
 | 自有确认弹窗和详情弹层 | `UModal`、`USlideover`、`UPopover`、`UTooltip` | 已有 `UModal` 保留；详情抽屉和提示由业务页面任务决定 | #32、#34、#35 |
 | `.error-box`、`.info-strip`、成功提示 | `UAlert`、`useToast` | 表单和服务端错误使用 `UAlert`；全局操作反馈由 #32 统一 | #32、#33 |
 | 分类树 | 自有树交互 + Nuxt UI 基础控件 | 保留树的层级保护、键盘导航和异常节点表达；不得复制通用 Dialog/Button 行为 | #19、#35 |
@@ -56,6 +56,18 @@ Breadcrumb 标签由同一份路由元数据生成；不再使用组件内部状
 `end`、`granularity`、`month` 和 `parentCategoryId` 保存。默认值省略，非法或
 重复参数回退并从地址中移除；弹窗、消息和表单草稿不写入 URL。完整浏览器验收见
 [通用前端测试方案与指示](frontend-testing-plan.md)。
+
+## Issue #30 应用壳层
+
+应用根节点使用 Nuxt UI Dashboard 组件组合，不再用自有 Sidebar/Header 网格和移动端底部导航模拟壳层：
+
+- `UDashboardSidebar` 在宽屏提供可调整宽度和折叠的侧栏，折叠后由 `UNavigationMenu` 保留固定 Lucide 图标、可访问名称和 Tooltip；
+- 小于 Nuxt UI `lg` 断点时，`UDashboardSidebar` 使用内建 Slideover，打开后约束焦点，并在真实路由切换后自动关闭；
+- `UDashboardNavbar` 同时承载页面标题、由路由元数据生成的 `UBreadcrumb`，以及外观、刷新和记账主操作；
+- `UApp` 显式使用简体中文 locale，抽屉开关、关闭和折叠控件不会暴露英文或内部翻译键；
+- 侧栏底部通过 `UTooltip` 和 `UButton` 状态指示器展示“个人账本”“货币：CNY”“统计边界：Asia/Shanghai”；折叠时只保留图标，但鼠标、键盘和屏幕阅读器仍可取得完整语义。
+
+壳层只消费 `APP_ROUTES` 的路径、标题、Breadcrumb 和 Lucide 图标映射，不接管交易或统计 query，也不改动页面业务请求。业务页面组件化、全局消息系统与遗留 CSS 全量清理由各自后续 Issue 负责。
 
 ## Issue #33 代表性迁移
 

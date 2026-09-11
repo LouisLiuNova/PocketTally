@@ -32,6 +32,9 @@
 
 覆盖以下数据和交互状态：
 
+- 宽屏侧栏展开、折叠、调整宽度，以及窄屏 Slideover 导航；
+- 当前路由对应的导航选中态、页面标题和 Breadcrumb；
+- 折叠导航和账本状态指示器的可访问名称与 Tooltip；
 - 空账本和空状态提示；
 - 常规账本数据；
 - 长账户名称、分类名称、交易说明和标签名称；
@@ -189,7 +192,25 @@ cd frontend
 bun run test:e2e --project=chromium-1280 routing.spec.ts
 ```
 
-### 5.5 Issue #17 键盘与无障碍验收
+### 5.5 Issue #30 应用壳层验收
+
+`app-shell.spec.ts` 使用真实路由和响应式视口验证：
+
+1. 宽屏侧栏可折叠和展开，折叠后六个导航入口仍有可访问名称；
+2. 页面标题、Breadcrumb、`aria-current` 和 URL 保持一致；
+3. 账本、CNY 和 Asia/Shanghai 状态在折叠后只显示图标，仍可聚焦并通过 Tooltip 读取完整语义；
+4. 680 像素窄屏隐藏桌面侧栏，使用具名按钮打开 Slideover；
+5. Slideover 中切换路由后自动关闭，页面无横向溢出；
+6. 打开 Slideover 时执行 axe 扫描，critical/serious 问题数必须为 0。
+
+聚焦执行：
+
+```bash
+cd frontend
+bun run test:e2e --project=chromium-1280 app-shell.spec.ts
+```
+
+### 5.6 Issue #17 键盘与无障碍验收
 
 新增的 `keyboard-accessibility.spec.ts` 不使用鼠标点击完成主流程，使用键盘完成以下路径：
 
@@ -254,6 +275,7 @@ Issue #17/#20 只有在以下条件全部满足时才算通过：
 8. 纯键盘主流程、弹窗焦点、重复提交和 axe critical/serious 扫描全部通过。
 9. 前端类型检查、单元测试、生产构建、E2E、后端测试、Ruff、文档检查和 `git diff --check` 全部通过。
 10. 六个路由可直接访问和刷新，交易与统计 query 可规范化并通过浏览器历史恢复。
+11. 宽屏折叠侧栏、Breadcrumb、紧凑状态指示器和窄屏 Slideover 导航通过 `app-shell.spec.ts` 验收。
 
 ## 8. 当前验证记录
 
