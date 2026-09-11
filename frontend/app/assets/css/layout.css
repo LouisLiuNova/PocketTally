@@ -16,6 +16,12 @@
   min-width: 0;
 }
 
+.message-alert-stack {
+  display: grid;
+  gap: 12px;
+  margin-bottom: var(--pt-layout-flow-gap);
+}
+
 .page-flow {
   display: grid;
   gap: var(--pt-layout-flow-gap);
