@@ -13,7 +13,7 @@ Issue #40 统一的是页面容器、页面流和网格约束，不改变业务�
 | 页面流与业务网格 | `UPageGrid` 或等价的 `page-grid` 作为语义化 Grid 入口，Tailwind/CSS 使用 `minmax(0, 1fr)`、`min-width: 0` 和命名 `grid-template-areas` | 每个页面的区域比例属于业务信息架构：总览的趋势/分类/近期流水和统计的趋势/分类/日历不能抽象成相同列数；分类页让分类树与详情组成主工作区，标签作为右侧次级资源区并与详情底边对齐，避免卡片漂移 |
 | 交易筛选和账户卡 | Nuxt UI 按钮与现有输入控件，统一网格容器和断点 | 筛选项的 URL query 提交语义、账户卡操作语义属于 #31 与后续业务页面 Issue，不在本 Issue 重写为完整表单组件 |
 | 分类树、现金流趋势、统计日历 | Nuxt UI 主题 token 与基础控件 | 分类树键盘导航、层级保护、异常节点表达和服务端统计降级文本是业务专属交互，保留自有布局避免组件替换造成语义回归 |
-| 设置页 | 共享页面流与表单控件 | 保持工具页视觉，不套用业务 `panel` 卡片容器 |
+| 设置页 | `UCard`、`URadioGroup`、`USwitch`、`UButton` 与共享页面流 | 外观设置使用独立卡片分组；八套配色按钮属于色板预览这一业务专属交互，保留局部布局和选中态 |
 
 六个路由页面都放在同一个 `UDashboardPanel`/`UContainer` 内容约束内；页面内部统一使用 `page-flow` 间距，业务网格通过命名区域组织，并在中小视口回退为单列或双列。空态、加载态、错误态和长文本仍作为页面流子项参与相同的最小宽度约束。该布局重构不新增 CSS/UI/布局依赖，也不改变 API、URL query、金额、时区或退款语义。
 
@@ -63,9 +63,16 @@ Breadcrumb 标签由同一份路由元数据生成；不再使用组件内部状
 
 - `UDashboardSidebar` 在宽屏提供可调整宽度和折叠的侧栏，折叠后由 `UNavigationMenu` 保留固定 Lucide 图标、可访问名称和 Tooltip；
 - 小于 Nuxt UI `lg` 断点时，`UDashboardSidebar` 使用内建 Slideover，打开后约束焦点，并在真实路由切换后自动关闭；
-- `UDashboardNavbar` 同时承载页面标题、由路由元数据生成的 `UBreadcrumb`，以及外观、刷新和记账主操作；
+- `UDashboardNavbar` 同时承载页面标题、由路由元数据生成的 `UBreadcrumb`，以及刷新和记账主操作；
 - `UApp` 显式使用简体中文 locale，抽屉开关、关闭和折叠控件不会暴露英文或内部翻译键；
+- 侧栏导航主体底部通过 `USwitch` 提供带太阳/月亮图标的明暗切换；开关位于账本状态分割线之前，切换会复用统一的外观偏好和本地持久化逻辑；
 - 侧栏底部通过 `UTooltip` 和 `UButton` 状态指示器展示“个人账本”“货币：CNY”“统计边界：Asia/Shanghai”；折叠时只保留图标，但鼠标、键盘和屏幕阅读器仍可取得完整语义。
+
+## Issue #26 设置页
+
+设置页是外观配置的唯一页面入口，顶栏不再提供重复的外观按钮。主题模式由 `URadioGroup` 提供“跟随系统”“亮色”“暗色”三个可访问选项；配色由 `APPEARANCE_PALETTES` registry 直接生成八个带名称、描述和双色色板预览的按钮，当前项同时使用 `aria-pressed`、描边、背景和勾选图标表达。
+
+侧栏明暗开关表示当前已解析的明暗结果。用户在“跟随系统”状态下主动切换时，会转为明确的 `light` 或 `dark` 偏好；设置页仍可恢复“跟随系统”，并继续响应系统主题变化。所有变更即时更新 `data-theme`、`data-palette`、Nuxt UI class、`color-scheme` 和 `pockettally-appearance`，不新增后端接口或数据库字段。
 
 壳层只消费 `APP_ROUTES` 的路径、标题、Breadcrumb 和 Lucide 图标映射，不接管交易或统计 query，也不改动页面业务请求。业务页面组件化、全局消息系统与遗留 CSS 全量清理由各自后续 Issue 负责。
 
