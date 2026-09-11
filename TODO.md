@@ -20,6 +20,7 @@
 - [x] 建立适用于 macOS ARM64 与 Linux x86_64 的 Docker Compose 内网部署、双架构镜像流水线、SQLite 一致备份与停机恢复流程；当前无鉴权，只允许可信内网访问，不发布公网入口。
 - [x] 按 Issue #23 同步 v0.1.0 发布文档、首个 SQLite 数据库基线、固定版本镜像部署、备份要求、鉴权规划边界和发行说明草稿。
 - [x] 按 Issue #31 将工作台迁移为六个 Nuxt 文件路由，区分总览与统计分析职责，并使用 URL query 保存交易和统计的用户可见筛选状态。
+- [x] 按 Issue #40 统一六个业务页面的 `UMain`/`UContainer` 内容约束、页面流和响应式命名网格区域；保留分类树与统计可视化的业务专属交互，并完成三档 Chromium 布局验收。
 
 - [x] 将当前已实现的基础交易类型限制为 `income`、`expense`、`transfer` 和 `balance_adjustment`，并要求交易金额为有限正数。
 - [x] 要求创建交易提供 `occurred_at`，并在交易读取结果中返回；文档区分 `occurredAt`、`createdAt` 和 `updatedAt`。

@@ -18,6 +18,12 @@ test.describe('Chromium 桌面兼容性矩阵', () => {
       await page.getByRole('link', { name: label, exact: true }).click()
       await assertNoHorizontalOverflow(page)
       await expect(page.locator('main')).toBeVisible()
+      if (label === '统计分析') {
+        const metrics = page.locator('.statistics-metrics')
+        await expect(metrics).toBeVisible()
+        await expect(metrics).toHaveCSS('gap', '20px')
+        await expect(metrics).toHaveCSS('margin-bottom', '20px')
+      }
     }
 
     await page.getByRole('button', { name: '外观设置', exact: true }).click()

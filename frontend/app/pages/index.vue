@@ -69,26 +69,27 @@ onBeforeUnmount(() => { requestId++ })
 </script>
 
 <template>
-  <section v-if="workspace.loaded.value && !workspace.accounts.value.length" class="panel welcome">
-    <p class="eyebrow">从第一笔开始</p><h2>欢迎来到你的账本</h2>
-    <p>先创建账户，再用调账录入现有余额；添加收入和支出分类后即可开始记账。</p>
-    <UButton label="创建第一个账户" @click="workspace.resourceEditor.value = { kind: 'accounts' }" />
-    <UButton color="neutral" variant="outline" label="创建分类" @click="workspace.resourceEditor.value = { kind: 'categories' }" />
-  </section>
-  <div v-if="queryError" role="alert" class="error-box">{{ queryError }}<UButton label="重试" color="neutral" @click="loadDashboard" /></div>
-  <p v-if="loading && !overview" role="status" class="empty-state">正在读取当前账本状态…</p>
+  <div class="page-flow page-flow--overview">
+    <section v-if="workspace.loaded.value && !workspace.accounts.value.length" class="panel welcome">
+      <p class="eyebrow">从第一笔开始</p><h2>欢迎来到你的账本</h2>
+      <p>先创建账户，再用调账录入现有余额；添加收入和支出分类后即可开始记账。</p>
+      <UButton label="创建第一个账户" @click="workspace.resourceEditor.value = { kind: 'accounts' }" />
+      <UButton color="neutral" variant="outline" label="创建分类" @click="workspace.resourceEditor.value = { kind: 'categories' }" />
+    </section>
+    <div v-if="queryError" role="alert" class="error-box">{{ queryError }}<UButton label="重试" color="neutral" @click="loadDashboard" /></div>
+    <p v-if="loading && !overview" role="status" class="empty-state">正在读取当前账本状态…</p>
 
-  <template v-if="overview">
-    <div class="section-intro">
-      <div><p>账户合计余额</p><h2>{{ money(balance) }}</h2></div>
-    </div>
-    <section class="metric-grid">
+    <template v-if="overview">
+      <div class="section-intro">
+        <div><p>账户合计余额</p><h2>{{ money(balance) }}</h2></div>
+      </div>
+      <UPageGrid as="section" class="page-grid metric-grid" aria-label="本期摘要">
       <article class="metric-card feature"><span>实际净现金流</span><strong>{{ money(overview.netCashFlow.currentAmountMinor) }}</strong><p>{{ formatChange(overview.netCashFlow.changePercent) }}</p></article>
       <article class="metric-card"><span>本期普通收入</span><strong>{{ money(overview.income.currentAmountMinor) }}</strong><p>{{ formatChange(overview.income.changePercent) }}</p></article>
       <article class="metric-card"><span>消费净支出</span><strong>{{ money(overview.netExpense.currentAmountMinor) }}</strong><p>{{ formatChange(overview.netExpense.changePercent) }}</p></article>
-    </section>
-    <div class="dashboard-grid">
-      <section class="panel">
+      </UPageGrid>
+      <UPageGrid as="div" class="page-grid dashboard-grid">
+      <section class="panel overview-flow">
         <div class="panel-head"><h2>现金流趋势摘要</h2><NuxtLink class="text-link" to="/statistics">查看完整分析 →</NuxtLink></div>
         <p v-if="!cashFlow?.buckets.length" class="empty-state">本期暂无现金流</p>
         <div v-else class="real-trend" tabindex="0" aria-label="现金流趋势摘要数据">
@@ -99,13 +100,13 @@ onBeforeUnmount(() => { requestId++ })
           </div>
         </div>
       </section>
-      <section class="panel">
+      <section class="panel overview-categories">
         <h2>支出分类 Top 5</h2>
         <p v-if="!categoryStatistics?.topCategories.length" class="empty-state">本期暂无消费</p>
         <button v-for="item in categoryStatistics?.topCategories" :key="item.categoryId" class="resource-row drill-button" @click="showCategoryTransactions(item.categoryId)"><span>{{ item.name }}</span><strong>{{ money(item.amountMinor) }}</strong></button>
         <div v-if="categoryStatistics?.other.amountMinor" class="resource-row"><span>其他</span><strong>{{ money(categoryStatistics.other.amountMinor) }}</strong></div>
       </section>
-      <section class="panel recent-panel">
+      <section class="panel recent-panel overview-recent">
         <div class="panel-head"><h2>近期流水</h2><NuxtLink class="text-link" to="/transactions">查看分页流水 →</NuxtLink></div>
         <p v-if="!transactions.length" class="empty-state">暂无交易，点击「记一笔」开始。</p>
         <button v-for="transaction in transactions.slice(0, 5)" :key="transaction.id" class="mvp-transaction" @click="workspace.openTransaction(transaction)">
@@ -114,6 +115,7 @@ onBeforeUnmount(() => { requestId++ })
           <time>{{ localInput(transaction.occurredAt).replace('T', ' ') }}</time><b>{{ signedAmount(transaction) }}</b>
         </button>
       </section>
-    </div>
-  </template>
+      </UPageGrid>
+    </template>
+  </div>
 </template>

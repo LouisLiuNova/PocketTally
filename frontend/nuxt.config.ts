@@ -6,7 +6,7 @@ export default defineNuxtConfig({
   runtimeConfig: { apiBase: 'http://127.0.0.1:8000' },
   nitro: { preset: 'bun' },
   modules: ['@nuxt/ui'],
-  css: ['~/assets/css/main.css', '~/assets/css/mvp.css', '~/assets/css/theme.css'],
+  css: ['~/assets/css/main.css', '~/assets/css/mvp.css', '~/assets/css/theme.css', '~/assets/css/layout.css'],
   colorMode: {
     preference: 'system',
     fallback: 'light',

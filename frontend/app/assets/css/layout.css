@@ -1,0 +1,277 @@
+/* Issue #40：页面壳、页面流和业务网格的共同布局契约。 */
+:root {
+  --pt-layout-flow-gap: 20px;
+  --pt-layout-grid-gap: 20px;
+}
+
+.app-main {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin: 0;
+  padding: 0 0 48px;
+}
+
+.page-container,
+.page-container > * {
+  min-width: 0;
+}
+
+.page-flow {
+  display: grid;
+  gap: var(--pt-layout-flow-gap);
+  min-width: 0;
+}
+
+.page-flow > *,
+.page-grid > * {
+  min-width: 0;
+}
+
+.page-flow .error-box,
+.page-flow .info-strip,
+.page-flow .empty-state {
+  margin-block: 0;
+}
+
+.page-grid {
+  min-width: 0;
+  gap: var(--pt-layout-grid-gap);
+}
+
+.metric-grid {
+  grid-template-columns: minmax(0, 1.45fr) repeat(2, minmax(0, 1fr));
+  gap: var(--pt-layout-grid-gap);
+}
+
+.dashboard-grid {
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, .9fr);
+  grid-template-areas:
+    "flow categories"
+    "recent categories";
+  gap: var(--pt-layout-grid-gap);
+  margin-top: 0;
+}
+
+.overview-flow { grid-area: flow; }
+.overview-categories { grid-area: categories; }
+.overview-recent { grid-area: recent; }
+
+.recent-panel,
+.category-panel,
+.calendar-panel {
+  grid-column: auto;
+  grid-row: auto;
+}
+
+.section-intro {
+  min-width: 0;
+  margin: 0;
+}
+
+.transaction-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
+  gap: 12px;
+  margin: 0;
+}
+
+.transaction-filters > label {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  align-content: end;
+}
+
+.transaction-filters > input,
+.transaction-filters > select,
+.transaction-filters > label > input {
+  width: 100%;
+  min-width: 0;
+}
+
+.transaction-filters > input.search-field {
+  display: block;
+  grid-column: span 2;
+  height: 42px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-card-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--pt-layout-grid-gap);
+}
+
+.balance-card,
+.panel,
+.metric-card {
+  min-width: 0;
+}
+
+.balance-card .card-brand,
+.balance-card > small,
+.panel-head > *,
+.mvp-transaction > span {
+  min-width: 0;
+}
+
+.balance-card .card-brand,
+.balance-card > small,
+.mvp-transaction strong,
+.mvp-transaction small,
+.resource-row span,
+.category-tree-name,
+.category-detail dd {
+  overflow-wrap: anywhere;
+}
+
+.taxonomy-grid {
+  grid-template-columns: minmax(0, 1.55fr) minmax(280px, .75fr);
+  grid-template-areas: "taxonomy tags";
+  gap: var(--pt-layout-grid-gap);
+  margin: 0;
+}
+
+.category-workspace {
+  grid-area: taxonomy;
+  grid-column: auto;
+}
+
+.taxonomy-tags {
+  grid-area: tags;
+}
+
+.category-tree-layout {
+  grid-template-columns: minmax(0, 1.35fr) minmax(240px, .65fr);
+  gap: var(--pt-layout-grid-gap);
+}
+
+.analytics-grid {
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr);
+  grid-template-areas:
+    "trend trend"
+    "expense category"
+    "tags calendar";
+  gap: var(--pt-layout-grid-gap);
+  margin-top: 0;
+}
+
+.analytics-trend { grid-area: trend; }
+.analytics-expense { grid-area: expense; }
+.analytics-category { grid-area: category; }
+.analytics-tags { grid-area: tags; }
+.analytics-calendar {
+  grid-area: calendar;
+  grid-column: auto;
+  grid-row: auto;
+  align-self: start;
+}
+
+.analytics-calendar .calendar-grid {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.statistics-metrics {
+  gap: var(--pt-layout-grid-gap);
+  margin-bottom: var(--pt-layout-grid-gap);
+}
+
+.drill-panel {
+  margin-top: 0;
+}
+
+.settings-page {
+  width: min(100%, 720px);
+  padding: 8px 0;
+}
+
+.settings-page h2 {
+  margin-bottom: 8px;
+}
+
+.settings-page .hint {
+  max-width: 60ch;
+}
+
+@media (max-width: 1280px) {
+  .transaction-filters {
+    grid-template-columns: minmax(13rem, 2fr) repeat(3, minmax(8rem, 1fr));
+  }
+
+  .transaction-filters > input.search-field {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 1050px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metric-card.feature {
+    grid-column: 1 / -1;
+  }
+
+  .dashboard-grid,
+  .analytics-grid,
+  .taxonomy-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: none;
+  }
+
+  .overview-flow,
+  .overview-categories,
+  .overview-recent,
+  .category-workspace,
+  .taxonomy-tags,
+  .analytics-trend,
+  .analytics-expense,
+  .analytics-category,
+  .analytics-tags,
+  .analytics-calendar {
+    grid-area: auto;
+  }
+
+  .account-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .category-tree-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .app-main {
+    padding-bottom: 88px;
+  }
+
+  .metric-grid,
+  .account-card-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .metric-card.feature {
+    grid-column: auto;
+  }
+
+  .transaction-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .transaction-filters > input.search-field {
+    grid-column: 1 / -1;
+  }
+
+  .transaction-filters > label,
+  .transaction-filters > select {
+    min-width: 0;
+  }
+
+  .settings-page {
+    padding-inline: 0;
+  }
+}

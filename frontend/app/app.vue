@@ -41,7 +41,8 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
         <div class="sidebar-foot"><p class="hint">个人账本 · CNY<br>统计边界 · Asia/Shanghai</p></div>
       </aside>
 
-      <main>
+      <UMain class="app-main">
+        <UContainer class="page-container" :ui="{ base: 'w-full max-w-[1580px] mx-auto px-4 sm:px-6 lg:px-8' }">
         <header class="topbar">
           <div><p class="eyebrow">{{ today }}</p><h1>{{ currentRoute.title }}</h1></div>
           <div class="top-actions">
@@ -63,8 +64,9 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
         </div>
         <p v-if="workspace.loading.value && !workspace.loaded.value" role="status" class="empty-state">正在从账本服务同步资源…</p>
 
-        <NuxtPage />
-      </main>
+          <NuxtPage />
+        </UContainer>
+      </UMain>
     </div>
 
     <UModal :open="!!workspace.transactionEditor.value" :dismissible="true" title="交易表单" @update:open="value => { if (!value) workspace.transactionEditor.value = null }">

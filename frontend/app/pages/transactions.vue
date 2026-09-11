@@ -123,7 +123,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="view-toolbar wrap transaction-filters">
+  <div class="page-flow page-flow--transactions">
+  <div class="view-toolbar transaction-filters">
     <input :value="searchDraft" class="search-field" aria-label="搜索交易" placeholder="搜索说明、分类、账户或标签" @input="scheduleSearch">
     <label>开始日期<input v-model="startDraft" type="date" @change="commitDates"></label>
     <label>结束日期（不含）<input v-model="endDraft" type="date" @change="commitDates"></label>
@@ -150,4 +151,5 @@ onBeforeUnmount(() => {
       <UButton label="下一页" color="neutral" :disabled="routeState.page >= pageCount" @click="updateRoute({ page: routeState.page + 1 }, false, false)" />
     </div>
   </section>
+  </div>
 </template>

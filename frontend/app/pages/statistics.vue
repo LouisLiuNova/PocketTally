@@ -185,7 +185,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="view-toolbar wrap analytics-toolbar">
+  <div class="page-flow page-flow--statistics">
+  <div class="view-toolbar analytics-toolbar">
     <div class="period-tabs">
       <button v-for="item in [{ value: 'this_month', label: '本月' }, { value: 'last_month', label: '上月' }, { value: 'year', label: '今年' }, { value: 'twelve_months', label: '近 12 个月' }, { value: 'custom', label: '自定义' }]" :key="item.value" :class="{ active: routeState.preset === item.value }" @click="setPreset(item.value as StatisticsPreset)">{{ item.label }}</button>
     </div>
@@ -200,7 +201,7 @@ onBeforeUnmount(() => {
   <div v-if="queryError" role="alert" class="error-box">{{ queryError }}<UButton label="重试" color="neutral" @click="loadStatistics" /></div>
   <p v-if="loading && !loadedData" role="status" class="empty-state">正在读取统计分析…</p>
 
-  <section v-if="overview" class="metric-grid">
+  <section v-if="overview" class="metric-grid statistics-metrics">
     <article class="metric-card feature"><span>实际净现金流</span><strong>{{ money(overview.netCashFlow.currentAmountMinor) }}</strong><p>{{ formatChange(overview.netCashFlow.changePercent) }}</p></article>
     <article class="metric-card"><span>普通收入</span><strong>{{ money(overview.income.currentAmountMinor) }}</strong><p>{{ formatChange(overview.income.changePercent) }}</p></article>
     <article class="metric-card"><span>消费净支出</span><strong>{{ money(overview.netExpense.currentAmountMinor) }}</strong><p>{{ formatChange(overview.netExpense.changePercent) }}</p></article>
@@ -213,34 +214,35 @@ onBeforeUnmount(() => {
   </section>
 
   <template v-if="loadedData && hasAnalysisData">
-    <div class="analytics-grid">
-      <section class="panel">
+    <UPageGrid as="div" class="page-grid analytics-grid">
+      <section class="panel analytics-trend">
         <div class="panel-head"><h2>现金流趋势</h2><span class="hint">点击时间桶查看流水</span></div>
         <div class="real-trend" tabindex="0" aria-label="可按时间桶查看现金流"><button v-for="item in cashFlow?.buckets" :key="item.startAt" class="trend-row bucket-button" @click="showCashBucket(item.startAt, item.endAt)"><span>{{ bucketLabel(item.startAt).slice(5) }}</span><div><div class="trend-track"><i :style="{ width: `${item.incomeAmountMinor / trendMax * 100}%` }" /></div><div class="trend-track expense-track"><i :style="{ width: `${item.expenseAmountMinor / trendMax * 100}%` }" /></div></div><small>{{ money(item.incomeAmountMinor) }} / 退款 {{ money(item.refundAmountMinor) }} / 支出 {{ money(item.expenseAmountMinor) }} / 净额 {{ money(item.netCashFlowMinor) }}</small></button></div>
       </section>
-      <section class="panel">
+      <section class="panel analytics-expense">
         <div class="panel-head"><h2>消费趋势</h2><span class="hint">点击时间桶查看净额明细</span></div>
         <p v-if="!expenses?.buckets.length" class="empty-state">本期暂无消费</p>
         <button v-for="item in expenses?.buckets" :key="item.startAt" class="resource-row drill-button" @click="openExpenseDrill(bucketLabel(item.startAt), { startDate: bucketLabel(item.startAt), endDate: bucketLabel(item.endAt) })"><span>{{ bucketLabel(item.startAt) }}</span><span>{{ money(item.netExpenseMinor) }} / 累计 {{ money(item.cumulativeNetExpenseMinor) }}</span></button>
       </section>
-      <section class="panel">
+      <section class="panel analytics-category">
         <div class="panel-head"><h2>分类分析</h2><button v-if="routeState.parentCategoryId" class="text-link" @click="updateRoute({ parentCategoryId: '' })">返回一级分类</button></div>
         <p class="hint">退款按原支出日期抵减；点击分类查看净额明细。</p>
         <button v-for="item in categoryStatistics?.items" :key="item.categoryId" class="category-stat" @click="openExpenseDrill(item.name, { categoryId: item.categoryId, includeDescendants: true })"><span><strong>{{ item.name }}</strong><small>直接 {{ money(item.directAmountMinor) }} · 变化贡献 {{ money(item.changeContributionMinor) }}</small></span><i :style="{ width: `${Math.abs(item.amountMinor) / categoryMax * 100}%` }" /><b>{{ money(item.amountMinor) }}</b></button>
         <div v-for="parent in categoryStatistics?.items.filter(item => item.children.length)" :key="`${parent.categoryId}-children`" class="child-links"><span>{{ parent.name }} 下钻：</span><button v-for="child in parent.children" :key="child.categoryId" @click="openExpenseDrill(`${parent.name} / ${child.name}`, { categoryId: child.categoryId, includeDescendants: true })">{{ child.name }} {{ money(child.amountMinor) }}</button></div>
       </section>
-      <section class="panel">
+      <section class="panel analytics-tags">
         <h2>Tag 汇总</h2><p class="hint">一笔交易可完整计入多个 Tag，因此不提供 Tag 合计或占比。</p>
         <button v-for="item in tagStatistics?.items" :key="item.tagId" class="resource-row drill-button" @click="openExpenseDrill(`Tag：${item.name}`, { tagId: item.tagId })"><span><i class="color-dot" :style="{ background: item.color }" />{{ item.name }}</span><strong>{{ money(item.netExpenseMinor) }}</strong></button>
       </section>
-      <section class="panel calendar-panel">
+      <section class="panel calendar-panel analytics-calendar">
         <div class="panel-head"><div><h2>收支日历</h2><p class="hint">点击日期查看服务端筛选的当日流水</p></div><label>月份 <input :value="routeState.month" type="month" @change="updateRoute({ month: selectValue($event) })"></label></div>
         <div class="calendar-grid"><button v-for="day in calendar?.days" :key="day.date" :style="{ '--heat': `${Math.abs(day.netCashFlowMinor) / calendarMax * 18}%` }" @click="showCalendarDay(day.date)"><b>{{ day.date.slice(-2) }}</b><span>{{ money(day.netCashFlowMinor) }}</span><small>入 {{ money(day.incomeAmountMinor + day.refundAmountMinor) }} / 出 {{ money(day.expenseAmountMinor) }}</small></button></div>
       </section>
-    </div>
+    </UPageGrid>
     <section v-if="drill || drillLoading" class="panel drill-panel">
       <div class="panel-head"><h2>{{ drill?.title || '正在读取明细…' }}</h2><button class="text-link" @click="drill = null">关闭</button></div>
       <template v-if="drill"><p class="hint">原支出 {{ money(drill.data.totals.originalAmountMinor) }} − 有效退款 {{ money(drill.data.totals.refundedAmountMinor) }} = 净支出 {{ money(drill.data.totals.netExpenseMinor) }}；共 {{ drill.data.total }} 笔。</p><button v-for="item in drill.data.items" :key="item.transaction.id" class="mvp-transaction" @click="workspace.openTransaction(item.transaction.id)"><span class="transaction-icon blue">支出</span><span><strong>{{ item.transaction.description || '支出' }}</strong><small>原支出 {{ money(item.originalAmountMinor) }} · 已退 {{ money(item.refundedAmountMinor) }}</small></span><time>{{ localInput(item.transaction.occurredAt).replace('T', ' ') }}</time><b>{{ money(item.netExpenseMinor) }}</b></button></template>
     </section>
   </template>
+  </div>
 </template>

@@ -14,12 +14,13 @@ function showAccountLedger(accountId: string) {
 </script>
 
 <template>
+  <div class="page-flow page-flow--accounts">
   <div class="section-intro">
     <div><p>账户合计余额</p><h2>{{ money(balance) }}</h2></div>
     <UButton label="新建账户" icon="i-lucide-plus" @click="workspace.resourceEditor.value = { kind: 'accounts' }" />
   </div>
   <p v-if="workspace.loaded.value && !workspace.accounts.value.length" class="empty-state">暂无账户，请先新建账户。</p>
-  <div class="account-card-grid">
+  <UPageGrid as="div" class="page-grid account-card-grid">
     <article v-for="account in workspace.accounts.value" :key="account.id" class="balance-card">
       <span>{{ account.type === 'debit' ? '借记账户' : '信用账户' }}</span>
       <div class="card-brand">{{ account.name }}</div><strong>{{ money(minor(account.amount)) }}</strong>
@@ -31,5 +32,6 @@ function showAccountLedger(accountId: string) {
         <button class="danger" @click="workspace.deleteResource('accounts', account)">删除</button>
       </div>
     </article>
+  </UPageGrid>
   </div>
 </template>
