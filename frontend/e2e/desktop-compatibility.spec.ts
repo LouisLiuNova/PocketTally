@@ -26,10 +26,10 @@ test.describe('Chromium 桌面兼容性矩阵', () => {
       }
     }
 
-    await page.getByRole('button', { name: '外观设置', exact: true }).click()
-    await page.getByLabel('主题').selectOption('light')
+    await page.getByRole('link', { name: '设置', exact: true }).click()
+    await page.locator('.settings-theme-option').filter({ hasText: '亮色' }).click()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
-    await page.getByLabel('主题').selectOption('dark')
+    await page.locator('.settings-theme-option').filter({ hasText: '暗色' }).click()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
     await assertNoHorizontalOverflow(page)
     await assertNoPageErrors(page, errors)

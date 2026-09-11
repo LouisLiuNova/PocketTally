@@ -24,7 +24,6 @@ export function createLedgerWorkspace() {
   const colorMode = useColorMode()
   const theme = ref<ThemePreference>('system')
   const palette = ref<PaletteName>('ruri')
-  const showAppearance = ref(false)
 
   async function refreshWorkspace() {
     try {
@@ -154,7 +153,6 @@ export function createLedgerWorkspace() {
     refreshRevision,
     theme,
     palette,
-    showAppearance,
     refreshWorkspace,
     saved,
     openTransaction,

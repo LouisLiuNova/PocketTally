@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { zh_cn } from '@nuxt/ui/locale'
 import { APP_ROUTES, appRoute } from '~/constants/navigation'
-import { APPEARANCE_PALETTES } from '~/constants/appearance'
+import type { ThemePreference } from '~/constants/appearance'
 import { ledgerWorkspaceKey } from '~/composables/useLedgerWorkspace'
 import { kindLabels } from '~/types/ledger'
 import { localInput, money } from '~/utils/money'
@@ -23,6 +23,14 @@ const appLocale = {
 }
 
 const currentRoute = computed(() => appRoute(route.path))
+const themeModes: Array<{ value: ThemePreference; label: string; icon: string }> = [
+  { value: 'system', label: '跟随系统', icon: 'i-lucide-monitor' },
+  { value: 'light', label: '亮色', icon: 'i-lucide-sun' },
+  { value: 'dark', label: '暗色', icon: 'i-lucide-moon' },
+]
+const currentThemeMode = computed(() => themeModes.find(mode => mode.value === workspace.theme.value) || themeModes[0])
+const themeModeIndex = computed(() => Math.max(0, themeModes.findIndex(mode => mode.value === workspace.theme.value)))
+const themeModeThumbClass = computed(() => `sidebar-theme-switch-thumb--${themeModeIndex.value}`)
 const navigationItems = computed(() => APP_ROUTES.map(item => ({
   label: item.label,
   icon: item.icon,
@@ -46,7 +54,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
     <UDashboardGroup class="app-shell" storage="local" storage-key="pockettally-shell" unit="rem">
       <UDashboardSidebar
         id="primary"
-        class="app-sidebar bg-inverted text-inverted"
+        class="app-sidebar"
         collapsible
         resizable
         :default-size="15"
@@ -54,10 +62,10 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
         :max-size="20"
         :collapsed-size="4"
         :ui="{
-          header: 'border-b border-white/10',
+          header: 'border-b border-default',
           body: 'gap-3',
-          footer: 'border-t border-white/10',
-          content: 'bg-inverted text-inverted sm:max-w-72',
+          footer: 'border-t border-default',
+          content: 'bg-default text-default sm:max-w-72',
         }"
       >
         <template #header="{ collapsed }">
@@ -67,7 +75,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
           </NuxtLink>
           <UTooltip :text="collapsed ? '展开主导航' : '折叠主导航'" :content="{ side: 'right' }">
             <UDashboardSidebarCollapse
-              class="hidden lg:inline-flex"
+              class="sidebar-collapse-button hidden lg:inline-flex"
               :class="collapsed ? 'mx-auto' : 'ml-auto'"
               :aria-label="collapsed ? '展开主导航' : '折叠主导航'"
             />
@@ -75,20 +83,44 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
         </template>
 
         <template #default="{ collapsed }">
-          <UNavigationMenu
-            aria-label="主导航"
-            :items="navigationItems"
-            orientation="vertical"
-            color="primary"
-            variant="pill"
-            highlight
-            :collapsed="collapsed"
-            :tooltip="{ delayDuration: 0, content: { side: 'right' } }"
-            :ui="{
-              link: 'min-h-11 text-inverted hover:text-inverted focus-visible:before:outline-white/80',
-              linkLeadingIcon: 'size-5 text-inverted/70 group-hover:text-inverted group-data-[active]:text-inverted',
-            }"
-          />
+          <div class="sidebar-main" :data-collapsed="collapsed">
+            <UNavigationMenu
+              aria-label="主导航"
+              :items="navigationItems"
+              orientation="vertical"
+              color="primary"
+              variant="pill"
+              highlight
+              :collapsed="collapsed"
+              :tooltip="{ delayDuration: 0, content: { side: 'right' } }"
+              :ui="{
+                link: 'min-h-11 text-default hover:text-highlighted focus-visible:before:outline-[var(--pt-focus-ring)]',
+                linkLeadingIcon: 'size-5 text-dimmed group-hover:text-default group-data-[active]:text-default',
+              }"
+            />
+            <div class="sidebar-theme-control">
+              <div class="sidebar-theme-switch-row">
+                <UTooltip :text="`主题模式：${currentThemeMode.label}`" :delay-duration="0" :content="{ side: 'right' }">
+                  <div class="sidebar-theme-switch" role="radiogroup" aria-label="主题模式">
+                    <span class="sidebar-theme-switch-thumb" :class="themeModeThumbClass" aria-hidden="true" />
+                    <button
+                      v-for="mode in themeModes"
+                      :key="mode.value"
+                      class="sidebar-theme-switch-option"
+                      type="button"
+                      role="radio"
+                      :aria-checked="workspace.theme.value === mode.value"
+                      :aria-label="mode.label"
+                      :title="mode.label"
+                      @click="workspace.theme.value = mode.value"
+                    >
+                      <UIcon :name="mode.icon" aria-hidden="true" />
+                    </button>
+                  </div>
+                </UTooltip>
+              </div>
+            </div>
+          </div>
         </template>
 
         <template #footer="{ collapsed }">
@@ -121,9 +153,6 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
             </template>
             <template #right>
               <div class="top-actions">
-                <UTooltip text="外观设置">
-                  <UButton color="neutral" variant="ghost" icon="i-lucide-sun-moon" aria-label="外观设置" @click="workspace.showAppearance.value = !workspace.showAppearance.value" />
-                </UTooltip>
                 <UButton color="neutral" variant="outline" icon="i-lucide-refresh-cw" label="刷新" :loading="workspace.loading.value" :aria-busy="workspace.loading.value" @click="workspace.refreshWorkspace" />
                 <UButton icon="i-lucide-plus" label="记一笔" :disabled="!workspace.loaded.value || workspace.loading.value || !!workspace.loadError.value" @click="workspace.transactionEditor.value = {}" />
               </div>
@@ -134,10 +163,6 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
         <template #body>
           <main>
             <UContainer class="page-container" :ui="{ base: 'w-full max-w-[1580px] mx-auto px-0' }">
-            <div v-if="workspace.showAppearance.value" class="view-toolbar">
-              <label>主题 <select v-model="workspace.theme.value"><option value="system">跟随系统</option><option value="light">亮色</option><option value="dark">暗色</option></select></label>
-              <label>配色 <select v-model="workspace.palette.value"><option v-for="item in APPEARANCE_PALETTES" :key="item.value" :value="item.value">{{ item.label }}</option></select></label>
-            </div>
             <p v-if="workspace.notice.value" role="status" class="info-strip">{{ workspace.notice.value }}<button class="text-link" aria-label="关闭提示" @click="workspace.notice.value = ''">×</button></p>
             <div v-if="workspace.loadError.value || workspace.detailError.value" role="alert" class="error-box">
               {{ workspace.loadError.value || workspace.detailError.value }}

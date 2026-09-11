@@ -131,7 +131,7 @@ body { background: var(--pt-surface-page); color: var(--ui-text); }
 
 /* #30 之后业务页面仍通过这些语义 token 逐步迁移。 */
 
-.metric-card, .panel, .balance-card, .appearance-popover, .search-field, .filter-chip,
+.metric-card, .panel, .balance-card, .search-field, .filter-chip,
 .composer, .composer input, .composer select, .view-toolbar input, .view-toolbar select,
 .category-tree-toolbar input, .calendar-panel input, .cash-calendar button,
 .subcategory-popover, .category-editor-popover, .calculator-popover, .calculator-grid button {
@@ -148,7 +148,7 @@ body { background: var(--pt-surface-page); color: var(--ui-text); }
 .danger, .text-link.danger { color: var(--pt-error); }
 
 .segmented, .period-tabs, .preview-category, .icon-link, .calculator-screen { background: var(--ui-bg-muted); }
-.segmented .active, .period-tabs .active, .filter-chip.active, .appearance-options button.active, .palette-options button.active {
+.segmented .active, .period-tabs .active, .filter-chip.active {
   background: var(--pt-primary-container);
   color: var(--pt-on-primary-container);
   border-color: var(--pt-focus-ring);
