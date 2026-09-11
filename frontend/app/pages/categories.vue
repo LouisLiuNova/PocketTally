@@ -3,7 +3,7 @@ const workspace = useLedgerWorkspace()
 </script>
 
 <template>
-  <UPageGrid as="section" class="page-flow page-grid taxonomy-grid">
+  <section class="page-flow page-grid taxonomy-grid">
     <CategoryTree
       :categories="workspace.categories.value"
       @create="workspace.createCategory"
@@ -18,5 +18,5 @@ const workspace = useLedgerWorkspace()
         <div><button class="text-link" @click="workspace.resourceEditor.value = { kind: 'tags', item: tag }">编辑</button><button class="text-link danger" @click="workspace.deleteResource('tags', tag)">删除</button></div>
       </div>
     </article>
-  </UPageGrid>
+  </section>
 </template>
