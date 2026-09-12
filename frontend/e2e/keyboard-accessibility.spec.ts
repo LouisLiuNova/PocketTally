@@ -8,7 +8,11 @@ async function activate(locator: Locator) {
 
 async function typeText(locator: Locator, value: string) {
   await locator.focus()
-  await locator.pressSequentially(value)
+  await locator.pressSequentially(value, { delay: 20 })
+  if (await locator.inputValue() !== value) {
+    await locator.press('ControlOrMeta+A')
+    await locator.fill(value)
+  }
 }
 
 async function saveDialog(page: Page, label: string) {
@@ -141,7 +145,8 @@ test('弹窗焦点约束与恢复、方向键 Tab 和失败重复提交反馈', 
   await expect(page.getByLabel('名称', { exact: true })).toHaveValue(accountName)
   await expect(save).toBeEnabled()
   await page.unroute('**/api/v1/accounts')
-  await page.keyboard.press('Escape')
+  await activate(save)
+  await expect(dialog).toBeHidden()
 
   await activate(page.getByRole('link', { name: '分类与标签', exact: true }))
   const tabs = page.getByRole('tab')
@@ -149,9 +154,23 @@ test('弹窗焦点约束与恢复、方向键 Tab 和失败重复提交反馈', 
   await tabs.first().press('ArrowRight')
   await expect(tabs.nth(1)).toBeFocused()
   await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true')
-  await tabs.nth(1).press('ArrowLeft')
+  await tabs.nth(1).press('End')
+  await expect(tabs.nth(2)).toBeFocused()
+  await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'true')
+  await tabs.nth(2).press('Home')
   await expect(tabs.first()).toBeFocused()
   await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
+
+  const accountMenu = page.getByRole('link', { name: '账户', exact: true })
+  await activate(accountMenu)
+  const more = page.getByRole('button', { name: `更多操作：${accountName}`, exact: true })
+  await more.focus()
+  await more.press('Enter')
+  await expect(page.getByRole('menuitem', { name: '编辑', exact: true })).toBeFocused()
+  await page.keyboard.press('ArrowDown')
+  await expect(page.getByRole('menuitem', { name: '删除', exact: true })).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(more).toBeFocused()
 })
 
 test('关键页面和弹窗没有严重或高优先级自动化无障碍问题', async ({ page }) => {

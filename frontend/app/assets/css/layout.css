@@ -117,21 +117,16 @@
   gap: var(--pt-layout-grid-gap);
 }
 
-.balance-card,
 .panel,
 .metric-card {
   min-width: 0;
 }
 
-.balance-card .card-brand,
-.balance-card > small,
 .panel-head > *,
 .mvp-transaction > span {
   min-width: 0;
 }
 
-.balance-card .card-brand,
-.balance-card > small,
 .mvp-transaction strong,
 .mvp-transaction small,
 .resource-row span,
@@ -140,24 +135,8 @@
   overflow-wrap: anywhere;
 }
 
-.page-flow.taxonomy-grid {
-  grid-template-columns: minmax(0, 1.75fr) minmax(300px, .9fr);
-  grid-template-areas: "taxonomy tags";
-  gap: var(--pt-layout-grid-gap);
-  margin: 0;
-  align-items: stretch;
-}
-
 .category-workspace {
-  grid-area: taxonomy;
-  grid-column: auto;
-}
-
-.taxonomy-tags {
-  grid-area: tags;
-  width: auto;
-  margin-top: 63px;
-  align-self: stretch;
+  min-width: 0;
 }
 
 .category-workspace .category-tree-layout {
@@ -605,8 +584,7 @@
   }
 
   .dashboard-grid,
-  .analytics-grid,
-  .page-flow.taxonomy-grid {
+  .analytics-grid {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: none;
   }
@@ -615,17 +593,12 @@
   .overview-categories,
   .overview-recent,
   .category-workspace,
-  .taxonomy-tags,
   .analytics-trend,
   .analytics-expense,
   .analytics-category,
   .analytics-tags,
   .analytics-calendar {
     grid-area: auto;
-  }
-
-  .taxonomy-tags {
-    margin-top: 0;
   }
 
   .account-card-grid {

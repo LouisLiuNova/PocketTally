@@ -18,7 +18,7 @@ export function createLedgerWorkspace() {
   const refundError = ref('')
   const transactionEditor = ref<{ editing?: Transaction; refund?: Transaction; accountId?: string } | null>(null)
   const editorBusy = ref(false)
-  const resourceEditor = ref<{ kind: 'accounts' | 'categories' | 'tags'; item?: Account | Category | Tag; initialParentCategoryId?: string } | null>(null)
+  const resourceEditor = ref<{ kind: 'accounts' | 'categories' | 'tags'; item?: Account | Category | Tag; initialParentCategoryId?: string; initialPurpose?: Category['purpose'] } | null>(null)
   const confirmation = ref<{ title: string; text: string; path: string; method: 'POST' | 'DELETE' } | null>(null)
   const actionError = ref('')
   const busy = ref(false)
@@ -118,8 +118,8 @@ export function createLedgerWorkspace() {
     }
   }
 
-  function createCategory(parentCategoryId?: string) {
-    resourceEditor.value = { kind: 'categories', initialParentCategoryId: parentCategoryId }
+  function createCategory(parentCategoryId?: string, initialPurpose: Category['purpose'] = 'expense') {
+    resourceEditor.value = { kind: 'categories', initialParentCategoryId: parentCategoryId, initialPurpose }
   }
 
   function voidSelected() {

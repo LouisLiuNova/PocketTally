@@ -3,6 +3,14 @@
 本文记录 Issue #33 建立的 Nuxt UI 技术基础、组件采用边界和可重复的量化基线。
 它服务于后续 Issue #25 的渐进式页面迁移，不代表所有业务页面已经完成重构。
 
+## Issue #35 资源管理组件化
+
+账户页使用 `UCard` 表达余额摘要和账户资源，使用 `UPageGrid` 保留响应式业务网格；流水和调账作为高频 `UButton` 直接展示，编辑与删除收纳到带资源名称的 `UDropdownMenu`。分类与标签页使用页面级 `UTabs` 切换支出分类、收入分类和标签，数量通过 badge 呈现且不写入 URL；标签集中在一个紧凑 `UCard` 列表中。已加载的空账户、空标签和空分类统一使用 `UEmpty`，分类异常链使用 `UAlert`。
+
+`CategoryTree` 只接收显式的 `expense` 或 `income` 用途，不再自行维护用途 Tab。通用表面、输入、按钮和菜单分别由 `UCard`、`UInput`、`UButton` 与 `UDropdownMenu` 承担；自有 CSS 仅保留树缩进和连线、选中与异常节点、响应式“树 + 详情”布局，以及 roving tabindex、方向键、搜索祖先展开和异常链隔离所需的业务状态。窄屏回退为树在前、详情在后的单列，但不隐藏创建、编辑或删除能力。
+
+资源编辑和删除仍复用既有 `ResourceEditor`、`ColorInput`、`UModal`、请求体及全局消息机制。创建分类由活动 Tab 注入固定用途，编辑时用途不可变；子树移动确认、非法父级过滤、删除冲突保留弹窗和服务端错误等规则没有改变。本次没有新增依赖，也没有修改 API、数据库、金额、时区、颜色字段或持久化语义；全局遗留 CSS 清理仍归 Issue #37。
+
 ## Issue #40 布局复用决策
 
 Issue #40 统一的是页面容器、页面流和网格约束，不改变业务组件迁移边界。当前决策如下：
@@ -32,13 +40,13 @@ Nuxt UI 的全局主题应优先通过 `app.config.ts`、`--ui-*` token、Tailwi
 | --- | --- | --- | --- |
 | `UApp`、`UButton`、`UModal`、`UIcon` | 继续使用并统一语义色、variant 和默认尺寸 | 主操作使用 `primary`，次要操作使用 `neutral`，破坏性操作使用 `error` | #33、#25 |
 | 原生表单、`.composer` 字段样式 | `UForm`、`UFormField`、`UInput`、`USelect`、`UTextarea`、`UCheckbox` | Issue #33 先迁移 `ResourceEditor`；业务校验仍由现有服务逻辑负责 | #33、#34、#35 |
-| `.panel`、指标卡和资源卡片 | `UCard` | 后续页面迁移时使用；业务图表内部布局可继续局部实现 | #34、#35、#36 |
-| 自有用途 Tab 和筛选 Tab | `UTabs` | #31 已确定信息架构和 URL query；控件迁移按业务页面任务实施 | #31、#35、#36 |
+| `.panel`、指标卡和资源卡片 | `UCard` | #35 已迁移账户、分类详情和标签资源；业务图表内部布局可继续局部实现 | #34、#35、#36 |
+| 自有用途 Tab 和筛选 Tab | `UTabs` | #35 已迁移分类与标签页面级 Tab；其临时状态不写 URL，其他筛选仍按页面契约实施 | #31、#35、#36 |
 | 自有分页按钮 | `UPagination` | 交易列表迁移时替换，保留服务端分页语义 | #34 |
 | 应用壳层、侧边导航、Header、Breadcrumb | `UDashboardGroup`、`UDashboardSidebar`、`UDashboardPanel`、`UDashboardNavbar`、`UNavigationMenu`、`UBreadcrumb`、`UTooltip` | #30 已完成；页面标题、Breadcrumb 和选中态统一来自路由元数据，窄屏导航由 Sidebar 的 Slideover 模式提供 | #30 |
 | 自有确认弹窗和详情弹层 | `UModal`、`USlideover`、`UPopover`、`UTooltip` | 已有 `UModal` 保留；详情抽屉和提示由业务页面任务决定 | #32、#34、#35 |
 | `.error-box`、`.info-strip`、成功提示 | `UAlert`、`useToast` | 表单和服务端错误使用 `UAlert`；全局操作反馈由 #32 统一 | #32、#33 |
-| 分类树 | 自有树交互 + Nuxt UI 基础控件 | 保留树的层级保护、键盘导航和异常节点表达；不得复制通用 Dialog/Button 行为 | #19、#35 |
+| 分类树 | 自有树交互 + `UCard`、`UInput`、`UButton`、`UDropdownMenu`、`UAlert`、`UEmpty` | #35 已迁移通用 UI；保留树的层级保护、键盘导航、搜索展开和异常节点表达 | #19、#35 |
 | 现金流趋势、统计图表、日历布局 | 自有业务可视化 + 主题 token | 保留服务端统计语义和可访问文本降级，不引入重复图表组件库 | #28、#36 |
 
 ## Issue #31 路由与页面边界

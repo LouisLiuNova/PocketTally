@@ -24,6 +24,7 @@
 - [x] 按 Issue #26 将外观配置迁移到设置页，使用八套 registry 配色色板和 Nuxt UI 主题选项，并在侧边栏账本状态上方提供包含系统、明亮、暗色图标的三档滑动开关；移除顶栏重复入口并统一导航与主页面主题表面。
 - [x] 按 Issue #40 统一六个业务页面的 `UMain`/`UContainer` 内容约束、页面流和响应式命名网格区域；保留分类树与统计可视化的业务专属交互，并完成三档 Chromium 布局验收。
 - [x] 按 Issue #39 为分类与标签资源表单增加可复用的原生颜色选择器与 `#RRGGBB` 输入组合；实现双向同步、预览、字段级校验、键盘/无障碍支持及创建编辑回归验收。
+- [x] 按 Issue #35 使用 `UCard`、`UTabs`、`UDropdownMenu`、`UEmpty` 与 Nuxt UI 表单控件完成账户、分类和标签资源管理组件化；保留分类树的层级、搜索、异常隔离和键盘语义，并将全局遗留 CSS 清理留给 Issue #37。
 
 - [x] 将当前已实现的基础交易类型限制为 `income`、`expense`、`transfer` 和 `balance_adjustment`，并要求交易金额为有限正数。
 - [x] 要求创建交易提供 `occurred_at`，并在交易读取结果中返回；文档区分 `occurredAt`、`createdAt` 和 `updatedAt`。

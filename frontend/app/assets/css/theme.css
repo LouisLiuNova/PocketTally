@@ -150,9 +150,9 @@ body { background: var(--pt-surface-page); color: var(--ui-text); }
 
 /* #30 之后业务页面仍通过这些语义 token 逐步迁移。 */
 
-.metric-card, .panel, .balance-card, .search-field, .filter-chip,
+.metric-card, .panel, .search-field, .filter-chip,
 .composer, .composer input, .composer select, .view-toolbar input, .view-toolbar select,
-.category-tree-toolbar input, .calendar-panel input, .cash-calendar button,
+.calendar-panel input, .cash-calendar button,
 .subcategory-popover, .category-editor-popover, .calculator-popover, .calculator-grid button {
   background: var(--ui-bg);
   color: var(--ui-text);

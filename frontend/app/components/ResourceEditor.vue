@@ -3,16 +3,22 @@ import type { Account, Category, Tag } from '~/types/ledger'
 import { errorMessage } from '~/composables/useLedger'
 import { colorValidationMessage, isValidHexColor } from '~/utils/color'
 
-const props = defineProps<{ kind: 'accounts' | 'categories' | 'tags'; item?: Account | Category | Tag; categories: Category[]; initialParentCategoryId?: string }>()
-const emit = defineEmits<{ close: []; saved: [] }>()
+const props = defineProps<{ kind: 'accounts' | 'categories' | 'tags'; item?: Account | Category | Tag; categories: Category[]; initialParentCategoryId?: string; initialPurpose?: Category['purpose'] }>()
+const emit = defineEmits<{ close: []; saved: []; busy: [value: boolean] }>()
 const names = { accounts: '账户', categories: '分类', tags: '标签' }
 const item = props.item
-const form = reactive({ name: item?.name || '', description: item?.description || '', type: (item as Account)?.type || 'debit', purpose: (item as Category)?.purpose || 'expense', parentCategoryId: (item as Category)?.parentCategory?.id || props.initialParentCategoryId || '', color: (item as Tag)?.color || (item as Category)?.iconColor || '#005CAF', cardNumber: (item as Account)?.cardNumber || '' })
+const form = reactive({ name: item?.name || '', description: item?.description || '', type: (item as Account)?.type || 'debit', purpose: (item as Category)?.purpose || props.initialPurpose || 'expense', parentCategoryId: (item as Category)?.parentCategory?.id || props.initialParentCategoryId || '', color: (item as Tag)?.color || (item as Category)?.iconColor || '#005CAF', cardNumber: (item as Account)?.cardNumber || '' })
 const busy = ref(false)
 const error = ref('')
 const moveConfirmed = ref(false)
 const colorError = computed(() => props.kind !== 'accounts' && !isValidHexColor(form.color) ? colorValidationMessage(form.color) : '')
 const moving = computed(() => props.kind === 'categories' && !!item && form.parentCategoryId !== ((item as Category).parentCategory?.id || ''))
+const editorTitle = computed(() => {
+  const resourceName = props.kind === 'categories' && !item
+    ? `${form.purpose === 'income' ? '收入' : '支出'}分类`
+    : names[props.kind]
+  return `${item ? '编辑' : '新建'}${resourceName}`
+})
 const accountTypeItems = [
   { label: '借记账户（余额不可为负）', value: 'debit' },
   { label: '信用账户（允许负余额）', value: 'credit' },
@@ -58,18 +64,18 @@ async function save() {
   if (props.kind === 'accounts') body = { ...body, type: form.type, cardNumber: form.cardNumber.trim() || null }
   if (props.kind === 'tags') body = { ...body, color: form.color }
   if (props.kind === 'categories') body = { ...body, ...(!item ? { purpose: form.purpose } : {}), parentCategoryId: form.parentCategoryId || null, iconColor: form.color, iconName: (item as Category)?.iconName || 'i-lucide-folder' }
-  busy.value = true; error.value = ''
+  busy.value = true; error.value = ''; emit('busy', true)
   try {
     await $fetch(`/api/v1/${props.kind}${item ? `/${item.id}` : ''}`, { method: item ? 'PATCH' : 'POST', body, retry: 0 })
     emit('saved')
   } catch (e) { error.value = errorMessage(e) }
-  finally { busy.value = false }
+  finally { busy.value = false; emit('busy', false) }
 }
 </script>
 
 <template>
   <UForm :state="form" class="w-full space-y-4 p-4 pb-5 sm:p-6 sm:pb-7" :disabled="busy" :aria-busy="busy" @submit="save">
-    <header class="flex items-start justify-between gap-4"><h2>{{ item ? '编辑' : '新建' }}{{ names[kind] }}</h2><UButton color="neutral" variant="ghost" icon="i-lucide-x" aria-label="关闭" :disabled="busy" @click="emit('close')" /></header>
+    <header class="flex items-start justify-between gap-4"><h2>{{ editorTitle }}</h2><UButton color="neutral" variant="ghost" icon="i-lucide-x" aria-label="关闭" :disabled="busy" @click="emit('close')" /></header>
     <UFormField name="name" label="名称" required>
       <UInput id="resource-name" v-model="form.name" autofocus class="w-full" />
     </UFormField>
@@ -84,7 +90,7 @@ async function save() {
     </template>
     <template v-if="kind === 'categories'">
       <UFormField name="purpose" label="用途" required>
-        <USelect v-model="form.purpose" :items="categoryPurposeItems" :disabled="!!item" class="w-full" />
+        <USelect v-model="form.purpose" :items="categoryPurposeItems" disabled class="w-full" />
       </UFormField>
       <UFormField name="parentCategoryId" label="父分类">
         <USelect v-model="form.parentCategoryId" :items="parentItems" class="w-full" />

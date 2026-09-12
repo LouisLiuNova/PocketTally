@@ -44,9 +44,22 @@ const breadcrumbItems = computed(() => currentRoute.value.path === '/'
       { label: currentRoute.value.breadcrumb, icon: currentRoute.value.icon },
     ])
 const today = new Intl.DateTimeFormat('zh-CN', { dateStyle: 'full', timeZone: 'Asia/Shanghai' }).format(new Date())
+const resourceEditorTitle = computed(() => {
+  const editor = workspace.resourceEditor.value
+  if (!editor) return '资源表单'
+  const names = { accounts: '账户', categories: '分类', tags: '标签' }
+  const name = editor.kind === 'categories' && !editor.item
+    ? `${editor.initialPurpose === 'income' ? '收入' : '支出'}分类`
+    : names[editor.kind]
+  return `${editor.item ? '编辑' : '新建'}${name}`
+})
 
 function alertActions(message: AppMessage) {
   return message.action ? [{ label: message.action.label, onClick: message.action.onSelect }] : undefined
+}
+
+function focusConfirmationCancel() {
+  nextTick(() => document.querySelector<HTMLButtonElement>('[data-confirmation-cancel]')?.focus())
 }
 
 useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
@@ -219,23 +232,24 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
         />
       </template>
     </UModal>
-    <UModal :open="!!workspace.resourceEditor.value" :dismissible="true" title="资源表单" @update:open="value => { if (!value) workspace.resourceEditor.value = null }">
+    <UModal :open="!!workspace.resourceEditor.value" :dismissible="!workspace.editorBusy.value" :title="resourceEditorTitle" @update:open="value => { if (!value && !workspace.editorBusy.value) workspace.resourceEditor.value = null }">
       <template #content>
         <ResourceEditor
           v-if="workspace.resourceEditor.value"
           v-bind="workspace.resourceEditor.value"
           :categories="workspace.categories.value"
           @close="workspace.resourceEditor.value = null"
+          @busy="workspace.editorBusy.value = $event"
           @saved="workspace.saved"
         />
       </template>
     </UModal>
-    <UModal :open="!!workspace.confirmation.value" :dismissible="!workspace.busy.value" :title="workspace.confirmation.value?.title" @update:open="value => { if (!value && !workspace.busy.value) workspace.confirmation.value = null }">
+    <UModal :open="!!workspace.confirmation.value" :dismissible="!workspace.busy.value" :title="workspace.confirmation.value?.title" @after:enter="focusConfirmationCancel" @update:open="value => { if (!value && !workspace.busy.value) workspace.confirmation.value = null }">
       <template #body>
         <p>{{ workspace.confirmation.value?.text }}</p>
         <UAlert v-if="workspace.actionError.value" color="error" variant="soft" icon="i-lucide-circle-alert" title="操作失败" :description="workspace.actionError.value" role="alert" />
       </template>
-      <template #footer><UButton label="取消" color="neutral" :disabled="workspace.busy.value" @click="workspace.confirmation.value = null" /><UButton label="确认操作" color="error" :loading="workspace.busy.value" :aria-busy="workspace.busy.value" :disabled="workspace.busy.value" @click="workspace.confirmAction" /></template>
+      <template #footer><UButton autofocus data-confirmation-cancel label="取消" color="neutral" :disabled="workspace.busy.value" @click="workspace.confirmation.value = null" /><UButton label="确认操作" color="error" :loading="workspace.busy.value" :aria-busy="workspace.busy.value" :disabled="workspace.busy.value" @click="workspace.confirmAction" /></template>
     </UModal>
   </UApp>
 </template>
