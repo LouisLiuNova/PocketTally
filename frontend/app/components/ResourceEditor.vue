@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Account, Category, Tag } from '~/types/ledger'
 import { errorMessage } from '~/composables/useLedger'
+import { colorValidationMessage, isValidHexColor } from '~/utils/color'
 
 const props = defineProps<{ kind: 'accounts' | 'categories' | 'tags'; item?: Account | Category | Tag; categories: Category[]; initialParentCategoryId?: string }>()
 const emit = defineEmits<{ close: []; saved: [] }>()
@@ -10,6 +11,7 @@ const form = reactive({ name: item?.name || '', description: item?.description |
 const busy = ref(false)
 const error = ref('')
 const moveConfirmed = ref(false)
+const colorError = computed(() => props.kind !== 'accounts' && !isValidHexColor(form.color) ? colorValidationMessage(form.color) : '')
 const moving = computed(() => props.kind === 'categories' && !!item && form.parentCategoryId !== ((item as Category).parentCategory?.id || ''))
 const accountTypeItems = [
   { label: '借记账户（余额不可为负）', value: 'debit' },
@@ -50,6 +52,7 @@ watch(() => form.parentCategoryId, () => { moveConfirmed.value = false })
 async function save() {
   if (busy.value) return
   if (!form.name.trim()) { error.value = '名称不能为空'; return }
+  if (colorError.value) { error.value = ''; return }
   if (moving.value && !moveConfirmed.value) { error.value = '请确认移动分类及其整个子树'; return }
   let body: object = { name: form.name.trim(), description: form.description.trim() || null }
   if (props.kind === 'accounts') body = { ...body, type: form.type, cardNumber: form.cardNumber.trim() || null }
@@ -89,8 +92,8 @@ async function save() {
       <p class="hint parent-path">父分类路径：{{ selectedParentPath }}</p>
       <UCheckbox v-if="moving" v-model="moveConfirmed" label="确认将此分类及其所有子分类一起移动" />
     </template>
-    <UFormField v-if="kind !== 'accounts'" name="color" label="颜色">
-      <UInput v-model="form.color" type="color" class="w-full" />
+    <UFormField v-if="kind !== 'accounts'" name="color" label="颜色" required :error="colorError || undefined">
+      <ColorInput v-model="form.color" id="resource-color" :error="colorError" :disabled="busy" />
     </UFormField>
     <UFormField name="description" label="说明">
       <UTextarea v-model="form.description" :rows="3" class="w-full" />
