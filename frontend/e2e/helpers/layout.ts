@@ -19,6 +19,8 @@ export async function assertWithinViewport(locator: Locator, label: string) {
 }
 
 export async function assertDialogWithinViewport(page: Page) {
+  // USlideover uses a 200ms entrance transition; measure after it settles.
+  await page.waitForTimeout(250)
   const dialog = page.getByRole('dialog').last()
   await assertWithinViewport(dialog, '弹窗')
 }

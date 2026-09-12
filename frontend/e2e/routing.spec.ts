@@ -69,6 +69,6 @@ test('交易页不会请求统计接口', async ({ page }) => {
     if (request.url().includes('/api/v1/statistics/')) statisticsRequests++
   })
   await page.goto('/transactions')
-  await expect(page.getByText(/服务端共 \d+ 笔/)).toBeVisible()
+  await expect(page.getByText(/\d+ 笔结果/)).toBeVisible()
   expect(statisticsRequests).toBe(0)
 })

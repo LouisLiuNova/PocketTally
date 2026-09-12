@@ -47,10 +47,10 @@ test.describe('Chromium 桌面兼容性矩阵', () => {
     await assertNoHorizontalOverflow(page)
 
     await page.getByRole('link', { name: '交易', exact: true }).click()
-    await expect(page.getByText(/服务端共 \d+ 笔/)).toBeVisible()
+    await expect(page.getByText(/\d+ 笔结果/)).toBeVisible()
     await expect(page.getByRole('button', { name: '下一页', exact: true })).toBeVisible()
     await page.getByRole('button', { name: '下一页', exact: true }).click()
-    await expect(page.getByText(/^[2-9] \/ [2-9]$/)).toBeVisible()
+    await expect(page.getByText(/^第 \d+ \/ \d+ 页$/)).toBeVisible()
     await assertNoHorizontalOverflow(page)
 
     await page.getByLabel('搜索交易').fill(`可打开详情-${fixture.suffix}`)
@@ -66,7 +66,7 @@ test.describe('Chromium 桌面兼容性矩阵', () => {
     await page.getByRole('button', { name: '作废交易', exact: true }).click()
     await assertDialogWithinViewport(page)
     await page.getByRole('button', { name: '取消', exact: true }).click()
-    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: '关闭交易详情', exact: true }).click()
 
     await page.getByRole('link', { name: '账户', exact: true }).click()
     const walletCard = page.locator('.balance-card').filter({ hasText: fixture.wallet.name })

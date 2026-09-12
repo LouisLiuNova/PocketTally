@@ -15,7 +15,9 @@ export function createLedgerWorkspace() {
   const selected = ref<Transaction | null>(null)
   const refundSummary = ref<RefundSummary | null>(null)
   const refundLoading = ref(false)
+  const refundError = ref('')
   const transactionEditor = ref<{ editing?: Transaction; refund?: Transaction; accountId?: string } | null>(null)
+  const editorBusy = ref(false)
   const resourceEditor = ref<{ kind: 'accounts' | 'categories' | 'tags'; item?: Account | Category | Tag; initialParentCategoryId?: string } | null>(null)
   const confirmation = ref<{ title: string; text: string; path: string; method: 'POST' | 'DELETE' } | null>(null)
   const actionError = ref('')
@@ -64,14 +66,22 @@ export function createLedgerWorkspace() {
   async function openTransaction(transaction: Transaction | string) {
     const transactionId = typeof transaction === 'string' ? transaction : transaction.id
     refundSummary.value = null
-    refundLoading.value = true
+    refundError.value = ''
+    refundLoading.value = false
     try {
       selected.value = typeof transaction === 'string'
         ? await $fetch<Transaction>(`/api/v1/transactions/${transaction}`)
         : transaction
       messages.dismiss(`transaction-detail-${transactionId}`)
       if (selected.value.type === 'expense') {
-        refundSummary.value = await $fetch<RefundSummary>(`/api/v1/transactions/${selected.value.id}/refund-summary`)
+        refundLoading.value = true
+        try {
+          refundSummary.value = await $fetch<RefundSummary>(`/api/v1/transactions/${selected.value.id}/refund-summary`)
+        } catch (error) {
+          refundError.value = errorMessage(error)
+        } finally {
+          refundLoading.value = false
+        }
       }
     } catch (error) {
       selected.value = null
@@ -82,6 +92,17 @@ export function createLedgerWorkspace() {
         description: errorMessage(error),
         action: { label: '重试', onSelect: () => void openTransaction(transactionId) },
       })
+    }
+  }
+
+  async function retryRefundSummary() {
+    if (!selected.value || selected.value.type !== 'expense') return
+    refundLoading.value = true
+    refundError.value = ''
+    try {
+      refundSummary.value = await $fetch<RefundSummary>(`/api/v1/transactions/${selected.value.id}/refund-summary`)
+    } catch (error) {
+      refundError.value = errorMessage(error)
     } finally {
       refundLoading.value = false
     }
@@ -168,7 +189,9 @@ export function createLedgerWorkspace() {
     selected,
     refundSummary,
     refundLoading,
+    refundError,
     transactionEditor,
+    editorBusy,
     resourceEditor,
     confirmation,
     actionError,
@@ -179,6 +202,7 @@ export function createLedgerWorkspace() {
     refreshWorkspace,
     saved,
     openTransaction,
+    retryRefundSummary,
     deleteResource,
     createCategory,
     voidSelected,
