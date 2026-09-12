@@ -4,9 +4,6 @@ import { APP_ROUTES, appRoute } from '~/constants/navigation'
 import type { ThemePreference } from '~/constants/appearance'
 import { ledgerWorkspaceKey } from '~/composables/useLedgerWorkspace'
 import { MESSAGE_ICONS, type AppMessage } from '~/utils/messages'
-import { kindLabels } from '~/types/ledger'
-import { localInput, money } from '~/utils/money'
-import { accountNames, signedAmount } from '~/utils/transactionDisplay'
 
 const route = useRoute()
 const workspace = createLedgerWorkspace()
@@ -193,7 +190,21 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
       </UDashboardPanel>
     </UDashboardGroup>
 
-    <UModal :open="!!workspace.transactionEditor.value" :dismissible="true" title="交易表单" @update:open="value => { if (!value) workspace.transactionEditor.value = null }">
+    <TransactionDetailDrawer
+      :transaction="workspace.selected.value"
+      :refund-summary="workspace.refundSummary.value"
+      :refund-loading="workspace.refundLoading.value"
+      :refund-error="workspace.refundError.value"
+      :modal="!workspace.transactionEditor.value && !workspace.confirmation.value"
+      @close="workspace.selected.value = null"
+      @edit="transaction => { workspace.transactionEditor.value = { editing: transaction } }"
+      @refund="transaction => { workspace.transactionEditor.value = { refund: transaction } }"
+      @void="workspace.voidSelected"
+      @retry-refund="workspace.retryRefundSummary"
+      @open-original="workspace.openTransaction"
+    />
+
+    <UModal :open="!!workspace.transactionEditor.value" :dismissible="!workspace.editorBusy.value" title="交易表单" @update:open="value => { if (!value && !workspace.editorBusy.value) workspace.transactionEditor.value = null }">
       <template #content>
         <TransactionEditor
           v-if="workspace.transactionEditor.value"
@@ -203,6 +214,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
           :tags="workspace.tags.value"
           :refund-summary="workspace.refundSummary.value"
           @close="workspace.transactionEditor.value = null"
+          @busy="workspace.editorBusy.value = $event"
           @saved="workspace.saved"
         />
       </template>
@@ -216,31 +228,6 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
           @close="workspace.resourceEditor.value = null"
           @saved="workspace.saved"
         />
-      </template>
-    </UModal>
-    <UModal :open="!!workspace.selected.value && !workspace.transactionEditor.value && !workspace.confirmation.value" title="交易详情" @update:open="value => { if (!value) workspace.selected.value = null }">
-      <template #body>
-        <template v-if="workspace.selected.value">
-          <div class="detail-amount">{{ signedAmount(workspace.selected.value) }}<span class="status-dot">{{ workspace.selected.value.isVoid ? '已作废' : '有效' }}</span></div>
-          <dl class="mvp-detail">
-            <dt>类型</dt><dd>{{ kindLabels[workspace.selected.value.type] }}</dd>
-            <dt>说明</dt><dd>{{ workspace.selected.value.description || '无' }}</dd>
-            <dt>账户</dt><dd>{{ accountNames(workspace.selected.value) }}</dd>
-            <dt>分类</dt><dd>{{ workspace.selected.value.category?.name || '不适用' }}</dd>
-            <dt>发生时间</dt><dd>{{ localInput(workspace.selected.value.occurredAt).replace('T', ' ') }}（上海）</dd>
-            <dt>标签</dt><dd>{{ workspace.selected.value.tags.map(tag => tag.name).join('、') || '无' }}</dd>
-            <template v-if="workspace.selected.value.voidedAt"><dt>作废时间</dt><dd>{{ localInput(workspace.selected.value.voidedAt).replace('T', ' ') }}</dd></template>
-          </dl>
-          <p v-if="workspace.selected.value.type === 'expense'" class="info-strip">
-            {{ workspace.refundLoading.value ? '正在读取退款额度…' : `已退 ${money(workspace.refundSummary.value?.refundedAmountMinor || 0)} · 剩余可退 ${money(workspace.refundSummary.value?.remainingRefundableAmountMinor || 0)}` }}
-          </p>
-          <button v-if="workspace.selected.value.refundOfTransactionId" class="text-link" @click="workspace.openTransaction(workspace.selected.value.refundOfTransactionId)">查看原支出 →</button>
-          <div v-if="!workspace.selected.value.isVoid" class="composer-actions">
-            <UButton label="编辑交易" color="neutral" @click="workspace.transactionEditor.value = { editing: workspace.selected.value }" />
-            <UButton v-if="workspace.selected.value.type === 'expense'" label="申请退款" :disabled="workspace.refundLoading.value || !workspace.refundSummary.value?.canRefund" @click="workspace.transactionEditor.value = { refund: workspace.selected.value }" />
-            <UButton label="作废交易" color="error" variant="soft" @click="workspace.voidSelected" />
-          </div>
-        </template>
       </template>
     </UModal>
     <UModal :open="!!workspace.confirmation.value" :dismissible="!workspace.busy.value" :title="workspace.confirmation.value?.title" @update:open="value => { if (!value && !workspace.busy.value) workspace.confirmation.value = null }">

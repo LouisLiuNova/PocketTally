@@ -15,6 +15,11 @@ async function saveDialog(page: Page, label: string) {
   await activate(page.getByRole('dialog').getByRole('button', { name: label, exact: true }))
 }
 
+async function selectNuxtUiOption(page: Page, label: string, option: string) {
+  await page.getByRole('dialog').last().getByLabel(label, { exact: true }).click()
+  await page.getByRole('option', { name: option, exact: true }).click()
+}
+
 test('纯键盘完成核心记账、退款作废、筛选和统计下钻', async ({ page }) => {
   const suffix = Date.now().toString()
   const wallet = '键盘钱包' + suffix
@@ -41,8 +46,8 @@ test('纯键盘完成核心记账、退款作废、筛选和统计下钻', async
   await expect(page.getByText(category, { exact: true })).toBeVisible()
 
   await activate(page.getByRole('button', { name: '记一笔', exact: true }))
-  await page.getByRole('combobox', { name: '交易类型', exact: true }).selectOption('balance_adjustment')
-  await page.getByRole('combobox', { name: '账户', exact: true }).selectOption({ label: wallet + ' · ¥0.00' })
+  await selectNuxtUiOption(page, '交易类型', '调账')
+  await selectNuxtUiOption(page, '账户', wallet + ' · ¥0.00')
   await typeText(page.getByLabel('金额（元）', { exact: true }), '1000')
   await typeText(page.getByLabel('说明', { exact: true }), adjustment)
   await saveDialog(page, '保存交易')
@@ -50,8 +55,8 @@ test('纯键盘完成核心记账、退款作废、筛选和统计下钻', async
 
   await activate(page.getByRole('button', { name: '记一笔', exact: true }))
   await typeText(page.getByLabel('金额（元）', { exact: true }), '80')
-  await page.getByRole('combobox', { name: '账户', exact: true }).selectOption({ label: wallet + ' · ¥1,000.00' })
-  await page.getByRole('combobox', { name: '分类', exact: true }).selectOption({ label: category })
+  await selectNuxtUiOption(page, '账户', wallet + ' · ¥1,000.00')
+  await selectNuxtUiOption(page, '分类', category)
   await typeText(page.getByLabel('说明', { exact: true }), expense)
   await saveDialog(page, '保存交易')
   await expect(page.getByRole('button', { name: '保存交易', exact: true })).toBeHidden()
@@ -81,7 +86,7 @@ test('纯键盘完成核心记账、退款作废、筛选和统计下钻', async
   await expect(page.getByText('已作废', { exact: true })).toBeVisible()
 
   await page.waitForTimeout(250)
-  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: '关闭交易详情', exact: true }).click()
   await expect(page.getByRole('dialog')).toBeHidden()
   await page.getByLabel('搜索交易').fill('')
   await page.getByLabel('状态筛选').selectOption('voided')

@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 
 async function selectNuxtUiOption(page: Page, label: string, option: string) {
-  await page.getByLabel(label, { exact: true }).click()
+  await page.getByRole('dialog').last().getByLabel(label, { exact: true }).click()
   await page.getByRole('option', { name: option, exact: true }).click()
 }
 
@@ -36,19 +36,21 @@ test('真实账本：资源、收支、转账、调账、退款、作废和持�
   await expect(page.getByText(tag, { exact: true })).toBeVisible()
   async function create(kind: string, amount: string, description: string) {
     await page.getByRole('button', { name: '记一笔', exact: true }).click()
-    await page.getByRole('combobox', { name: '交易类型', exact: true }).selectOption(kind)
+    const kindLabels: Record<string, string> = { expense: '支出', income: '收入', transfer: '转账', balance_adjustment: '调账' }
+    await selectNuxtUiOption(page, '交易类型', kindLabels[kind]!)
     await page.getByLabel('金额（元）', { exact: true }).fill(amount)
     await page.getByLabel('说明', { exact: true }).fill(description)
     if (kind === 'income') {
-      await page.getByRole('combobox', { name: '收款账户', exact: true }).selectOption({ label: wallet })
-      await page.getByRole('combobox', { name: '分类', exact: true }).selectOption({ label: income })
+      await selectNuxtUiOption(page, '收款账户', wallet)
+      await selectNuxtUiOption(page, '分类', income)
     } else if (kind === 'transfer') {
-      await page.getByRole('combobox', { name: '转出账户', exact: true }).selectOption({ label: `${wallet} · ¥1,030.00` })
-      await page.getByRole('combobox', { name: '转入账户', exact: true }).selectOption({ label: bank })
+      await selectNuxtUiOption(page, '转出账户', `${wallet} · ¥1,030.00`)
+      await selectNuxtUiOption(page, '转入账户', bank)
     } else {
-      const option = await page.getByRole('combobox', { name: '账户', exact: true }).locator('option').allTextContents()
-      await page.getByRole('combobox', { name: '账户', exact: true }).selectOption({ label: option.find(v => v.startsWith(wallet))! })
-      if (kind === 'expense') await page.getByRole('combobox', { name: '分类', exact: true }).selectOption({ label: expense })
+      await page.getByRole('dialog').last().getByLabel('账户', { exact: true }).click()
+      const options = await page.getByRole('option').allTextContents()
+      await page.getByRole('option', { name: options.find(value => value.startsWith(wallet))!, exact: true }).click()
+      if (kind === 'expense') await selectNuxtUiOption(page, '分类', expense)
     }
     if (kind === 'expense') await page.getByLabel(tag, { exact: true }).check()
     await page.getByRole('button', { name: '保存交易', exact: true }).click()
@@ -76,13 +78,13 @@ test('真实账本：资源、收支、转账、调账、退款、作废和持�
   await page.getByRole('button', { name: '确认操作', exact: true }).click()
   await expect(page.getByRole('alert')).toContainText('退款')
   await page.getByRole('button', { name: '取消', exact: true }).click()
-  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: '关闭交易详情', exact: true }).click()
   await page.getByLabel('搜索交易').fill(`退款${suffix}`)
   await page.getByRole('button').filter({ hasText: `退款${suffix}` }).click()
   await page.getByRole('button', { name: '作废交易', exact: true }).click()
   await page.getByRole('button', { name: '确认操作', exact: true }).click()
   await expect(page.getByText('已作废', { exact: true })).toBeVisible()
-  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: '关闭交易详情', exact: true }).click()
   await create('transfer', '100', `转账${suffix}`)
   await page.getByRole('link', { name: '统计分析', exact: true }).click()
   await expect(page.getByText('普通收入', { exact: true })).toBeVisible()
