@@ -88,7 +88,8 @@ function chooseFromCrosshair(_x: number | Date | undefined, _datum: CashFlowChar
   if (index !== undefined) selectIndex(index)
 }
 
-function tooltipContent(row: CashFlowChartRow) {
+function tooltipContent(value: CashFlowChartRow | { datum: CashFlowChartRow }) {
+  const row = 'datum' in value ? value.datum : value
   const element = document.createElement('div')
   element.className = 'cash-flow-tooltip'
   element.innerHTML = `<strong>${bucketDateFormat(props.granularity, row.startAt, row.endAt)}</strong><span>收入 ${money(row.incomeAmountMinor)}</span><span>退款流入 ${money(row.refundAmountMinor)}</span><span>支出流出 ${money(row.expenseAmountMinor)}</span><span>净现金流 ${money(row.netCashFlowMinor)}</span>`

@@ -178,9 +178,8 @@ body { background: var(--pt-surface-page); color: var(--ui-text); }
 .transaction-summary span, .transaction-summary p { color: var(--pt-on-primary-container); opacity: .8; }
 .ledger-row:hover, .mvp-transaction:hover { background: var(--ui-bg-muted); }
 
-.trend-track { background: var(--ui-bg-muted); }
-.trend-track i, .income-bar, .income-dot, .cash-in { background: var(--pt-chart-income); }
-.expense-track i, .expense-bar, .expense-dot, .cash-out { background: var(--pt-chart-expense); }
+.income-bar, .income-dot, .cash-in { background: var(--pt-chart-income); }
+.expense-bar, .expense-dot, .cash-out { background: var(--pt-chart-expense); }
 .transaction-icon.blue { background: var(--pt-info-container); color: var(--pt-on-info-container); }
 .transaction-icon.emerald { background: var(--pt-success-container); color: var(--pt-on-success-container); }
 .transaction-icon.amber { background: var(--pt-warning-container); color: var(--pt-on-warning-container); }
