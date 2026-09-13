@@ -3,6 +3,46 @@ import { assertDialogWithinViewport, assertNoHorizontalOverflow, assertNoPageErr
 import { seedDesktopLedger } from './helpers/ledger-fixtures'
 
 test.describe('Chromium 桌面兼容性矩阵', () => {
+  test('窄窗口中的交易与资源表单保留间距、滚动区和操作栏', async ({ page }) => {
+    await page.setViewportSize({ width: 729, height: 480 })
+    await page.goto('/')
+    await expect(page.getByRole('button', { name: '记一笔', exact: true })).toBeEnabled()
+
+    const assertEditorFrame = async (saveLabel: string) => {
+      const dialog = page.getByRole('dialog').last()
+      const form = dialog.locator('.modal-editor-form')
+      const body = form.locator('.modal-editor-body')
+      await assertDialogWithinViewport(page)
+      await expect(form.getByRole('heading')).toBeVisible()
+      await expect(form.getByRole('button', { name: saveLabel, exact: true })).toBeVisible()
+      const layout = await form.evaluate(element => {
+        const dialogRect = element.parentElement!.getBoundingClientRect()
+        const headingRect = element.querySelector('h2')!.getBoundingClientRect()
+        const bodyElement = element.querySelector('.modal-editor-body') as HTMLElement
+        const actionsRect = element.querySelector('.modal-editor-actions')!.getBoundingClientRect()
+        return {
+          headingInset: headingRect.left - dialogRect.left,
+          actionsBottomGap: dialogRect.bottom - actionsRect.bottom,
+          bodyOverflowY: getComputedStyle(bodyElement).overflowY,
+          bodyScrolls: bodyElement.scrollHeight > bodyElement.clientHeight,
+        }
+      })
+      expect(layout.headingInset).toBeGreaterThanOrEqual(16)
+      expect(layout.actionsBottomGap).toBeGreaterThanOrEqual(0)
+      expect(layout.bodyOverflowY).toBe('auto')
+      expect(layout.bodyScrolls).toBe(true)
+      await expect(body).toBeVisible()
+    }
+
+    await page.getByRole('button', { name: '记一笔', exact: true }).click()
+    await assertEditorFrame('保存交易')
+    await page.getByRole('button', { name: '关闭', exact: true }).click()
+
+    await page.goto('/accounts')
+    await page.getByRole('button', { name: '新建账户', exact: true }).click()
+    await assertEditorFrame('保存')
+  })
+
   test('空账本和六个主页面无布局阻断', async ({ page }) => {
     const errors: string[] = []
     page.on('pageerror', error => errors.push(error.message))

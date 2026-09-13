@@ -74,8 +74,9 @@ async function save() {
 </script>
 
 <template>
-  <UForm :state="form" class="w-full space-y-4 p-4 pb-5 sm:p-6 sm:pb-7" :disabled="busy" :aria-busy="busy" @submit="save">
-    <header class="flex items-start justify-between gap-4"><h2>{{ editorTitle }}</h2><UButton color="neutral" variant="ghost" icon="i-lucide-x" aria-label="关闭" :disabled="busy" @click="emit('close')" /></header>
+  <UForm :state="form" class="modal-editor-form resource-editor" :disabled="busy" :aria-busy="busy" @submit="save">
+    <header class="modal-editor-header"><h2>{{ editorTitle }}</h2><UButton color="neutral" variant="ghost" icon="i-lucide-x" aria-label="关闭" :disabled="busy" @click="emit('close')" /></header>
+    <div class="modal-editor-body resource-editor-body">
     <UFormField name="name" label="名称" required>
       <UInput id="resource-name" v-model="form.name" autofocus class="w-full" />
     </UFormField>
@@ -104,7 +105,8 @@ async function save() {
     <UFormField name="description" label="说明">
       <UTextarea v-model="form.description" :rows="3" class="w-full" />
     </UFormField>
-    <UAlert v-if="error" color="error" variant="soft" icon="i-lucide-circle-alert" title="保存失败" :description="error" role="alert" aria-live="assertive" />
-    <div class="flex items-center justify-between gap-3 pt-2"><span class="text-sm text-dimmed">名称不能重复</span><UButton type="submit" label="保存" :loading="busy" :aria-busy="busy" :disabled="busy" /></div>
+      <UAlert v-if="error" color="error" variant="soft" icon="i-lucide-circle-alert" title="保存失败" :description="error" role="alert" aria-live="assertive" />
+    </div>
+    <div class="modal-editor-actions"><span class="text-sm text-dimmed">名称不能重复</span><UButton type="submit" label="保存" :loading="busy" :aria-busy="busy" :disabled="busy" /></div>
   </UForm>
 </template>
