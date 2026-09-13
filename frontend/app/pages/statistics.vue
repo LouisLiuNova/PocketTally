@@ -148,7 +148,10 @@ function showTransactions(start: string, end: string) {
   const state = defaultTransactionState(today)
   state.start = start
   state.end = end
-  return navigateTo({ path: '/transactions', query: compactQuery(serializeTransactionState(state, today)) })
+  return navigateTo({
+    path: '/transactions',
+    query: { ...compactQuery(serializeTransactionState(state, today)), start: state.start, end: state.end },
+  })
 }
 
 function showCalendarDay(date: string) {

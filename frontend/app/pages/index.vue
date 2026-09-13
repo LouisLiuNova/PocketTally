@@ -62,7 +62,10 @@ function showCashBucket(startAt: string, endAt: string) {
   const state = defaultTransactionState(today)
   state.start = localInput(startAt).slice(0, 10)
   state.end = localInput(endAt).slice(0, 10)
-  return navigateTo({ path: '/transactions', query: serializeTransactionState(state, today) })
+  return navigateTo({
+    path: '/transactions',
+    query: { ...serializeTransactionState(state, today), start: state.start, end: state.end },
+  })
 }
 
 onMounted(() => void loadDashboard())

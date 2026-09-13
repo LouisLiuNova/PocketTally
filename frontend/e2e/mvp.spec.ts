@@ -108,7 +108,7 @@ test('真实账本：资源、收支、转账、调账、退款、作废和持�
   await page.getByRole('button', { name: '关闭交易详情', exact: true }).click()
   await create('transfer', '100', `转账${suffix}`)
   await page.getByRole('link', { name: '统计分析', exact: true }).click()
-  await expect(page.getByText('普通收入', { exact: true })).toBeVisible()
+  await expect(page.locator('.statistics-metrics').getByText('普通收入', { exact: true })).toBeVisible()
   await expect(page.locator('.category-stat').filter({ hasText: expense })).toContainText('¥70.00')
   await page.locator('.category-stat').filter({ hasText: expense }).click()
   await expect(page.locator('.drill-panel')).toContainText('净支出 ¥70.00')
