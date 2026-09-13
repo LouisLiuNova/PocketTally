@@ -25,6 +25,7 @@ import {
 } from '~/utils/routeQuery'
 import { localInput, money } from '~/utils/money'
 import { cashFlowSummary } from '~/utils/cashFlowTrend'
+import type { StatisticsSnapshot } from '~/types/statisticsWorkspace'
 
 const route = useRoute()
 const workspace = useLedgerWorkspace()
@@ -41,6 +42,7 @@ const customError = ref('')
 const customStartDraft = ref('')
 const customEndDraft = ref('')
 const loadedData = ref(false)
+const snapshotState = ref<StatisticsRouteState | null>(null)
 const drill = ref<{ title: string; data: ExpenseTransactionPage } | null>(null)
 const drillLoading = ref(false)
 let requestId = 0
@@ -58,6 +60,20 @@ const hasAnalysisData = computed(() => {
     || !!categoryStatistics.value?.items.some(item => item.amountMinor || item.directAmountMinor)
     || !!tagStatistics.value?.items.some(item => item.netExpenseMinor)
 })
+const snapshotPeriod = computed(() => snapshotState.value ? statisticsPeriod(snapshotState.value, today) : null)
+const showingPreviousSnapshot = computed(() => loadedData.value && !!snapshotState.value && JSON.stringify(snapshotState.value) !== JSON.stringify(routeState.value))
+const presetItems = [
+  { value: 'this_month', label: '本月' },
+  { value: 'last_month', label: '上月' },
+  { value: 'year', label: '今年' },
+  { value: 'twelve_months', label: '近 12 个月' },
+  { value: 'custom', label: '自定义' },
+]
+const granularityItems = [
+  { value: 'day', label: '日' },
+  { value: 'week', label: '周' },
+  { value: 'month', label: '月' },
+]
 
 function formatChange(value: number | null) {
   return value === null ? '上期为 0，暂无百分比' : `${value >= 0 ? '+' : ''}${value.toFixed(1)}% 较上期`
@@ -123,6 +139,7 @@ async function loadStatistics(state = routeState.value) {
     categoryStatistics.value = categoryData
     tagStatistics.value = tagData
     calendar.value = calendarData
+    snapshotState.value = state
     loadedData.value = true
   } catch (error) {
     if (currentRequest === requestId) queryError.value = errorMessage(error)
@@ -189,21 +206,37 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="page-flow page-flow--statistics">
-  <div class="view-toolbar analytics-toolbar">
-    <div class="period-tabs">
-      <button v-for="item in [{ value: 'this_month', label: '本月' }, { value: 'last_month', label: '上月' }, { value: 'year', label: '今年' }, { value: 'twelve_months', label: '近 12 个月' }, { value: 'custom', label: '自定义' }]" :key="item.value" :class="{ active: routeState.preset === item.value }" @click="setPreset(item.value as StatisticsPreset)">{{ item.label }}</button>
+  <div class="page-flow page-flow--statistics" :aria-busy="loading">
+  <section class="statistics-toolbar" aria-label="统计筛选">
+    <div class="statistics-toolbar__periods">
+      <p class="mb-2 text-sm font-medium text-highlighted">时间范围</p>
+      <UTabs :items="presetItems" :model-value="routeState.preset" activation-mode="manual" :content="false" @update:model-value="value => setPreset(value as StatisticsPreset)" />
     </div>
-    <template v-if="routeState.preset === 'custom'">
-      <label>开始<input v-model="customStartDraft" type="date" @change="commitCustomDates"></label>
-      <label>结束（不含）<input v-model="customEndDraft" type="date" @change="commitCustomDates"></label>
-    </template>
-    <label>粒度<select :value="routeState.granularity" @change="updateRoute({ granularity: selectValue($event) as StatisticsRouteState['granularity'] })"><option value="day">日</option><option value="week">周</option><option value="month">月</option></select></label>
-    <label>父分类<select :value="routeState.parentCategoryId" @change="updateRoute({ parentCategoryId: selectValue($event) })"><option value="">全部一级分类</option><option v-for="category in expenseCategories" :key="category.id" :value="category.id">{{ category.name }}</option></select></label>
+    <div class="statistics-toolbar__controls">
+      <UFormField v-if="routeState.preset === 'custom'" label="开始日期" name="statistics-start">
+        <UInput id="statistics-start" v-model="customStartDraft" type="date" />
+      </UFormField>
+      <UFormField v-if="routeState.preset === 'custom'" label="结束日期（不含）" name="statistics-end">
+        <UInput id="statistics-end" v-model="customEndDraft" type="date" />
+      </UFormField>
+      <UButton v-if="routeState.preset === 'custom'" color="neutral" variant="outline" label="应用日期" @click="commitCustomDates" />
+      <UFormField label="粒度" name="statistics-granularity">
+        <USelect :model-value="routeState.granularity" :items="granularityItems" @update:model-value="value => updateRoute({ granularity: value as StatisticsRouteState['granularity'] })" />
+      </UFormField>
+      <UFormField label="父分类" name="statistics-parent-category">
+        <USelect :model-value="routeState.parentCategoryId" :items="[{ value: '', label: '全部一级分类' }, ...expenseCategories.map(category => ({ value: category.id, label: category.name }))]" @update:model-value="value => updateRoute({ parentCategoryId: String(value || '') })" />
+      </UFormField>
+    </div>
+  </section>
+  <UAlert v-if="customError" color="error" variant="soft" icon="i-lucide-circle-alert" title="日期范围无效" :description="customError" role="alert" />
+  <UAlert v-if="queryError" color="error" variant="soft" icon="i-lucide-circle-alert" title="统计读取失败" :description="snapshotPeriod ? `${queryError} 当前仍显示 ${snapshotPeriod.startDate} 至 ${snapshotPeriod.endDate} 的结果。` : queryError" role="alert">
+    <template #actions><UButton label="重试" color="error" variant="soft" :loading="loading" @click="loadStatistics" /></template>
+  </UAlert>
+  <UAlert v-if="showingPreviousSnapshot && !queryError" color="info" variant="soft" icon="i-lucide-refresh-cw" title="正在更新统计" description="筛选条件已更新，当前暂显示上一组完整结果。" role="status" />
+  <div v-if="loading && !loadedData" class="statistics-loading" role="status" aria-label="正在读取统计分析">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3"><USkeleton v-for="index in 3" :key="index" class="h-32 w-full" /></div>
+    <USkeleton class="h-80 w-full" />
   </div>
-  <p v-if="customError" role="alert" class="error-box">{{ customError }}</p>
-  <div v-if="queryError" role="alert" class="error-box">{{ queryError }}<UButton label="重试" color="neutral" @click="loadStatistics" /></div>
-  <p v-if="loading && !loadedData" role="status" class="empty-state">正在读取统计分析…</p>
 
   <section v-if="overview" class="metric-grid statistics-metrics">
     <article class="metric-card feature"><span>实际净现金流</span><strong>{{ money(overview.netCashFlow.currentAmountMinor) }}</strong><p>{{ formatChange(overview.netCashFlow.changePercent) }}</p></article>
@@ -257,3 +290,46 @@ onBeforeUnmount(() => {
   </template>
   </div>
 </template>
+
+<style scoped>
+.statistics-toolbar {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--ui-border-muted);
+  border-radius: 12px;
+  background: var(--ui-bg-elevated);
+}
+
+.statistics-toolbar__periods,
+.statistics-toolbar__controls {
+  min-width: 0;
+}
+
+.statistics-toolbar__controls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.statistics-toolbar__controls > [data-slot="form-field"] {
+  min-width: 150px;
+}
+
+.statistics-loading {
+  display: grid;
+  gap: 20px;
+}
+
+@media (min-width: 900px) {
+  .statistics-toolbar {
+    grid-template-columns: minmax(280px, 1fr) auto;
+    align-items: end;
+  }
+
+  .statistics-toolbar__controls {
+    justify-content: flex-end;
+  }
+}
+</style>
