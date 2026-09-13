@@ -98,10 +98,10 @@ test('纯键盘完成核心记账、退款作废、筛选和统计下钻', async
   await expect(page.getByRole('button').filter({ hasText: refund }).first()).toContainText('已作废')
 
   await activate(page.getByRole('link', { name: '统计分析', exact: true }))
-  const categoryStat = page.locator('.category-stat').filter({ hasText: category }).first()
-  await expect(categoryStat).toBeVisible()
-  await activate(categoryStat)
-  await expect(page.locator('.drill-panel')).toContainText('净支出')
+  const categoryRow = page.locator('[data-statistics-section="category"] tr').filter({ hasText: category }).first()
+  await expect(categoryRow).toBeVisible()
+  await activate(categoryRow.getByRole('button', { name: '查看明细', exact: true }))
+  await expect(page.getByRole('dialog')).toContainText('净支出')
 })
 
 test('弹窗焦点约束与恢复、方向键 Tab 和失败重复提交反馈', async ({ page }) => {

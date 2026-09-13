@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { TableColumn } from '@nuxt/ui'
 import type {
   CalendarStatistics,
   CashFlow,
@@ -8,6 +9,7 @@ import type {
   Overview,
   TagStatistics,
 } from '~/types/ledger'
+import type { StatisticsDrilldownState } from '~/types/statisticsWorkspace'
 import { errorMessage } from '~/composables/useLedger'
 import {
   compactQuery,
@@ -41,8 +43,8 @@ const customError = ref('')
 const customStartDraft = ref('')
 const customEndDraft = ref('')
 const loadedData = ref(false)
-const drill = ref<{ title: string; data: ExpenseTransactionPage } | null>(null)
-const drillLoading = ref(false)
+const snapshotState = ref<StatisticsRouteState | null>(null)
+const drill = ref<StatisticsDrilldownState | null>(null)
 let requestId = 0
 let stopRouteWatch: (() => void) | undefined
 
@@ -58,6 +60,45 @@ const hasAnalysisData = computed(() => {
     || !!categoryStatistics.value?.items.some(item => item.amountMinor || item.directAmountMinor)
     || !!tagStatistics.value?.items.some(item => item.netExpenseMinor)
 })
+const snapshotPeriod = computed(() => snapshotState.value ? statisticsPeriod(snapshotState.value, today) : null)
+const showingPreviousSnapshot = computed(() => loadedData.value && !!snapshotState.value && JSON.stringify(snapshotState.value) !== JSON.stringify(routeState.value))
+const calendarCells = computed(() => {
+  const days = calendar.value?.days || []
+  const first = days[0]
+  if (!first) return []
+  const weekday = new Date(`${first.date}T00:00:00Z`).getUTCDay()
+  const offset = weekday === 0 ? 6 : weekday - 1
+  return [...Array.from({ length: offset }, () => null), ...days]
+})
+const presetItems = [
+  { value: 'this_month', label: '本月' },
+  { value: 'last_month', label: '上月' },
+  { value: 'year', label: '今年' },
+  { value: 'twelve_months', label: '近 12 个月' },
+  { value: 'custom', label: '自定义' },
+]
+const granularityItems = [
+  { value: 'day', label: '日' },
+  { value: 'week', label: '周' },
+  { value: 'month', label: '月' },
+]
+const weekdayLabels = ['一', '二', '三', '四', '五', '六', '日']
+const expenseColumns: TableColumn<Expenses['buckets'][number]>[] = [
+  { accessorKey: 'startAt', header: '时间桶' },
+  { accessorKey: 'netExpenseMinor', header: '净支出' },
+  { accessorKey: 'cumulativeNetExpenseMinor', header: '累计' },
+  { accessorKey: 'actions', header: '操作' },
+]
+const categoryColumns: TableColumn<CategoryStatistics['items'][number]>[] = [
+  { accessorKey: 'name', header: '分类' },
+  { accessorKey: 'amountMinor', header: '净额' },
+  { accessorKey: 'actions', header: '操作' },
+]
+const tagColumns: TableColumn<TagStatistics['items'][number]>[] = [
+  { accessorKey: 'name', header: 'Tag' },
+  { accessorKey: 'netExpenseMinor', header: '净支出' },
+  { accessorKey: 'actions', header: '操作' },
+]
 
 function formatChange(value: number | null) {
   return value === null ? '上期为 0，暂无百分比' : `${value >= 0 ? '+' : ''}${value.toFixed(1)}% 较上期`
@@ -123,6 +164,7 @@ async function loadStatistics(state = routeState.value) {
     categoryStatistics.value = categoryData
     tagStatistics.value = tagData
     calendar.value = calendarData
+    snapshotState.value = state
     loadedData.value = true
   } catch (error) {
     if (currentRequest === requestId) queryError.value = errorMessage(error)
@@ -164,18 +206,29 @@ function showCashBucket(startAt: string, endAt: string) {
 
 async function openExpenseDrill(title: string, query: Record<string, string | boolean>) {
   const currentPeriod = period.value
-  drillLoading.value = true
-  queryError.value = ''
+  drill.value = { title, query, data: null, error: '', loading: true }
   try {
     const data = await $fetch<ExpenseTransactionPage>('/api/v1/statistics/expense-transactions', {
       query: { ...currentPeriod, page: 1, pageSize: 100, ...query },
     })
-    drill.value = { title, data }
+    if (drill.value?.title === title) drill.value = { title, query, data, error: '', loading: false }
   } catch (error) {
-    queryError.value = errorMessage(error)
-  } finally {
-    drillLoading.value = false
+    if (drill.value?.title === title) drill.value = { title, query, data: null, error: errorMessage(error), loading: false }
   }
+}
+
+function closeDrill() {
+  drill.value = null
+}
+
+function retryDrill() {
+  if (!drill.value) return
+  void openExpenseDrill(drill.value.title, drill.value.query)
+}
+
+function openDrillTransaction(id: string) {
+  closeDrill()
+  void nextTick(() => workspace.openTransaction(id))
 }
 
 onMounted(() => {
@@ -189,71 +242,179 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="page-flow page-flow--statistics">
-  <div class="view-toolbar analytics-toolbar">
-    <div class="period-tabs">
-      <button v-for="item in [{ value: 'this_month', label: '本月' }, { value: 'last_month', label: '上月' }, { value: 'year', label: '今年' }, { value: 'twelve_months', label: '近 12 个月' }, { value: 'custom', label: '自定义' }]" :key="item.value" :class="{ active: routeState.preset === item.value }" @click="setPreset(item.value as StatisticsPreset)">{{ item.label }}</button>
+  <div class="page-flow page-flow--statistics" :aria-busy="loading">
+  <section class="statistics-toolbar" aria-label="统计筛选">
+    <div class="statistics-toolbar__periods">
+      <p class="mb-2 text-sm font-medium text-highlighted">时间范围</p>
+      <UTabs :items="presetItems" :model-value="routeState.preset" activation-mode="manual" :content="false" @update:model-value="value => setPreset(value as StatisticsPreset)" />
     </div>
-    <template v-if="routeState.preset === 'custom'">
-      <label>开始<input v-model="customStartDraft" type="date" @change="commitCustomDates"></label>
-      <label>结束（不含）<input v-model="customEndDraft" type="date" @change="commitCustomDates"></label>
-    </template>
-    <label>粒度<select :value="routeState.granularity" @change="updateRoute({ granularity: selectValue($event) as StatisticsRouteState['granularity'] })"><option value="day">日</option><option value="week">周</option><option value="month">月</option></select></label>
-    <label>父分类<select :value="routeState.parentCategoryId" @change="updateRoute({ parentCategoryId: selectValue($event) })"><option value="">全部一级分类</option><option v-for="category in expenseCategories" :key="category.id" :value="category.id">{{ category.name }}</option></select></label>
+    <div class="statistics-toolbar__controls">
+      <UFormField v-if="routeState.preset === 'custom'" label="开始日期" name="statistics-start">
+        <UInput id="statistics-start" v-model="customStartDraft" type="date" />
+      </UFormField>
+      <UFormField v-if="routeState.preset === 'custom'" label="结束日期（不含）" name="statistics-end">
+        <UInput id="statistics-end" v-model="customEndDraft" type="date" />
+      </UFormField>
+      <UButton v-if="routeState.preset === 'custom'" color="neutral" variant="outline" label="应用日期" @click="commitCustomDates" />
+      <UFormField label="粒度" name="statistics-granularity">
+        <USelect :model-value="routeState.granularity" :items="granularityItems" @update:model-value="value => updateRoute({ granularity: value as StatisticsRouteState['granularity'] })" />
+      </UFormField>
+      <UFormField label="父分类" name="statistics-parent-category">
+        <USelect :model-value="routeState.parentCategoryId || '__all__'" :items="[{ value: '__all__', label: '全部一级分类' }, ...expenseCategories.map(category => ({ value: category.id, label: category.name }))]" @update:model-value="value => updateRoute({ parentCategoryId: value === '__all__' ? '' : String(value || '') })" />
+      </UFormField>
+    </div>
+  </section>
+  <UAlert v-if="customError" color="error" variant="soft" icon="i-lucide-circle-alert" title="日期范围无效" :description="customError" role="alert" />
+  <UAlert v-if="queryError" color="error" variant="soft" icon="i-lucide-circle-alert" title="统计读取失败" :description="snapshotPeriod ? `${queryError} 当前仍显示 ${snapshotPeriod.startDate} 至 ${snapshotPeriod.endDate} 的结果。` : queryError" role="alert">
+    <template #actions><UButton label="重试" color="error" variant="soft" :loading="loading" @click="loadStatistics" /></template>
+  </UAlert>
+  <UAlert v-if="showingPreviousSnapshot && !queryError" color="info" variant="soft" icon="i-lucide-refresh-cw" title="正在更新统计" description="筛选条件已更新，当前暂显示上一组完整结果。" role="status" />
+  <div v-if="loading && !loadedData" class="statistics-loading" role="status" aria-label="正在读取统计分析">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3"><USkeleton v-for="index in 3" :key="index" class="h-32 w-full" /></div>
+    <USkeleton class="h-80 w-full" />
   </div>
-  <p v-if="customError" role="alert" class="error-box">{{ customError }}</p>
-  <div v-if="queryError" role="alert" class="error-box">{{ queryError }}<UButton label="重试" color="neutral" @click="loadStatistics" /></div>
-  <p v-if="loading && !loadedData" role="status" class="empty-state">正在读取统计分析…</p>
 
-  <section v-if="overview" class="metric-grid statistics-metrics">
-    <article class="metric-card feature"><span>实际净现金流</span><strong>{{ money(overview.netCashFlow.currentAmountMinor) }}</strong><p>{{ formatChange(overview.netCashFlow.changePercent) }}</p></article>
-    <article class="metric-card"><span>普通收入</span><strong>{{ money(overview.income.currentAmountMinor) }}</strong><p>{{ formatChange(overview.income.changePercent) }}</p></article>
-    <article class="metric-card"><span>消费净支出</span><strong>{{ money(overview.netExpense.currentAmountMinor) }}</strong><p>{{ formatChange(overview.netExpense.changePercent) }}</p></article>
+  <section v-if="overview" class="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="统计对比摘要">
+    <MetricSummaryCard label="实际净现金流" :value="money(overview.netCashFlow.currentAmountMinor)" :comparison="formatChange(overview.netCashFlow.changePercent)" emphasis icon="i-lucide-arrow-down-up" />
+    <MetricSummaryCard label="普通收入" :value="money(overview.income.currentAmountMinor)" :comparison="formatChange(overview.income.changePercent)" icon="i-lucide-arrow-down-left" />
+    <MetricSummaryCard label="消费净支出" :value="money(overview.netExpense.currentAmountMinor)" :comparison="formatChange(overview.netExpense.changePercent)" icon="i-lucide-arrow-up-right" />
   </section>
 
-  <section v-if="loadedData && !hasAnalysisData" class="panel">
-    <h2>当前筛选范围暂无可分析数据</h2>
-    <p class="hint">可以调整时间范围，或先记录一笔交易后再回来查看变化。</p>
-    <div class="composer-actions"><UButton color="neutral" variant="outline" label="调整范围" @click="navigateTo('/statistics')" /><UButton label="记一笔" icon="i-lucide-plus" @click="workspace.transactionEditor.value = {}" /></div>
-  </section>
+  <UEmpty
+    v-if="loadedData && !hasAnalysisData"
+    icon="i-lucide-chart-no-axes-combined"
+    title="当前筛选范围暂无可分析数据"
+    description="可以调整时间范围，或先记录一笔交易后再回来查看变化。"
+    variant="subtle"
+  >
+    <template #actions>
+      <UButton color="neutral" variant="outline" label="恢复本月" @click="navigateTo('/statistics')" />
+      <UButton label="记一笔" icon="i-lucide-plus" @click="workspace.transactionEditor.value = {}" />
+    </template>
+  </UEmpty>
 
   <template v-if="loadedData && hasAnalysisData">
-    <UPageGrid as="div" class="page-grid analytics-grid">
-      <section class="panel analytics-trend">
-        <div class="panel-head"><h2>现金流趋势</h2><span class="hint">点击时间桶查看流水</span></div>
-        <div class="cash-flow-summary" aria-label="当前范围现金流汇总">
-          <div><span>普通收入</span><strong>{{ money(cashFlowTotals.incomeAmountMinor) }}</strong></div>
-          <div><span>退款流入</span><strong>{{ money(cashFlowTotals.refundAmountMinor) }}</strong></div>
-          <div><span>支出流出</span><strong>{{ money(cashFlowTotals.expenseAmountMinor) }}</strong></div>
-          <div><span>净现金流</span><strong>{{ money(cashFlowTotals.netCashFlowMinor) }}</strong></div>
+    <div class="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-2" aria-label="统计分析区">
+      <UCard data-statistics-section="cash-flow" class="min-w-0 lg:col-span-2" variant="outline">
+        <template #header><div class="flex items-start justify-between gap-4"><div><h2 class="m-0 text-base font-semibold text-highlighted">现金流趋势</h2><p class="mt-1 text-xs text-muted">点击时间桶查看流水</p></div></div></template>
+        <div class="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="当前范围现金流汇总">
+          <div v-for="item in [{ label: '普通收入', value: cashFlowTotals.incomeAmountMinor }, { label: '退款流入', value: cashFlowTotals.refundAmountMinor }, { label: '支出流出', value: cashFlowTotals.expenseAmountMinor }, { label: '净现金流', value: cashFlowTotals.netCashFlowMinor }]" :key="item.label" class="border-l-2 border-primary pl-2"><span class="block text-xs text-muted">{{ item.label }}</span><strong class="mt-1 block tabular-nums">{{ money(item.value) }}</strong></div>
         </div>
-        <p v-if="!cashFlowTotals.formulaMatchesApi" role="alert" class="cash-flow-integrity-warning">现金流净额与分项合计不一致，请重试后再查看。</p>
+        <UAlert v-if="!cashFlowTotals.formulaMatchesApi" class="mt-4" color="error" variant="soft" icon="i-lucide-circle-alert" title="现金流数据不一致" description="净额与分项合计不一致，请重试后再查看。" role="alert" />
         <LazyCashFlowTrend :buckets="cashFlow?.buckets || []" :granularity="routeState.granularity" variant="full" @drilldown="showCashBucket" />
-      </section>
-      <section class="panel analytics-expense">
-        <div class="panel-head"><h2>消费趋势</h2><span class="hint">点击时间桶查看净额明细</span></div>
-        <p v-if="!expenses?.buckets.length" class="empty-state">本期暂无消费</p>
-        <button v-for="item in expenses?.buckets" :key="item.startAt" class="resource-row drill-button" @click="openExpenseDrill(bucketLabel(item.startAt), { startDate: bucketLabel(item.startAt), endDate: bucketLabel(item.endAt) })"><span>{{ bucketLabel(item.startAt) }}</span><span>{{ money(item.netExpenseMinor) }} / 累计 {{ money(item.cumulativeNetExpenseMinor) }}</span></button>
-      </section>
-      <section class="panel analytics-category">
-        <div class="panel-head"><h2>分类分析</h2><button v-if="routeState.parentCategoryId" class="text-link" @click="updateRoute({ parentCategoryId: '' })">返回一级分类</button></div>
-        <p class="hint">退款按原支出日期抵减；点击分类查看净额明细。</p>
-        <button v-for="item in categoryStatistics?.items" :key="item.categoryId" class="category-stat" @click="openExpenseDrill(item.name, { categoryId: item.categoryId, includeDescendants: true })"><span><strong>{{ item.name }}</strong><small>直接 {{ money(item.directAmountMinor) }} · 变化贡献 {{ money(item.changeContributionMinor) }}</small></span><i :style="{ width: `${Math.abs(item.amountMinor) / categoryMax * 100}%` }" /><b>{{ money(item.amountMinor) }}</b></button>
-        <div v-for="parent in categoryStatistics?.items.filter(item => item.children.length)" :key="`${parent.categoryId}-children`" class="child-links"><span>{{ parent.name }} 下钻：</span><button v-for="child in parent.children" :key="child.categoryId" @click="openExpenseDrill(`${parent.name} / ${child.name}`, { categoryId: child.categoryId, includeDescendants: true })">{{ child.name }} {{ money(child.amountMinor) }}</button></div>
-      </section>
-      <section class="panel analytics-tags">
-        <h2>Tag 汇总</h2><p class="hint">一笔交易可完整计入多个 Tag，因此不提供 Tag 合计或占比。</p>
-        <button v-for="item in tagStatistics?.items" :key="item.tagId" class="resource-row drill-button" @click="openExpenseDrill(`Tag：${item.name}`, { tagId: item.tagId })"><span><i class="color-dot" :style="{ background: item.color }" />{{ item.name }}</span><strong>{{ money(item.netExpenseMinor) }}</strong></button>
-      </section>
-      <section class="panel calendar-panel analytics-calendar">
-        <div class="panel-head"><div><h2>收支日历</h2><p class="hint">点击日期查看服务端筛选的当日流水</p></div><label>月份 <input :value="routeState.month" type="month" @change="updateRoute({ month: selectValue($event) })"></label></div>
-        <div class="calendar-grid"><button v-for="day in calendar?.days" :key="day.date" :style="{ '--heat': `${Math.abs(day.netCashFlowMinor) / calendarMax * 18}%` }" @click="showCalendarDay(day.date)"><b>{{ day.date.slice(-2) }}</b><span>{{ money(day.netCashFlowMinor) }}</span><small>入 {{ money(day.incomeAmountMinor + day.refundAmountMinor) }} / 出 {{ money(day.expenseAmountMinor) }}</small></button></div>
-      </section>
-    </UPageGrid>
-    <section v-if="drill || drillLoading" class="panel drill-panel">
-      <div class="panel-head"><h2>{{ drill?.title || '正在读取明细…' }}</h2><button class="text-link" @click="drill = null">关闭</button></div>
-      <template v-if="drill"><p class="hint">原支出 {{ money(drill.data.totals.originalAmountMinor) }} − 有效退款 {{ money(drill.data.totals.refundedAmountMinor) }} = 净支出 {{ money(drill.data.totals.netExpenseMinor) }}；共 {{ drill.data.total }} 笔。</p><button v-for="item in drill.data.items" :key="item.transaction.id" class="mvp-transaction" @click="workspace.openTransaction(item.transaction.id)"><span class="transaction-icon blue">支出</span><span><strong>{{ item.transaction.description || '支出' }}</strong><small>原支出 {{ money(item.originalAmountMinor) }} · 已退 {{ money(item.refundedAmountMinor) }}</small></span><time>{{ localInput(item.transaction.occurredAt).replace('T', ' ') }}</time><b>{{ money(item.netExpenseMinor) }}</b></button></template>
-    </section>
+      </UCard>
+
+      <UCard data-statistics-section="expenses" variant="outline">
+        <template #header><div><h2 class="m-0 text-base font-semibold text-highlighted">消费趋势</h2><p class="mt-1 text-xs text-muted">点击时间桶查看净额明细</p></div></template>
+        <UEmpty v-if="!expenses?.buckets.length" icon="i-lucide-receipt-text" title="本期暂无消费" variant="subtle" />
+        <UTable v-else :data="expenses.buckets" :columns="expenseColumns" caption="消费趋势" :ui="{ td: 'align-middle' }">
+          <template #startAt-cell="{ row }"><span class="whitespace-nowrap">{{ bucketLabel(row.original.startAt) }}</span></template>
+          <template #netExpenseMinor-cell="{ row }"><strong class="tabular-nums">{{ money(row.original.netExpenseMinor) }}</strong></template>
+          <template #cumulativeNetExpenseMinor-cell="{ row }"><span class="tabular-nums text-muted">{{ money(row.original.cumulativeNetExpenseMinor) }}</span></template>
+          <template #actions-cell="{ row }"><UButton color="neutral" variant="ghost" size="sm" label="查看明细" @click="openExpenseDrill(bucketLabel(row.original.startAt), { startDate: bucketLabel(row.original.startAt), endDate: bucketLabel(row.original.endAt) })" /></template>
+        </UTable>
+      </UCard>
+
+      <UCard data-statistics-section="category" variant="outline">
+        <template #header><div class="flex items-start justify-between gap-4"><div><h2 class="m-0 text-base font-semibold text-highlighted">分类分析</h2><p class="mt-1 text-xs text-muted">退款按原支出日期抵减</p></div><UButton v-if="routeState.parentCategoryId" color="neutral" variant="link" label="返回一级分类" @click="updateRoute({ parentCategoryId: '' })" /></div></template>
+        <UTable :data="categoryStatistics?.items || []" :columns="categoryColumns" caption="分类分析" :ui="{ td: 'align-middle' }" empty="暂无分类数据">
+          <template #name-cell="{ row }"><div class="min-w-0"><strong class="block text-highlighted">{{ row.original.name }}</strong><small class="block text-muted">直接 {{ money(row.original.directAmountMinor) }} · 变化贡献 {{ money(row.original.changeContributionMinor) }}</small></div></template>
+          <template #amountMinor-cell="{ row }"><strong class="tabular-nums">{{ money(row.original.amountMinor) }}</strong></template>
+          <template #actions-cell="{ row }"><UButton color="neutral" variant="ghost" size="sm" label="查看明细" @click="openExpenseDrill(row.original.name, { categoryId: row.original.categoryId, includeDescendants: true })" /></template>
+        </UTable>
+        <div v-for="parent in categoryStatistics?.items.filter(item => item.children.length)" :key="`${parent.categoryId}-children`" class="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted"><span>{{ parent.name }} 下钻：</span><UButton v-for="child in parent.children" :key="child.categoryId" color="neutral" variant="outline" size="xs" :label="`${child.name} ${money(child.amountMinor)}`" @click="openExpenseDrill(`${parent.name} / ${child.name}`, { categoryId: child.categoryId, includeDescendants: true })" /></div>
+      </UCard>
+
+      <UCard data-statistics-section="tags" variant="outline">
+        <template #header><div><h2 class="m-0 text-base font-semibold text-highlighted">Tag 汇总</h2><p class="mt-1 text-xs text-muted">一笔交易可完整计入多个 Tag，不提供 Tag 合计或占比。</p></div></template>
+        <UTable :data="tagStatistics?.items || []" :columns="tagColumns" caption="Tag 汇总" :ui="{ td: 'align-middle' }" empty="暂无 Tag 数据">
+          <template #name-cell="{ row }"><span class="inline-flex items-center gap-2"><i class="size-2 rounded-full" :style="{ background: row.original.color }" aria-hidden="true" />{{ row.original.name }}</span></template>
+          <template #netExpenseMinor-cell="{ row }"><strong class="tabular-nums">{{ money(row.original.netExpenseMinor) }}</strong></template>
+          <template #actions-cell="{ row }"><UButton color="neutral" variant="ghost" size="sm" label="查看明细" @click="openExpenseDrill(`Tag：${row.original.name}`, { tagId: row.original.tagId })" /></template>
+        </UTable>
+      </UCard>
+
+      <UCard data-statistics-section="calendar" variant="outline">
+        <template #header><div class="flex items-start justify-between gap-4"><div><h2 class="m-0 text-base font-semibold text-highlighted">收支日历</h2><p class="mt-1 text-xs text-muted">点击日期查看服务端筛选的当日流水</p></div><UFormField label="月份" name="statistics-month"><UInput :model-value="routeState.month" type="month" @change="updateRoute({ month: selectValue($event) })" /></UFormField></div></template>
+        <div class="calendar-grid calendar-grid--weekdays" aria-hidden="true"><span v-for="weekday in weekdayLabels" :key="weekday" class="calendar-weekday">{{ weekday }}</span></div>
+        <div class="calendar-grid"><span v-for="(day, index) in calendarCells" :key="day?.date || `blank-${index}`" :class="{ 'calendar-grid__blank': !day }" aria-hidden="true"><template v-if="day"><button :style="{ '--heat': `${Math.abs(day.netCashFlowMinor) / calendarMax * 18}%` }" :aria-label="`${day.date}，净现金流 ${money(day.netCashFlowMinor)}，流入 ${money(day.incomeAmountMinor + day.refundAmountMinor)}，流出 ${money(day.expenseAmountMinor)}`" @click="showCalendarDay(day.date)"><b>{{ day.date.slice(-2) }}</b><span>{{ money(day.netCashFlowMinor) }}</span><small>入 {{ money(day.incomeAmountMinor + day.refundAmountMinor) }} / 出 {{ money(day.expenseAmountMinor) }}</small></button></template></span></div>
+      </UCard>
+    </div>
   </template>
+  <StatisticsDrillover v-if="drill" :open="!!drill" :title="drill.title" :loading="drill.loading" :error="drill.error" :data="drill.data" @close="closeDrill" @retry="retryDrill" @open-transaction="openDrillTransaction" />
   </div>
 </template>
+
+<style scoped>
+.statistics-toolbar {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--ui-border-muted);
+  border-radius: 12px;
+  background: var(--ui-bg-elevated);
+}
+
+.statistics-toolbar__periods,
+.statistics-toolbar__controls {
+  min-width: 0;
+}
+
+.statistics-toolbar__controls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.statistics-toolbar__controls > [data-slot="form-field"] {
+  min-width: 150px;
+}
+
+.statistics-loading {
+  display: grid;
+  gap: 20px;
+}
+
+.calendar-grid--weekdays {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.calendar-weekday {
+  color: var(--ui-text-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+.calendar-grid__blank {
+  min-width: 0;
+}
+
+.calendar-grid__blank:not(:has(button)) {
+  min-height: 78px;
+}
+
+@media (max-width: 720px) {
+  .calendar-grid {
+    min-width: 0;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+
+  .calendar-grid button {
+    min-height: 70px;
+    padding: 7px;
+  }
+}
+
+@media (min-width: 900px) {
+  .statistics-toolbar {
+    grid-template-columns: minmax(280px, 1fr) auto;
+    align-items: end;
+  }
+
+  .statistics-toolbar__controls {
+    justify-content: flex-end;
+  }
+}
+</style>

@@ -57,10 +57,10 @@ test('交易日期支持显式无边界，统计自定义范围可恢复并显�
   await page.goto('/statistics?preset=custom&start=2099-01-01&end=2099-02-01&granularity=month&unknown=value')
   await expect.poll(() => new URL(page.url()).searchParams.has('unknown')).toBe(false)
   await expect(page.getByLabel('开始')).toHaveValue('2099-01-01')
-  await expect(page.getByLabel('结束（不含）')).toHaveValue('2099-02-01')
-  await expect(page.getByLabel('粒度')).toHaveValue('month')
+  await expect(page.getByLabel('结束日期（不含）')).toHaveValue('2099-02-01')
+  await expect(page.getByLabel('粒度')).toContainText('月')
   await expect(page.getByText('当前筛选范围暂无可分析数据', { exact: true })).toBeVisible()
-  await expect(page.getByText('欢迎来到你的账本', { exact: true })).toBeHidden()
+  await expect(page.getByText('从第一笔开始建立你的账本', { exact: true })).toBeHidden()
 })
 
 test('交易页不会请求统计接口', async ({ page }) => {
