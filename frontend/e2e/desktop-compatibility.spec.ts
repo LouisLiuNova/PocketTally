@@ -11,7 +11,7 @@ test.describe('Chromium 桌面兼容性矩阵', () => {
     const accounts = await page.request.get('http://127.0.0.1:8012/api/v1/accounts')
     const accountItems = (await accounts.json()) as unknown[]
     if (accountItems.length === 0) {
-      await expect(page.getByText('欢迎来到你的账本')).toBeVisible()
+      await expect(page.getByText('从第一笔开始建立你的账本')).toBeVisible()
     }
 
     for (const label of ['总览', '交易', '账户', '分类与标签', '统计分析', '设置']) {
@@ -19,10 +19,9 @@ test.describe('Chromium 桌面兼容性矩阵', () => {
       await assertNoHorizontalOverflow(page)
       await expect(page.locator('main')).toBeVisible()
       if (label === '统计分析') {
-        const metrics = page.locator('.statistics-metrics')
+        const metrics = page.getByRole('region', { name: '统计对比摘要' })
         await expect(metrics).toBeVisible()
-        await expect(metrics).toHaveCSS('gap', '20px')
-        await expect(metrics).toHaveCSS('margin-bottom', '20px')
+        await expect(metrics).toContainText('实际净现金流')
       }
     }
 
@@ -94,9 +93,10 @@ test.describe('Chromium 桌面兼容性矩阵', () => {
     await assertNoHorizontalOverflow(page)
 
     await page.getByRole('link', { name: '统计分析', exact: true }).click()
-    await page.getByRole('button', { name: '近 12 个月', exact: true }).click()
+    await page.getByRole('tab', { name: '近 12 个月', exact: true }).click()
     await expect.poll(() => new URL(page.url()).searchParams.get('preset')).toBe('twelve_months')
-    await page.getByLabel('粒度').selectOption('month')
+    await page.getByLabel('粒度').click()
+    await page.getByRole('option', { name: '月', exact: true }).click()
     await expect.poll(() => new URL(page.url()).searchParams.get('granularity')).toBe('month')
     await expect(page.getByText('现金流趋势', { exact: true })).toBeVisible()
     await assertNoHorizontalOverflow(page)
@@ -104,17 +104,17 @@ test.describe('Chromium 桌面兼容性矩阵', () => {
     await page.getByRole('button', { name: '查看该时段流水', exact: true }).click()
     await expect(page).toHaveURL(/\/transactions\?.*start=.*end=/)
     await page.goBack()
-    await expect(page.getByLabel('粒度')).toHaveValue('month')
+    await expect(page.getByLabel('粒度')).toContainText('月')
 
     await page.locator('.calendar-grid button').first().click()
     await expect.poll(() => new URL(page.url()).pathname).toBe('/transactions')
     expect(new URL(page.url()).searchParams.get('start')).toMatch(/^\d{4}-\d{2}-01$/)
     expect(new URL(page.url()).searchParams.get('end')).toMatch(/^\d{4}-\d{2}-02$/)
     await page.goBack()
-    await expect(page.getByRole('button', { name: '近 12 个月', exact: true })).toHaveClass(/active/)
+    await expect(page.getByRole('tab', { name: '近 12 个月', exact: true })).toHaveAttribute('data-state', 'active')
 
-    await page.locator('.category-stat').first().click()
-    await expect(page.locator('.drill-panel')).toBeVisible()
+    await page.locator('[data-statistics-section="category"]').getByRole('button', { name: '查看明细', exact: true }).first().click()
+    await expect(page.getByRole('dialog')).toContainText('统计明细')
     await assertNoHorizontalOverflow(page)
     await assertNoPageErrors(page, errors)
   })

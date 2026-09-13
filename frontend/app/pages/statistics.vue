@@ -260,7 +260,7 @@ onBeforeUnmount(() => {
         <USelect :model-value="routeState.granularity" :items="granularityItems" @update:model-value="value => updateRoute({ granularity: value as StatisticsRouteState['granularity'] })" />
       </UFormField>
       <UFormField label="父分类" name="statistics-parent-category">
-        <USelect :model-value="routeState.parentCategoryId" :items="[{ value: '', label: '全部一级分类' }, ...expenseCategories.map(category => ({ value: category.id, label: category.name }))]" @update:model-value="value => updateRoute({ parentCategoryId: String(value || '') })" />
+        <USelect :model-value="routeState.parentCategoryId || '__all__'" :items="[{ value: '__all__', label: '全部一级分类' }, ...expenseCategories.map(category => ({ value: category.id, label: category.name }))]" @update:model-value="value => updateRoute({ parentCategoryId: value === '__all__' ? '' : String(value || '') })" />
       </UFormField>
     </div>
   </section>
@@ -295,7 +295,7 @@ onBeforeUnmount(() => {
 
   <template v-if="loadedData && hasAnalysisData">
     <div class="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-2" aria-label="统计分析区">
-      <UCard class="min-w-0 lg:col-span-2" variant="outline">
+      <UCard data-statistics-section="cash-flow" class="min-w-0 lg:col-span-2" variant="outline">
         <template #header><div class="flex items-start justify-between gap-4"><div><h2 class="m-0 text-base font-semibold text-highlighted">现金流趋势</h2><p class="mt-1 text-xs text-muted">点击时间桶查看流水</p></div></div></template>
         <div class="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="当前范围现金流汇总">
           <div v-for="item in [{ label: '普通收入', value: cashFlowTotals.incomeAmountMinor }, { label: '退款流入', value: cashFlowTotals.refundAmountMinor }, { label: '支出流出', value: cashFlowTotals.expenseAmountMinor }, { label: '净现金流', value: cashFlowTotals.netCashFlowMinor }]" :key="item.label" class="border-l-2 border-primary pl-2"><span class="block text-xs text-muted">{{ item.label }}</span><strong class="mt-1 block tabular-nums">{{ money(item.value) }}</strong></div>
@@ -304,7 +304,7 @@ onBeforeUnmount(() => {
         <LazyCashFlowTrend :buckets="cashFlow?.buckets || []" :granularity="routeState.granularity" variant="full" @drilldown="showCashBucket" />
       </UCard>
 
-      <UCard variant="outline">
+      <UCard data-statistics-section="expenses" variant="outline">
         <template #header><div><h2 class="m-0 text-base font-semibold text-highlighted">消费趋势</h2><p class="mt-1 text-xs text-muted">点击时间桶查看净额明细</p></div></template>
         <UEmpty v-if="!expenses?.buckets.length" icon="i-lucide-receipt-text" title="本期暂无消费" variant="subtle" />
         <UTable v-else :data="expenses.buckets" :columns="expenseColumns" caption="消费趋势" :ui="{ td: 'align-middle' }">
@@ -315,7 +315,7 @@ onBeforeUnmount(() => {
         </UTable>
       </UCard>
 
-      <UCard variant="outline">
+      <UCard data-statistics-section="category" variant="outline">
         <template #header><div class="flex items-start justify-between gap-4"><div><h2 class="m-0 text-base font-semibold text-highlighted">分类分析</h2><p class="mt-1 text-xs text-muted">退款按原支出日期抵减</p></div><UButton v-if="routeState.parentCategoryId" color="neutral" variant="link" label="返回一级分类" @click="updateRoute({ parentCategoryId: '' })" /></div></template>
         <UTable :data="categoryStatistics?.items || []" :columns="categoryColumns" caption="分类分析" :ui="{ td: 'align-middle' }" empty="暂无分类数据">
           <template #name-cell="{ row }"><div class="min-w-0"><strong class="block text-highlighted">{{ row.original.name }}</strong><small class="block text-muted">直接 {{ money(row.original.directAmountMinor) }} · 变化贡献 {{ money(row.original.changeContributionMinor) }}</small></div></template>
@@ -325,7 +325,7 @@ onBeforeUnmount(() => {
         <div v-for="parent in categoryStatistics?.items.filter(item => item.children.length)" :key="`${parent.categoryId}-children`" class="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted"><span>{{ parent.name }} 下钻：</span><UButton v-for="child in parent.children" :key="child.categoryId" color="neutral" variant="outline" size="xs" :label="`${child.name} ${money(child.amountMinor)}`" @click="openExpenseDrill(`${parent.name} / ${child.name}`, { categoryId: child.categoryId, includeDescendants: true })" /></div>
       </UCard>
 
-      <UCard variant="outline">
+      <UCard data-statistics-section="tags" variant="outline">
         <template #header><div><h2 class="m-0 text-base font-semibold text-highlighted">Tag 汇总</h2><p class="mt-1 text-xs text-muted">一笔交易可完整计入多个 Tag，不提供 Tag 合计或占比。</p></div></template>
         <UTable :data="tagStatistics?.items || []" :columns="tagColumns" caption="Tag 汇总" :ui="{ td: 'align-middle' }" empty="暂无 Tag 数据">
           <template #name-cell="{ row }"><span class="inline-flex items-center gap-2"><i class="size-2 rounded-full" :style="{ background: row.original.color }" aria-hidden="true" />{{ row.original.name }}</span></template>
@@ -334,7 +334,7 @@ onBeforeUnmount(() => {
         </UTable>
       </UCard>
 
-      <UCard variant="outline">
+      <UCard data-statistics-section="calendar" variant="outline">
         <template #header><div class="flex items-start justify-between gap-4"><div><h2 class="m-0 text-base font-semibold text-highlighted">收支日历</h2><p class="mt-1 text-xs text-muted">点击日期查看服务端筛选的当日流水</p></div><UFormField label="月份" name="statistics-month"><UInput :model-value="routeState.month" type="month" @change="updateRoute({ month: selectValue($event) })" /></UFormField></div></template>
         <div class="calendar-grid calendar-grid--weekdays" aria-hidden="true"><span v-for="weekday in weekdayLabels" :key="weekday" class="calendar-weekday">{{ weekday }}</span></div>
         <div class="calendar-grid"><span v-for="(day, index) in calendarCells" :key="day?.date || `blank-${index}`" :class="{ 'calendar-grid__blank': !day }" aria-hidden="true"><template v-if="day"><button :style="{ '--heat': `${Math.abs(day.netCashFlowMinor) / calendarMax * 18}%` }" :aria-label="`${day.date}，净现金流 ${money(day.netCashFlowMinor)}，流入 ${money(day.incomeAmountMinor + day.refundAmountMinor)}，流出 ${money(day.expenseAmountMinor)}`" @click="showCalendarDay(day.date)"><b>{{ day.date.slice(-2) }}</b><span>{{ money(day.netCashFlowMinor) }}</span><small>入 {{ money(day.incomeAmountMinor + day.refundAmountMinor) }} / 出 {{ money(day.expenseAmountMinor) }}</small></button></template></span></div>

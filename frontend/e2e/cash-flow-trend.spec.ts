@@ -14,7 +14,7 @@ test.describe('现金流趋势图', () => {
     const trend = page.locator('.cash-flow-trend--full')
     await expect(trend).toBeVisible()
     await expect(trend.locator('.cash-flow-chart')).toBeVisible()
-    await expect(page.locator('.cash-flow-summary')).toContainText('退款流入')
+    await expect(page.getByLabel('当前范围现金流汇总')).toContainText('退款流入')
     await expect(page.getByRole('button', { name: '查看完整数据表', exact: true })).toBeVisible()
 
     const chart = trend.locator('.cash-flow-chart')
@@ -56,7 +56,7 @@ test.describe('现金流趋势图', () => {
     const trend = page.locator('.cash-flow-trend--compact')
     await expect(trend).toBeVisible()
     await expect(trend.locator('.cash-flow-chart')).toBeVisible()
-    await expect(page.locator('.overview-flow .cash-flow-summary')).toHaveCount(0)
+    await expect(page.getByRole('region', { name: '总览工作区' }).getByLabel('当前范围现金流汇总')).toHaveCount(0)
     await expect(trend.locator('.cash-flow-table-wrap')).toHaveCount(0)
     await assertNoHorizontalOverflow(page)
 
@@ -64,5 +64,22 @@ test.describe('现金流趋势图', () => {
     await expect(trend).toBeVisible()
     await assertNoHorizontalOverflow(page)
     await assertNoPageErrors(page, errors)
+  })
+
+  test('统计请求失败时保留上一组完整快照并标记旧范围', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByRole('button', { name: '记一笔', exact: true })).toBeEnabled()
+    await seedDesktopLedger(page.request)
+    await page.goto('/statistics')
+
+    const trend = page.locator('.cash-flow-trend--full')
+    await expect(trend).toBeVisible()
+    await page.route('**/api/v1/statistics/**', route => route.abort())
+    await page.getByRole('tab', { name: '上月', exact: true }).click()
+
+    await expect(page.getByRole('alert')).toContainText('统计读取失败')
+    await expect(page.getByRole('alert')).toContainText('当前仍显示')
+    await expect(trend).toBeVisible()
+    await page.unroute('**/api/v1/statistics/**')
   })
 })
