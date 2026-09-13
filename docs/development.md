@@ -6,6 +6,8 @@
 ## 环境要求
 
 - 前端：[Bun](https://bun.sh/) 1.3.13
+- 前端开发服务器：[Node.js](https://nodejs.org/) 22.23.1（项目根目录下的
+  `frontend/.nvmrc` 为版本来源）
 - 后端：[Python](https://www.python.org/) 3.14 与 [uv](https://docs.astral.sh/uv/)
 
 ## 本地启动
@@ -24,12 +26,15 @@ uv run pocket-tally-backend
 
 ```bash
 cd frontend
+nvm use
 bun install --frozen-lockfile
 bun run dev
 ```
 
 访问 `http://localhost:3000`。前端默认通过同源 `/api/v1` 代理访问
 `http://127.0.0.1:8000`；后端地址不同时，通过 `NUXT_API_BASE` 覆盖。
+`bun run dev` 仍由 Bun 管理脚本和依赖，但 Nuxt 开发服务器按官方默认方式运行在
+Node.js 上；不要使用 `bun --bun nuxt dev` 强制切换到 Bun 运行时。
 
 后端默认将数据保存到 `backend/data/pocket-tally.sqlite3`。需要使用其他开发账本时，
 设置 `POCKET_TALLY_DATABASE_PATH`。请勿使用个人正式账本进行开发或测试。

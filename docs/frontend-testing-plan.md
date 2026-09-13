@@ -51,6 +51,7 @@
 
 ```text
 Bun 1.3.13
+Node.js 22.23.1
 uv 0.9.18
 frontend/node_modules
 @playwright/test
@@ -77,6 +78,9 @@ POCKET_TALLY_E2E_DATABASE_PATH=../frontend/.data/e2e-local.sqlite3
 ```
 
 不要将个人账本数据库作为 E2E 数据库使用。
+
+Playwright 会先构建前端，再通过 `bun run preview` 启动 Bun 生产预览服务；它不复用
+Node.js 开发服务器，也不应改为存在路由兼容问题的 `bun --bun nuxt dev`。
 
 ## 4. 标准执行流程
 
