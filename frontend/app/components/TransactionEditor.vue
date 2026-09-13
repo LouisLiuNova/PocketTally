@@ -119,8 +119,8 @@ async function save() {
 </script>
 
 <template>
-  <UForm :state="form" class="transaction-editor" :disabled="busy" :aria-busy="busy" @submit="save">
-    <header class="transaction-editor-header">
+  <UForm :state="form" class="modal-editor-form transaction-editor" :disabled="busy" :aria-busy="busy" @submit="save">
+    <header class="modal-editor-header transaction-editor-header">
       <div>
         <p class="eyebrow">记录真实的每一笔</p>
         <h2>{{ refund ? '支出退款' : editing ? '编辑交易' : '记一笔' }}</h2>
@@ -128,10 +128,11 @@ async function save() {
       <UButton color="neutral" variant="ghost" icon="i-lucide-x" aria-label="关闭" :disabled="busy" @click="emit('close')" />
     </header>
 
-    <UAlert v-if="refund" color="info" variant="soft" icon="i-lucide-rotate-ccw" title="退款摘要" :description="`${refund.description || '原支出'} · 剩余可退 ${money(remaining)} · 退回 ${refund.sourceAccount?.name || '原账户'}`" />
-    <UAlert v-if="locked" color="warning" variant="soft" icon="i-lucide-lock-keyhole" title="部分字段已锁定" description="此交易仅可修改说明、发生时间和标签。" />
+    <div class="modal-editor-body transaction-editor-body">
+      <UAlert v-if="refund" color="info" variant="soft" icon="i-lucide-rotate-ccw" title="退款摘要" :description="`${refund.description || '原支出'} · 剩余可退 ${money(remaining)} · 退回 ${refund.sourceAccount?.name || '原账户'}`" />
+      <UAlert v-if="locked" color="warning" variant="soft" icon="i-lucide-lock-keyhole" title="部分字段已锁定" description="此交易仅可修改说明、发生时间和标签。" />
 
-    <div class="transaction-editor-fields">
+      <div class="transaction-editor-fields">
       <UFormField v-if="!refund" name="type" label="交易类型" required>
         <USelect v-model="form.type" :items="kindItems" :disabled="!!editing" class="w-full" />
       </UFormField>
@@ -165,10 +166,11 @@ async function save() {
       <UFormField v-if="!refund && tags.length" name="tagIds" label="标签">
         <UCheckboxGroup v-model="form.tagIds" :items="tagItems" orientation="horizontal" class="transaction-tag-group" />
       </UFormField>
-    </div>
+      </div>
 
-    <UAlert v-if="error" color="error" variant="soft" icon="i-lucide-circle-alert" title="保存失败" :description="error" role="alert" aria-live="polite" />
-    <div class="transaction-editor-actions">
+      <UAlert v-if="error" color="error" variant="soft" icon="i-lucide-circle-alert" title="保存失败" :description="error" role="alert" aria-live="polite" />
+    </div>
+    <div class="modal-editor-actions transaction-editor-actions">
       <span class="hint">保存后同步账户余额</span>
       <UButton type="submit" label="保存交易" :loading="busy" :aria-busy="busy" :disabled="busy" />
     </div>
