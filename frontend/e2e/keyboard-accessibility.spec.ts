@@ -56,6 +56,7 @@ test('纯键盘完成核心记账、退款作废、筛选和统计下钻', async
   await typeText(page.getByLabel('说明', { exact: true }), adjustment)
   await saveDialog(page, '保存交易')
   await expect(page.getByRole('button', { name: '保存交易', exact: true })).toBeHidden()
+  await expect(page.getByRole('button', { name: '记一笔', exact: true })).toBeEnabled()
 
   await activate(page.getByRole('button', { name: '记一笔', exact: true }))
   await typeText(page.getByLabel('金额（元）', { exact: true }), '80')
@@ -79,7 +80,7 @@ test('纯键盘完成核心记账、退款作废、筛选和统计下钻', async
   await expect(page.getByRole('button', { name: '保存交易', exact: true })).toBeHidden()
 
   await expect(page.getByRole('button', { name: '申请退款', exact: true })).toBeVisible()
-  await page.keyboard.press('Escape')
+  await activate(page.getByRole('button', { name: '关闭交易详情', exact: true }))
   await expect(page.getByRole('button', { name: '申请退款', exact: true })).toBeHidden()
   await page.getByLabel('搜索交易').fill(refund)
   const refundRow = page.getByRole('button').filter({ hasText: refund }).first()

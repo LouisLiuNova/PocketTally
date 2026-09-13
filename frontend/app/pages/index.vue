@@ -16,14 +16,9 @@ const queryError = ref('')
 let requestId = 0
 
 const balance = computed(() => workspace.accounts.value.reduce((sum, account) => sum + minor(account.amount), 0))
-const trendMax = computed(() => Math.max(1, ...(cashFlow.value?.buckets.flatMap(item => [item.incomeAmountMinor, item.expenseAmountMinor, Math.abs(item.netCashFlowMinor)]) || [1])))
 
 function formatChange(value: number | null) {
   return value === null ? '上期为 0，暂无百分比' : `${value >= 0 ? '+' : ''}${value.toFixed(1)}% 较上期`
-}
-
-function bucketLabel(value: string) {
-  return localInput(value).slice(0, 10)
 }
 
 async function loadDashboard() {
@@ -63,6 +58,16 @@ function showCategoryTransactions(categoryId: string) {
   return navigateTo({ path: '/transactions', query: serializeTransactionState(state, today) })
 }
 
+function showCashBucket(startAt: string, endAt: string) {
+  const state = defaultTransactionState(today)
+  state.start = localInput(startAt).slice(0, 10)
+  state.end = localInput(endAt).slice(0, 10)
+  return navigateTo({
+    path: '/transactions',
+    query: { ...serializeTransactionState(state, today), start: state.start, end: state.end },
+  })
+}
+
 onMounted(() => void loadDashboard())
 watch(workspace.refreshRevision, () => void loadDashboard())
 onBeforeUnmount(() => { requestId++ })
@@ -91,14 +96,7 @@ onBeforeUnmount(() => { requestId++ })
       <UPageGrid as="div" class="page-grid dashboard-grid">
       <section class="panel overview-flow">
         <div class="panel-head"><h2>现金流趋势摘要</h2><NuxtLink class="text-link" to="/statistics">查看完整分析 →</NuxtLink></div>
-        <p v-if="!cashFlow?.buckets.length" class="empty-state">本期暂无现金流</p>
-        <div v-else class="real-trend" tabindex="0" aria-label="现金流趋势摘要数据">
-          <div v-for="item in cashFlow.buckets" :key="item.startAt" class="trend-row">
-            <span>{{ bucketLabel(item.startAt).slice(5) }}</span>
-            <div><div class="trend-track"><i :style="{ width: `${item.incomeAmountMinor / trendMax * 100}%` }" /></div><div class="trend-track expense-track"><i :style="{ width: `${item.expenseAmountMinor / trendMax * 100}%` }" /></div></div>
-            <small>收入 {{ money(item.incomeAmountMinor) }} · 退款 {{ money(item.refundAmountMinor) }} · 支出 {{ money(item.expenseAmountMinor) }} · 净额 {{ money(item.netCashFlowMinor) }}</small>
-          </div>
-        </div>
+        <LazyCashFlowTrend :buckets="cashFlow?.buckets || []" granularity="day" variant="compact" @drilldown="showCashBucket" />
       </section>
       <section class="panel overview-categories">
         <h2>支出分类 Top 5</h2>

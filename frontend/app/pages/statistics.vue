@@ -24,6 +24,7 @@ import {
   type StatisticsPreset,
 } from '~/utils/routeQuery'
 import { localInput, money } from '~/utils/money'
+import { cashFlowSummary } from '~/utils/cashFlowTrend'
 
 const route = useRoute()
 const workspace = useLedgerWorkspace()
@@ -47,9 +48,9 @@ let stopRouteWatch: (() => void) | undefined
 
 const routeState = computed(() => parseStatisticsQuery(route.query, today).state)
 const period = computed(() => statisticsPeriod(routeState.value, today))
-const trendMax = computed(() => Math.max(1, ...(cashFlow.value?.buckets.flatMap(item => [item.incomeAmountMinor, item.expenseAmountMinor, Math.abs(item.netCashFlowMinor)]) || [1])))
 const categoryMax = computed(() => Math.max(1, ...(categoryStatistics.value?.items.map(item => Math.abs(item.amountMinor)) || [1])))
 const calendarMax = computed(() => Math.max(1, ...(calendar.value?.days.map(day => Math.abs(day.netCashFlowMinor)) || [1])))
+const cashFlowTotals = computed(() => cashFlowSummary(cashFlow.value?.buckets || []))
 const expenseCategories = computed(() => workspace.categories.value.filter(category => category.purpose === 'expense' && !category.parentCategory))
 const hasAnalysisData = computed(() => {
   return !!cashFlow.value?.buckets.some(item => item.incomeAmountMinor || item.refundAmountMinor || item.expenseAmountMinor || item.netCashFlowMinor)
@@ -147,7 +148,10 @@ function showTransactions(start: string, end: string) {
   const state = defaultTransactionState(today)
   state.start = start
   state.end = end
-  return navigateTo({ path: '/transactions', query: compactQuery(serializeTransactionState(state, today)) })
+  return navigateTo({
+    path: '/transactions',
+    query: { ...compactQuery(serializeTransactionState(state, today)), start: state.start, end: state.end },
+  })
 }
 
 function showCalendarDay(date: string) {
@@ -217,7 +221,14 @@ onBeforeUnmount(() => {
     <UPageGrid as="div" class="page-grid analytics-grid">
       <section class="panel analytics-trend">
         <div class="panel-head"><h2>现金流趋势</h2><span class="hint">点击时间桶查看流水</span></div>
-        <div class="real-trend" tabindex="0" aria-label="可按时间桶查看现金流"><button v-for="item in cashFlow?.buckets" :key="item.startAt" class="trend-row bucket-button" @click="showCashBucket(item.startAt, item.endAt)"><span>{{ bucketLabel(item.startAt).slice(5) }}</span><div><div class="trend-track"><i :style="{ width: `${item.incomeAmountMinor / trendMax * 100}%` }" /></div><div class="trend-track expense-track"><i :style="{ width: `${item.expenseAmountMinor / trendMax * 100}%` }" /></div></div><small>{{ money(item.incomeAmountMinor) }} / 退款 {{ money(item.refundAmountMinor) }} / 支出 {{ money(item.expenseAmountMinor) }} / 净额 {{ money(item.netCashFlowMinor) }}</small></button></div>
+        <div class="cash-flow-summary" aria-label="当前范围现金流汇总">
+          <div><span>普通收入</span><strong>{{ money(cashFlowTotals.incomeAmountMinor) }}</strong></div>
+          <div><span>退款流入</span><strong>{{ money(cashFlowTotals.refundAmountMinor) }}</strong></div>
+          <div><span>支出流出</span><strong>{{ money(cashFlowTotals.expenseAmountMinor) }}</strong></div>
+          <div><span>净现金流</span><strong>{{ money(cashFlowTotals.netCashFlowMinor) }}</strong></div>
+        </div>
+        <p v-if="!cashFlowTotals.formulaMatchesApi" role="alert" class="cash-flow-integrity-warning">现金流净额与分项合计不一致，请重试后再查看。</p>
+        <LazyCashFlowTrend :buckets="cashFlow?.buckets || []" :granularity="routeState.granularity" variant="full" @drilldown="showCashBucket" />
       </section>
       <section class="panel analytics-expense">
         <div class="panel-head"><h2>消费趋势</h2><span class="hint">点击时间桶查看净额明细</span></div>

@@ -101,14 +101,14 @@ test.describe('Chromium 桌面兼容性矩阵', () => {
     await expect(page.getByText('现金流趋势', { exact: true })).toBeVisible()
     await assertNoHorizontalOverflow(page)
 
-    await page.locator('.bucket-button').first().click()
+    await page.getByRole('button', { name: '查看该时段流水', exact: true }).click()
     await expect(page).toHaveURL(/\/transactions\?.*start=.*end=/)
     await page.goBack()
     await expect(page.getByLabel('粒度')).toHaveValue('month')
 
     await page.locator('.calendar-grid button').first().click()
     await expect.poll(() => new URL(page.url()).pathname).toBe('/transactions')
-    expect(new URL(page.url()).searchParams.get('start')).toBeNull()
+    expect(new URL(page.url()).searchParams.get('start')).toMatch(/^\d{4}-\d{2}-01$/)
     expect(new URL(page.url()).searchParams.get('end')).toMatch(/^\d{4}-\d{2}-02$/)
     await page.goBack()
     await expect(page.getByRole('button', { name: '近 12 个月', exact: true })).toHaveClass(/active/)
