@@ -118,8 +118,13 @@ function clearFilters() {
 
 async function synchronizeRoute() {
   const parsed = parseTransactionQuery(route.query, today)
-  if (!queriesEqual(route.query, parsed.query)) {
-    await navigateTo({ path: '/transactions', query: compactQuery(parsed.query) }, { replace: true })
+  const canonicalQuery = { ...parsed.query }
+  for (const key of ['start', 'end'] as const) {
+    const raw = route.query[key]
+    if (typeof raw === 'string' && (raw === '' || isDate(raw))) canonicalQuery[key] = raw
+  }
+  if (!queriesEqual(route.query, canonicalQuery)) {
+    await navigateTo({ path: '/transactions', query: compactQuery(canonicalQuery) }, { replace: true })
     return
   }
   searchDraft.value = parsed.state.q

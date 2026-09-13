@@ -108,7 +108,7 @@ test.describe('Chromium 桌面兼容性矩阵', () => {
 
     await page.locator('.calendar-grid button').first().click()
     await expect.poll(() => new URL(page.url()).pathname).toBe('/transactions')
-    expect(new URL(page.url()).searchParams.get('start')).toBeNull()
+    expect(new URL(page.url()).searchParams.get('start')).toMatch(/^\d{4}-\d{2}-01$/)
     expect(new URL(page.url()).searchParams.get('end')).toMatch(/^\d{4}-\d{2}-02$/)
     await page.goBack()
     await expect(page.getByRole('button', { name: '近 12 个月', exact: true })).toHaveClass(/active/)
