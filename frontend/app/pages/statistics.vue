@@ -375,7 +375,9 @@ onBeforeUnmount(() => {
 
 @media (hover: hover) and (pointer: fine) {
   .calendar-grid button:not(:disabled):hover {
-    box-shadow: var(--pt-elevation-button-hover);
+    background: color-mix(in srgb, var(--ui-primary) 5%, var(--ui-bg-muted));
+    border-color: var(--ui-primary);
+    box-shadow: none;
   }
 }
 

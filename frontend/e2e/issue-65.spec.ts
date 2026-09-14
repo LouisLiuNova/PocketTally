@@ -23,5 +23,8 @@ test.describe('Issue #65：精简统计日历', () => {
     await expect(dayButton).not.toContainText('净现金流')
     await expect(dayButton).not.toContainText('入 ')
     await expect(dayButton).not.toContainText('出 ')
+    await dayButton.hover()
+    await expect(dayButton).toHaveCSS('box-shadow', 'none')
+    await expect(dayButton).toHaveCSS('transform', 'none')
   })
 })

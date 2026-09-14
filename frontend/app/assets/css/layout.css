@@ -366,7 +366,6 @@
 .palette-choice:hover {
   border-color: var(--ui-border-accented);
   background: var(--ui-bg-elevated);
-  transform: translateY(-1px);
 }
 
 .palette-choice:has([data-state="checked"]) {

@@ -88,7 +88,6 @@
   --pt-motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --pt-motion-ease-enter: cubic-bezier(0, 0, 0.2, 1);
   --pt-motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
-  --pt-elevation-button-hover: 0 2px 5px color-mix(in srgb, var(--ui-text) 18%, transparent);
   color-scheme: light;
   --pt-primary: var(--pt-brand-600); --pt-on-primary: #fff;
   --pt-primary-container: var(--pt-brand-100); --pt-on-primary-container: var(--pt-brand-900);
@@ -117,13 +116,19 @@
   transition:
     background-color var(--pt-motion-duration-fast) var(--pt-motion-ease-standard),
     border-color var(--pt-motion-duration-fast) var(--pt-motion-ease-standard),
-    box-shadow var(--pt-motion-duration-fast) var(--pt-motion-ease-standard),
     color var(--pt-motion-duration-fast) var(--pt-motion-ease-standard);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .pt-button:not(:disabled):not([aria-busy="true"]):hover {
-    box-shadow: var(--pt-elevation-button-hover);
+    box-shadow: none;
+  }
+
+  .pt-button[class~="hover:bg-elevated"]:not(:disabled):not([aria-busy="true"]):hover,
+  .pt-button[class~="hover:bg-accented/75"]:not(:disabled):not([aria-busy="true"]):hover,
+  .pt-button[class~="hover:bg-accented"]:not(:disabled):not([aria-busy="true"]):hover {
+    background-color: color-mix(in srgb, var(--ui-primary) 5%, var(--ui-bg-muted));
+    color: var(--ui-text);
   }
 }
 
@@ -206,6 +211,14 @@ body { background: var(--pt-surface-page); color: var(--ui-text); }
 .transaction-summary span, .transaction-summary p { color: var(--pt-on-primary-container); opacity: .8; }
 .ledger-row:hover, .mvp-transaction:hover { background: var(--ui-bg-muted); }
 .transaction-table tbody tr:has(.transaction-summary-button:hover) { background: color-mix(in srgb, var(--ui-primary) 5%, var(--ui-bg-muted)); }
+
+@media (hover: hover) and (pointer: fine) {
+  .calendar-grid button:not(:disabled):hover {
+    background: color-mix(in srgb, var(--ui-primary) 5%, var(--ui-bg-muted));
+    border-color: var(--ui-primary);
+    box-shadow: none;
+  }
+}
 
 .income-bar, .income-dot, .cash-in { background: var(--pt-chart-income); }
 .expense-bar, .expense-dot, .cash-out { background: var(--pt-chart-expense); }
