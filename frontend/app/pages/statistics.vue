@@ -27,6 +27,7 @@ import {
 } from '~/utils/routeQuery'
 import { localInput, money } from '~/utils/money'
 import { cashFlowSummary } from '~/utils/cashFlowTrend'
+import { metricIcons } from '~/constants/metricIcons'
 
 const route = useRoute()
 const workspace = useLedgerWorkspace()
@@ -275,7 +276,7 @@ onBeforeUnmount(() => {
   </div>
 
   <section v-if="overview" class="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="统计对比摘要">
-    <MetricSummaryCard label="实际净现金流" :value="money(overview.netCashFlow.currentAmountMinor)" :comparison="formatChange(overview.netCashFlow.changePercent)" emphasis icon="i-lucide-arrow-down-up" />
+    <MetricSummaryCard label="实际净现金流" :value="money(overview.netCashFlow.currentAmountMinor)" :comparison="formatChange(overview.netCashFlow.changePercent)" emphasis :icon="metricIcons.cashFlow" />
     <MetricSummaryCard label="普通收入" :value="money(overview.income.currentAmountMinor)" :comparison="formatChange(overview.income.changePercent)" icon="i-lucide-arrow-down-left" />
     <MetricSummaryCard label="消费净支出" :value="money(overview.netExpense.currentAmountMinor)" :comparison="formatChange(overview.netExpense.changePercent)" icon="i-lucide-arrow-up-right" />
   </section>
