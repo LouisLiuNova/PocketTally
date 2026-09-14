@@ -31,7 +31,7 @@ docker compose up -d --no-build
 
 1. 创建账户
 2. 通过调账录入当前余额
-3. 创建收入和支出分类
+3. 按需编辑或补充已预置的收入和支出分类
 4. 开始记账
 
 在保存真实数据前，请先按照[部署指南](https://louisliunova.github.io/PocketTally/deployment/)创建并校验备份。
