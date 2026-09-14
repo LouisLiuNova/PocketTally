@@ -71,7 +71,7 @@ function detailLabel(transaction: Transaction) {
     </template>
 
     <template #actions-cell="{ row }">
-      <UButton color="neutral" variant="ghost" size="sm" :aria-label="detailLabel(row.original)" @click="emit('select', row.original)" @keydown.enter.prevent="emit('select', row.original)">
+      <UButton class="transaction-action-button" color="neutral" variant="ghost" size="sm" :aria-label="detailLabel(row.original)" @click="emit('select', row.original)" @keydown.enter.prevent="emit('select', row.original)">
         详情
       </UButton>
     </template>

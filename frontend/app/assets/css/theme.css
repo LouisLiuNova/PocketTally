@@ -205,6 +205,7 @@ body { background: var(--pt-surface-page); color: var(--ui-text); }
 .transaction-summary { background: var(--pt-primary-container); color: var(--pt-on-primary-container); }
 .transaction-summary span, .transaction-summary p { color: var(--pt-on-primary-container); opacity: .8; }
 .ledger-row:hover, .mvp-transaction:hover { background: var(--ui-bg-muted); }
+.transaction-table tbody tr:has(.transaction-summary-button:hover) { background: color-mix(in srgb, var(--ui-primary) 5%, var(--ui-bg-muted)); }
 
 .income-bar, .income-dot, .cash-in { background: var(--pt-chart-income); }
 .expense-bar, .expense-dot, .cash-out { background: var(--pt-chart-expense); }
