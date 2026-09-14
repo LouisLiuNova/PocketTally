@@ -6,13 +6,14 @@ import { colorValidationMessage, isValidHexColor } from '~/utils/color'
 const props = defineProps<{ kind: 'accounts' | 'categories' | 'tags'; item?: Account | Category | Tag; categories: Category[]; initialParentCategoryId?: string; initialPurpose?: Category['purpose'] }>()
 const emit = defineEmits<{ close: []; saved: []; busy: [value: boolean] }>()
 const names = { accounts: '账户', categories: '分类', tags: '标签' }
+const topLevelCategoryValue = '__top_level__'
 const item = props.item
-const form = reactive({ name: item?.name || '', description: item?.description || '', type: (item as Account)?.type || 'debit', purpose: (item as Category)?.purpose || props.initialPurpose || 'expense', parentCategoryId: (item as Category)?.parentCategory?.id || props.initialParentCategoryId || '', color: (item as Tag)?.color || (item as Category)?.iconColor || '#005CAF', cardNumber: (item as Account)?.cardNumber || '' })
+const form = reactive({ name: item?.name || '', description: item?.description || '', type: (item as Account)?.type || 'debit', purpose: (item as Category)?.purpose || props.initialPurpose || 'expense', parentCategoryId: (item as Category)?.parentCategory?.id || props.initialParentCategoryId || topLevelCategoryValue, color: (item as Tag)?.color || (item as Category)?.iconColor || '#005CAF', cardNumber: (item as Account)?.cardNumber || '' })
 const busy = ref(false)
 const error = ref('')
 const moveConfirmed = ref(false)
 const colorError = computed(() => props.kind !== 'accounts' && !isValidHexColor(form.color) ? colorValidationMessage(form.color) : '')
-const moving = computed(() => props.kind === 'categories' && !!item && form.parentCategoryId !== ((item as Category).parentCategory?.id || ''))
+const moving = computed(() => props.kind === 'categories' && !!item && form.parentCategoryId !== ((item as Category).parentCategory?.id || topLevelCategoryValue))
 const editorTitle = computed(() => {
   const resourceName = props.kind === 'categories' && !item
     ? `${form.purpose === 'income' ? '收入' : '支出'}分类`
@@ -39,7 +40,7 @@ const parents = computed(() => props.categories.filter(c => {
   return true
 }))
 const parentItems = computed(() => [
-  { label: '顶级分类', value: '' },
+  { label: '顶级分类', value: topLevelCategoryValue },
   ...parents.value.map(category => ({ label: category.name, value: category.id })),
 ])
 const selectedParent = computed(() => props.categories.find(category => category.id === form.parentCategoryId))
@@ -53,7 +54,7 @@ const selectedParentPath = computed(() => {
   }
   return `${form.purpose === 'income' ? '收入' : '支出'} / ${names.join(' / ')}`
 })
-watch(() => form.purpose, () => { form.parentCategoryId = '' })
+watch(() => form.purpose, () => { form.parentCategoryId = topLevelCategoryValue })
 watch(() => form.parentCategoryId, () => { moveConfirmed.value = false })
 async function save() {
   if (busy.value) return
@@ -63,7 +64,7 @@ async function save() {
   let body: object = { name: form.name.trim(), description: form.description.trim() || null }
   if (props.kind === 'accounts') body = { ...body, type: form.type, cardNumber: form.cardNumber.trim() || null }
   if (props.kind === 'tags') body = { ...body, color: form.color }
-  if (props.kind === 'categories') body = { ...body, ...(!item ? { purpose: form.purpose } : {}), parentCategoryId: form.parentCategoryId || null, iconColor: form.color, iconName: (item as Category)?.iconName || 'i-lucide-folder' }
+  if (props.kind === 'categories') body = { ...body, ...(!item ? { purpose: form.purpose } : {}), parentCategoryId: form.parentCategoryId === topLevelCategoryValue ? null : form.parentCategoryId, iconColor: form.color, iconName: (item as Category)?.iconName || 'i-lucide-folder' }
   busy.value = true; error.value = ''; emit('busy', true)
   try {
     await $fetch(`/api/v1/${props.kind}${item ? `/${item.id}` : ''}`, { method: item ? 'PATCH' : 'POST', body, retry: 0 })
