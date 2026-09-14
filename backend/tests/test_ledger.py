@@ -5,7 +5,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import func
+from sqlalchemy import func, text
 from sqlmodel import Session, select
 
 from app.database import create_database_engine, initialize_database
@@ -34,6 +34,9 @@ def make_engine(database_path: Path):
 
     engine = create_database_engine(database_path)
     initialize_database(engine)
+    # 账本服务测试自行准备分类，避免与新账本默认分类混淆。
+    with engine.begin() as connection:
+        connection.execute(text("DELETE FROM categories"))
     return engine
 
 

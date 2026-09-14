@@ -6,10 +6,11 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import BinaryIO
 
-from sqlalchemy import URL, Engine, event, text
+from sqlalchemy import URL, Connection, Engine, event, insert, text
 from sqlmodel import SQLModel, create_engine
 
 import app.models  # noqa: F401  # 注册 SQLModel 表元数据。
+from app.models import Category, CategoryPurpose, new_id
 
 LEGACY_BALANCE_TRIGGERS = (
     "tr_transactions_sync_account_balances_insert",
@@ -74,6 +75,25 @@ REQUIRED_INDEXES = (
         "CREATE INDEX IF NOT EXISTS ix_transactions_type_status_refund_of "
         "ON transactions (type, is_void, refund_of_transaction_id)"
     ),
+)
+
+DEFAULT_CATEGORIES = (
+    ("工资", CategoryPurpose.INCOME),
+    ("奖金", CategoryPurpose.INCOME),
+    ("兼职", CategoryPurpose.INCOME),
+    ("投资收益", CategoryPurpose.INCOME),
+    ("其他收入", CategoryPurpose.INCOME),
+    ("餐饮", CategoryPurpose.EXPENSE),
+    ("交通", CategoryPurpose.EXPENSE),
+    ("住房", CategoryPurpose.EXPENSE),
+    ("日用", CategoryPurpose.EXPENSE),
+    ("购物", CategoryPurpose.EXPENSE),
+    ("娱乐", CategoryPurpose.EXPENSE),
+    ("医疗", CategoryPurpose.EXPENSE),
+    ("教育", CategoryPurpose.EXPENSE),
+    ("通讯", CategoryPurpose.EXPENSE),
+    ("人情往来", CategoryPurpose.EXPENSE),
+    ("其他支出", CategoryPurpose.EXPENSE),
 )
 
 
@@ -167,8 +187,36 @@ def create_database_engine(database_path: Path) -> Engine:
     return engine
 
 
+def _seed_default_categories(connection: Connection) -> None:
+    """在空分类表中一次性写入默认一级分类。
+
+    Args:
+        connection: 已开启事务的数据库连接。
+
+    Notes:
+        分类表只要存在一条记录就视为用户已经拥有自己的分类集合，
+        不再自动补齐默认分类。调用方通过同一事务保证检查和写入的原子性。
+    """
+
+    has_category = connection.execute(text("SELECT 1 FROM categories LIMIT 1")).first()
+    if has_category is not None:
+        return
+
+    connection.execute(
+        insert(Category),
+        [
+            {
+                "id": new_id(),
+                "name": name,
+                "purpose": purpose.value,
+            }
+            for name, purpose in DEFAULT_CATEGORIES
+        ],
+    )
+
+
 def initialize_database(engine: Engine) -> None:
-    """创建表、必要索引和审计触发器，并拒绝带旧余额触发器的数据库。
+    """创建运行时数据库结构并为新账本预置默认分类。
 
     Args:
         engine: 待初始化的 SQLite Engine。
@@ -191,14 +239,24 @@ def initialize_database(engine: Engine) -> None:
         )
 
     SQLModel.metadata.create_all(engine)
-    with engine.begin() as connection:
-        for statement in REQUIRED_INDEXES:
-            connection.exec_driver_sql(statement)
-        for statement in UPDATED_AT_TRIGGERS:
-            connection.exec_driver_sql(statement)
+    with engine.connect() as connection:
+        # BEGIN IMMEDIATE 将空表检查与批量插入串行化，避免并发初始化各自看到空表。
+        connection.exec_driver_sql("BEGIN IMMEDIATE")
+        try:
+            for statement in REQUIRED_INDEXES:
+                connection.exec_driver_sql(statement)
+            for statement in UPDATED_AT_TRIGGERS:
+                connection.exec_driver_sql(statement)
+            _seed_default_categories(connection)
+        except BaseException:
+            connection.rollback()
+            raise
+        else:
+            connection.commit()
 
 
 __all__ = (
+    "DEFAULT_CATEGORIES",
     "LEGACY_BALANCE_TRIGGERS",
     "REQUIRED_INDEXES",
     "DatabaseLockError",
