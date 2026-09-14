@@ -2,13 +2,14 @@
 import type { Account, Category, Tag } from '~/types/ledger'
 import { errorMessage } from '~/composables/useLedger'
 import { colorValidationMessage, isValidHexColor } from '~/utils/color'
+import { CATEGORY_ICON_ITEMS, DEFAULT_CATEGORY_ICON } from '~/constants/categoryIcons'
 
 const props = defineProps<{ kind: 'accounts' | 'categories' | 'tags'; item?: Account | Category | Tag; categories: Category[]; initialParentCategoryId?: string; initialPurpose?: Category['purpose'] }>()
 const emit = defineEmits<{ close: []; saved: []; busy: [value: boolean] }>()
 const names = { accounts: '账户', categories: '分类', tags: '标签' }
 const topLevelCategoryValue = '__top_level__'
 const item = props.item
-const form = reactive({ name: item?.name || '', description: item?.description || '', type: (item as Account)?.type || 'debit', purpose: (item as Category)?.purpose || props.initialPurpose || 'expense', parentCategoryId: (item as Category)?.parentCategory?.id || props.initialParentCategoryId || topLevelCategoryValue, color: (item as Tag)?.color || (item as Category)?.iconColor || '#005CAF', cardNumber: (item as Account)?.cardNumber || '' })
+const form = reactive({ name: item?.name || '', description: item?.description || '', type: (item as Account)?.type || 'debit', purpose: (item as Category)?.purpose || props.initialPurpose || 'expense', parentCategoryId: (item as Category)?.parentCategory?.id || props.initialParentCategoryId || topLevelCategoryValue, color: (item as Tag)?.color || (item as Category)?.iconColor || '#005CAF', cardNumber: (item as Account)?.cardNumber || '', iconName: (item as Category)?.iconName || DEFAULT_CATEGORY_ICON })
 const busy = ref(false)
 const error = ref('')
 const moveConfirmed = ref(false)
@@ -43,6 +44,12 @@ const parentItems = computed(() => [
   { label: '顶级分类', value: topLevelCategoryValue },
   ...parents.value.map(category => ({ label: category.name, value: category.id })),
 ])
+const categoryIconItems = computed(() => {
+  if (props.kind !== 'categories' || CATEGORY_ICON_ITEMS.some(option => option.value === form.iconName)) return CATEGORY_ICON_ITEMS
+  return [{ label: `当前图标（${form.iconName}）`, value: form.iconName, icon: DEFAULT_CATEGORY_ICON }, ...CATEGORY_ICON_ITEMS]
+})
+const selectedCategoryIcon = computed(() => categoryIconItems.value.find(option => option.value === form.iconName) || CATEGORY_ICON_ITEMS[0])
+const hasKnownCategoryIcon = computed(() => CATEGORY_ICON_ITEMS.some(option => option.value === form.iconName))
 const selectedParent = computed(() => props.categories.find(category => category.id === form.parentCategoryId))
 const selectedParentPath = computed(() => {
   if (!selectedParent.value) return '顶级分类'
@@ -64,7 +71,7 @@ async function save() {
   let body: object = { name: form.name.trim(), description: form.description.trim() || null }
   if (props.kind === 'accounts') body = { ...body, type: form.type, cardNumber: form.cardNumber.trim() || null }
   if (props.kind === 'tags') body = { ...body, color: form.color }
-  if (props.kind === 'categories') body = { ...body, ...(!item ? { purpose: form.purpose } : {}), parentCategoryId: form.parentCategoryId === topLevelCategoryValue ? null : form.parentCategoryId, iconColor: form.color, iconName: (item as Category)?.iconName || 'i-lucide-folder' }
+  if (props.kind === 'categories') body = { ...body, ...(!item ? { purpose: form.purpose } : {}), parentCategoryId: form.parentCategoryId === topLevelCategoryValue ? null : form.parentCategoryId, iconColor: form.color, iconName: form.iconName || DEFAULT_CATEGORY_ICON }
   busy.value = true; error.value = ''; emit('busy', true)
   try {
     await $fetch(`/api/v1/${props.kind}${item ? `/${item.id}` : ''}`, { method: item ? 'PATCH' : 'POST', body, retry: 0 })
@@ -99,6 +106,29 @@ async function save() {
       </UFormField>
       <p class="hint parent-path">父分类路径：{{ selectedParentPath }}</p>
       <UCheckbox v-if="moving" v-model="moveConfirmed" label="确认将此分类及其所有子分类一起移动" />
+      <UFormField name="iconName" label="分类图标" required>
+        <UInputMenu
+          v-model="form.iconName"
+          class="category-icon-picker w-full"
+          :items="categoryIconItems"
+          value-key="value"
+          :icon="selectedCategoryIcon?.icon || DEFAULT_CATEGORY_ICON"
+          placeholder="搜索或选择图标"
+          :portal="false"
+          aria-label="分类图标"
+        >
+          <template #item="{ item: icon }">
+            <span class="category-icon-option">
+              <UIcon :name="icon.icon || DEFAULT_CATEGORY_ICON" aria-hidden="true" />
+              <span>{{ icon.label }}</span>
+            </span>
+          </template>
+        </UInputMenu>
+        <div class="category-icon-preview" aria-live="polite">
+          <span class="category-icon-preview__icon" :style="{ color: form.color, backgroundColor: `${form.color}22` }"><UIcon :name="selectedCategoryIcon?.icon || DEFAULT_CATEGORY_ICON" aria-hidden="true" /></span>
+          <span><strong>预览：{{ selectedCategoryIcon?.label || '文件夹' }}</strong><small v-if="!hasKnownCategoryIcon">历史图标将原样保留；选择新图标后才会替换。</small><small v-else>保存后会同步显示在分类树和分类详情中。</small></span>
+        </div>
+      </UFormField>
     </template>
     <UFormField v-if="kind !== 'accounts'" name="color" label="颜色" required :error="colorError || undefined">
       <ColorInput v-model="form.color" id="resource-color" :error="colorError" :disabled="busy" />
@@ -111,3 +141,50 @@ async function save() {
     <div class="modal-editor-actions"><span class="text-sm text-dimmed">名称不能重复</span><UButton type="submit" label="保存" :loading="busy" :aria-busy="busy" :disabled="busy" /></div>
   </UForm>
 </template>
+
+<style scoped>
+.category-icon-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.category-icon-option :deep(svg) {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+}
+
+.category-icon-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--ui-border-muted);
+  border-radius: 10px;
+  background: var(--ui-bg-muted);
+}
+
+.category-icon-preview__icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  font-size: 18px;
+}
+
+.category-icon-preview > span:last-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.category-icon-preview small {
+  color: var(--ui-text-muted);
+  font-size: 11px;
+}
+</style>
