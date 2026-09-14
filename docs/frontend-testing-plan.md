@@ -51,7 +51,6 @@
 
 ```text
 Bun 1.3.13
-Node.js 22.23.1
 uv 0.9.18
 frontend/node_modules
 @playwright/test
@@ -79,8 +78,8 @@ POCKET_TALLY_E2E_DATABASE_PATH=../frontend/.data/e2e-local.sqlite3
 
 不要将个人账本数据库作为 E2E 数据库使用。
 
-Playwright 会先构建前端，再通过 `bun run preview` 启动 Bun 生产预览服务；它不复用
-Node.js 开发服务器，也不应改为存在路由兼容问题的 `bun --bun nuxt dev`。
+Playwright 会先构建前端，再通过 `bun run preview` 启动 Bun 生产预览服务；本地开发
+服务器则通过 `bun run dev` 显式使用 Bun runtime。
 
 ## 4. 标准执行流程
 
@@ -239,90 +238,3 @@ bun run test:e2e --project=chromium-1280 app-shell.spec.ts
 8. 使用 axe 检查主页面和交易表单弹窗，critical/serious 问题数必须为 0。
 
 测试入口：
-
-```bash
-cd frontend
-bun run test:e2e --project=chromium-1280 keyboard-accessibility.spec.ts
-```
-
-## 6. 单视口调试
-
-遇到矩阵失败时，先单独运行失败的项目：
-
-```bash
-cd frontend
-bun run test:e2e --project=chromium-1280
-bun run test:e2e --project=chromium-1440
-bun run test:e2e --project=chromium-1920
-```
-
-只运行新增兼容性测试：
-
-```bash
-bun run test:e2e --project=chromium-1280 desktop-compatibility.spec.ts
-```
-
-失败产物位于：
-
-```text
-frontend/test-results/
-```
-
-其中包括失败截图、错误上下文和 trace。查看 trace 时，在 `frontend` 目录运行：
-
-```bash
-bunx playwright show-trace test-results/<失败目录>/trace.zip
-```
-
-如果出现端口占用，先确认是否仍有测试残留进程，再只清理占用 8012 或 3012 的测试服务。不要停止个人账本服务或删除默认账本数据库。
-
-## 7. 通过标准
-
-Issue #17/#20 只有在以下条件全部满足时才算通过：
-
-1. Chromium 1280、1440、1920 三档矩阵全部通过。
-2. 六个主页面没有横向溢出、关键控件遮挡或不可操作问题。
-3. 空状态、常规数据、长文本、20 笔以上分页和多时间桶统计均通过。
-4. 详情、编辑、退款、作废确认和删除确认弹窗均完整位于视口内。
-5. 至少一档验证亮色主题，至少一档验证暗色主题。
-6. 保存失败后表单输入内容仍然保留。
-7. `bun run test:e2e:matrix` 可以作为完整 Chromium 验收命令重复执行。
-8. 纯键盘主流程、弹窗焦点、重复提交和 axe critical/serious 扫描全部通过。
-9. 前端类型检查、单元测试、生产构建、E2E、后端测试、Ruff、文档检查和 `git diff --check` 全部通过。
-10. 六个路由可直接访问和刷新，交易与统计 query 可规范化并通过浏览器历史恢复。
-11. 宽屏折叠侧栏、Breadcrumb、紧凑状态指示器和窄屏 Slideover 导航通过 `app-shell.spec.ts` 验收。
-
-## 8. 当前验证记录
-
-2026-09-10 Issue #31 本地验证结果：
-
-- 路由聚焦验收：4/4 通过；
-- Chromium 1280、1440、1920 完整矩阵：45/45 通过；
-- 前端单元测试：15/15 通过；
-- 前端类型检查与生产构建：通过；
-- 后端测试与 Ruff：通过；
-- 文档契约检查与构建、Compose 配置检查、`git diff --check`：通过；
-- 六个路由直达、刷新、标题及导航选中态，query 规范化、显式无边界、前进后退恢复、统计专属空状态和按页请求边界：通过。
-
-2026-09-09 Issue #17 本地验证结果：
-
-- Chromium 矩阵：24/24 通过；其中键盘与无障碍 spec 为 9/9 通过；
-- 前端单元测试：5 passed；
-- 前端类型检查：通过；
-- 前端生产构建：通过；
-- axe critical/serious 扫描：0 violations；
-- 纯键盘记账、退款、作废、筛选、统计下钻：通过；
-- 弹窗焦点约束与恢复、Tab/方向键、失败保留输入和重复提交：通过。
-
-2026-09-08 本地验证结果：
-
-- Chromium 矩阵：15/15 通过；
-- 前端单元测试：5 passed；
-- 前端类型检查：通过；
-- 前端生产构建：通过；
-- 后端测试：通过；
-- Ruff：通过；
-- 文档契约检查：通过；
-- `git diff --check`：通过。
-
-本记录只证明当前代码和本地环境下的 Chromium 桌面验收结果，不扩大 Firefox、WebKit、移动端或 CI 的支持承诺。
