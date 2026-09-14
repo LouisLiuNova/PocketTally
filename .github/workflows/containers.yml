@@ -238,3 +238,37 @@ jobs:
         with:
           context: backend
           push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.backend-meta.outputs.tags }}
+          labels: ${{ steps.backend-meta.outputs.labels }}
+          build-args: |
+            APP_VERSION=${{ steps.backend-meta.outputs.version }}
+            VCS_REF=${{ github.sha }}
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=backend-release
+          cache-to: type=gha,mode=max,scope=backend-release
+      - name: Publish frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.frontend-meta.outputs.tags }}
+          labels: ${{ steps.frontend-meta.outputs.labels }}
+          build-args: |
+            APP_VERSION=${{ steps.frontend-meta.outputs.version }}
+            VCS_REF=${{ github.sha }}
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=frontend-release
+          cache-to: type=gha,mode=max,scope=frontend-release
+      - name: Verify published manifests
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          docker logout ghcr.io
+          docker logout
+          docker buildx imagetools inspect "ghcr.io/louisliunova/pockettally-backend:$version"
+          docker buildx imagetools inspect "ghcr.io/louisliunova/pockettally-frontend:$version"
+          docker buildx imagetools inspect "iridium191/pocket-tally-backend:$version"
+          docker buildx imagetools inspect "iridium191/pocket-tally-frontend:$version"
