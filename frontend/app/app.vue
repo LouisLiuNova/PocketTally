@@ -219,7 +219,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
 
     <UModal :open="!!workspace.transactionEditor.value" :dismissible="!workspace.editorBusy.value" title="交易表单" @update:open="value => { if (!value && !workspace.editorBusy.value) workspace.transactionEditor.value = null }">
       <template #content>
-        <TransactionEditor
+        <LazyTransactionEditor
           v-if="workspace.transactionEditor.value"
           v-bind="workspace.transactionEditor.value"
           :accounts="workspace.accounts.value"
@@ -234,7 +234,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
     </UModal>
     <UModal :open="!!workspace.resourceEditor.value" :dismissible="!workspace.editorBusy.value" :title="resourceEditorTitle" @update:open="value => { if (!value && !workspace.editorBusy.value) workspace.resourceEditor.value = null }">
       <template #content>
-        <ResourceEditor
+        <LazyResourceEditor
           v-if="workspace.resourceEditor.value"
           v-bind="workspace.resourceEditor.value"
           :categories="workspace.categories.value"
