@@ -24,6 +24,12 @@ async function selectNuxtUiOption(page: Page, label: string, option: string) {
   await page.getByRole('option', { name: option, exact: true }).click()
 }
 
+async function selectTransactionType(page: Page, type: string) {
+  const radio = page.getByRole('dialog').last().getByRole('radio', { name: type, exact: true })
+  await radio.focus()
+  await radio.press('Space')
+}
+
 test('纯键盘完成核心记账、退款作废、筛选和统计下钻', async ({ page }) => {
   const suffix = Date.now().toString()
   const wallet = '键盘钱包' + suffix
@@ -50,7 +56,7 @@ test('纯键盘完成核心记账、退款作废、筛选和统计下钻', async
   await expect(page.getByText(category, { exact: true })).toBeVisible()
 
   await activate(page.getByRole('button', { name: '记一笔', exact: true }))
-  await selectNuxtUiOption(page, '交易类型', '调账')
+  await selectTransactionType(page, '调账')
   await selectNuxtUiOption(page, '账户', wallet + ' · ¥0.00')
   await typeText(page.getByLabel('金额（元）', { exact: true }), '1000')
   await typeText(page.getByLabel('说明', { exact: true }), adjustment)

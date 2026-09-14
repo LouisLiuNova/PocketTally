@@ -5,6 +5,10 @@ async function selectNuxtUiOption(page: Page, label: string, option: string) {
   await page.getByRole('option', { name: option, exact: true }).click()
 }
 
+async function selectTransactionType(page: Page, type: string) {
+  await page.getByRole('dialog').last().getByRole('radio', { name: type, exact: true }).click()
+}
+
 test('真实账本：资源、收支、转账、调账、退款、作废和持久化', async ({ page }) => {
   const suffix = Date.now().toString()
   const wallet = `钱包${suffix}`, bank = `银行${suffix}`, expense = `餐饮${suffix}`, income = `工资${suffix}`, tag = `日常${suffix}`
@@ -58,7 +62,7 @@ test('真实账本：资源、收支、转账、调账、退款、作废和持�
   async function create(kind: string, amount: string, description: string) {
     await page.getByRole('button', { name: '记一笔', exact: true }).click()
     const kindLabels: Record<string, string> = { expense: '支出', income: '收入', transfer: '转账', balance_adjustment: '调账' }
-    await selectNuxtUiOption(page, '交易类型', kindLabels[kind]!)
+    await selectTransactionType(page, kindLabels[kind]!)
     await page.getByLabel('金额（元）', { exact: true }).fill(amount)
     await page.getByLabel('说明', { exact: true }).fill(description)
     if (kind === 'income') {
