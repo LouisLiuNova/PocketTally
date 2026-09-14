@@ -1,5 +1,6 @@
 """运行时 SQLite Engine 和请求级 Session 测试。"""
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -7,17 +8,118 @@ from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, select
+from sqlmodel import Session, SQLModel, select
 
 from app.config import Settings
 from app.database import (
+    DEFAULT_CATEGORIES,
     LEGACY_BALANCE_TRIGGERS,
     create_database_engine,
     initialize_database,
 )
 from app.dependencies import SessionDep
 from app.main import create_app
-from app.models import Account, AccountType
+from app.models import Account, AccountType, Category, CategoryPurpose
+
+
+def default_category_names() -> set[str]:
+    """返回默认分类名称集合，避免测试重复维护清单。"""
+
+    return {name for name, _purpose in DEFAULT_CATEGORIES}
+
+
+def test_database_initialization_seeds_default_categories_idempotently(
+    tmp_path: Path,
+) -> None:
+    """验证新数据库预置正确用途的一级分类且重复初始化不重复写入。"""
+
+    engine = create_database_engine(tmp_path / "default-categories.sqlite3")
+    initialize_database(engine)
+    with Session(engine) as session:
+        categories = session.exec(select(Category)).all()
+        assert {category.name for category in categories} == default_category_names()
+        assert {
+            (category.name, category.purpose)
+            for category in categories
+        } == set(DEFAULT_CATEGORIES)
+        assert all(category.parent_category_id is None for category in categories)
+
+    initialize_database(engine)
+    with Session(engine) as session:
+        assert len(session.exec(select(Category)).all()) == len(DEFAULT_CATEGORIES)
+    engine.dispose()
+
+
+def test_database_initialization_does_not_fill_existing_category_data(
+    tmp_path: Path,
+) -> None:
+    """验证已有分类的数据库不会被自动补齐默认分类。"""
+
+    database_path = tmp_path / "existing-categories.sqlite3"
+    engine = create_database_engine(database_path)
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        session.add(Category(name="自定义分类", purpose=CategoryPurpose.EXPENSE))
+        session.commit()
+
+    initialize_database(engine)
+    with Session(engine) as session:
+        categories = session.exec(select(Category)).all()
+        assert [category.name for category in categories] == ["自定义分类"]
+    engine.dispose()
+
+
+def test_database_initialization_rolls_back_partial_default_seed(
+    tmp_path: Path,
+) -> None:
+    """验证默认分类批量写入失败时不会留下半套分类。"""
+
+    engine = create_database_engine(tmp_path / "default-categories-rollback.sqlite3")
+    SQLModel.metadata.create_all(engine)
+    with engine.begin() as connection:
+        connection.exec_driver_sql(
+            "CREATE TRIGGER abort_default_category_seed "
+            "BEFORE INSERT ON categories "
+            "WHEN NEW.name = '餐饮' "
+            "BEGIN SELECT RAISE(ABORT, '测试默认分类写入失败'); END"
+        )
+
+    with pytest.raises(IntegrityError, match="测试默认分类写入失败"):
+        initialize_database(engine)
+
+    with Session(engine) as session:
+        assert session.exec(select(Category)).all() == []
+
+    with engine.begin() as connection:
+        connection.exec_driver_sql("DROP TRIGGER abort_default_category_seed")
+    initialize_database(engine)
+    engine.dispose()
+
+
+def test_database_initialization_is_safe_when_called_concurrently(
+    tmp_path: Path,
+) -> None:
+    """验证并发初始化最终只生成一套默认分类。"""
+
+    database_path = tmp_path / "concurrent-default-categories.sqlite3"
+    setup_engine = create_database_engine(database_path)
+    SQLModel.metadata.create_all(setup_engine)
+    with setup_engine.begin() as connection:
+        connection.execute(text("DELETE FROM categories"))
+    setup_engine.dispose()
+
+    engines = [create_database_engine(database_path) for _ in range(2)]
+    try:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            list(executor.map(initialize_database, engines))
+
+        with Session(engines[0]) as session:
+            categories = session.exec(select(Category)).all()
+            assert len(categories) == len(DEFAULT_CATEGORIES)
+            assert {category.name for category in categories} == default_category_names()
+    finally:
+        for engine in engines:
+            engine.dispose()
 
 
 def test_database_initialization_is_repeatable_and_enables_foreign_keys(

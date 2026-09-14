@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+from sqlalchemy import text
 from sqlmodel import Session
 
 from app.categories import (
@@ -29,6 +30,9 @@ def make_engine(database_path: Path):
 
     engine = create_database_engine(database_path)
     initialize_database(engine)
+    # 这些服务测试需要自行构造分类树；默认分类行为由 test_database.py 单独覆盖。
+    with engine.begin() as connection:
+        connection.execute(text("DELETE FROM categories"))
     return engine
 
 

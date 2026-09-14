@@ -83,7 +83,7 @@ async def test_resource_crud_conflicts_and_validation(tmp_path: Path) -> None:
             client,
             "/api/v1/categories",
             {
-                "name": "餐饮",
+                "name": "测试餐饮",
                 "purpose": "expense",
                 "parentCategoryId": expense["id"],
             },
@@ -235,7 +235,7 @@ async def test_transaction_reads_and_delete_conflicts_preserve_relations(
         category = await create_resource(
             client,
             "/api/v1/categories",
-            {"name": "餐饮", "purpose": "expense"},
+            {"name": "测试餐饮", "purpose": "expense"},
         )
         child = await create_resource(
             client,
@@ -388,12 +388,12 @@ async def test_transaction_write_patch_tags_and_idempotent_void(tmp_path: Path) 
         income_category = await create_resource(
             client,
             "/api/v1/categories",
-            {"name": "工资", "purpose": "income"},
+            {"name": "测试工资", "purpose": "income"},
         )
         expense_category = await create_resource(
             client,
             "/api/v1/categories",
-            {"name": "餐饮", "purpose": "expense"},
+            {"name": "测试餐饮", "purpose": "expense"},
         )
         tag = await create_resource(client, "/api/v1/tags", {"name": "日常"})
         occurred_at = datetime.now(UTC).isoformat()
