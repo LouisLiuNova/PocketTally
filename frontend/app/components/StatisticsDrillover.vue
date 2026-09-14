@@ -24,7 +24,7 @@ const emit = defineEmits<{
     title="统计明细"
     :description="props.title"
     :close="{ 'aria-label': '关闭统计明细' }"
-    :ui="{ content: 'w-full sm:max-w-2xl', body: 'space-y-5' }"
+    :ui="{ content: 'w-full sm:max-w-2xl motion-reduce:animate-none motion-reduce:transition-none', body: 'space-y-5' }"
     @update:open="value => { if (!value) emit('close') }"
   >
     <template #body>
@@ -51,7 +51,7 @@ const emit = defineEmits<{
       </UAlert>
 
       <div v-else-if="props.loading && !props.data" class="statistics-drillover-loading" role="status" aria-label="正在读取统计明细">
-        <USkeleton v-for="index in 5" :key="index" class="h-12 w-full" />
+        <USkeleton v-for="index in 5" :key="index" class="h-12 w-full motion-reduce:animate-none" />
       </div>
 
       <UEmpty

@@ -217,7 +217,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
       @open-original="workspace.openTransaction"
     />
 
-    <UModal :open="!!workspace.transactionEditor.value" :dismissible="!workspace.editorBusy.value" title="交易表单" @update:open="value => { if (!value && !workspace.editorBusy.value) workspace.transactionEditor.value = null }">
+    <UModal :open="!!workspace.transactionEditor.value" :dismissible="!workspace.editorBusy.value" title="交易表单" :ui="{ content: 'motion-reduce:animate-none motion-reduce:transition-none' }" @update:open="value => { if (!value && !workspace.editorBusy.value) workspace.transactionEditor.value = null }">
       <template #content>
         <LazyTransactionEditor
           v-if="workspace.transactionEditor.value"
@@ -232,7 +232,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
         />
       </template>
     </UModal>
-    <UModal :open="!!workspace.resourceEditor.value" :dismissible="!workspace.editorBusy.value" :title="resourceEditorTitle" @update:open="value => { if (!value && !workspace.editorBusy.value) workspace.resourceEditor.value = null }">
+    <UModal :open="!!workspace.resourceEditor.value" :dismissible="!workspace.editorBusy.value" :title="resourceEditorTitle" :ui="{ content: 'motion-reduce:animate-none motion-reduce:transition-none' }" @update:open="value => { if (!value && !workspace.editorBusy.value) workspace.resourceEditor.value = null }">
       <template #content>
         <LazyResourceEditor
           v-if="workspace.resourceEditor.value"
@@ -244,7 +244,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
         />
       </template>
     </UModal>
-    <UModal :open="!!workspace.confirmation.value" :dismissible="!workspace.busy.value" :title="workspace.confirmation.value?.title" @after:enter="focusConfirmationCancel" @update:open="value => { if (!value && !workspace.busy.value) workspace.confirmation.value = null }">
+    <UModal :open="!!workspace.confirmation.value" :dismissible="!workspace.busy.value" :title="workspace.confirmation.value?.title" :ui="{ content: 'motion-reduce:animate-none motion-reduce:transition-none' }" @after:enter="focusConfirmationCancel" @update:open="value => { if (!value && !workspace.busy.value) workspace.confirmation.value = null }">
       <template #body>
         <p>{{ workspace.confirmation.value?.text }}</p>
         <UAlert v-if="workspace.actionError.value" color="error" variant="soft" icon="i-lucide-circle-alert" title="操作失败" :description="workspace.actionError.value" role="alert" />

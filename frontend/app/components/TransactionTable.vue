@@ -78,7 +78,7 @@ function detailLabel(transaction: Transaction) {
 
     <template #loading>
       <div class="transaction-table-skeleton" aria-label="正在加载交易">
-        <USkeleton v-for="index in 5" :key="index" class="h-12 w-full" />
+        <USkeleton v-for="index in 5" :key="index" class="h-12 w-full motion-reduce:animate-none" />
       </div>
     </template>
   </UTable>

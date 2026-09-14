@@ -235,7 +235,7 @@ onBeforeUnmount(() => {
   <section class="statistics-toolbar" aria-label="统计筛选">
     <div class="statistics-toolbar__periods">
       <p class="mb-2 text-sm font-medium text-highlighted">时间范围</p>
-      <UTabs :items="presetItems" :model-value="routeState.preset" activation-mode="manual" :content="false" @update:model-value="value => setPreset(value as StatisticsPreset)" />
+      <UTabs :items="presetItems" :model-value="routeState.preset" activation-mode="manual" :content="false" :ui="{ indicator: 'motion-reduce:transition-none' }" @update:model-value="value => setPreset(value as StatisticsPreset)" />
     </div>
     <div class="statistics-toolbar__controls">
       <UFormField v-if="routeState.preset === 'custom'" label="开始日期" name="statistics-start">
@@ -259,8 +259,8 @@ onBeforeUnmount(() => {
   </UAlert>
   <UAlert v-if="showingPreviousSnapshot && !queryError" color="info" variant="soft" icon="i-lucide-refresh-cw" title="正在更新统计" description="筛选条件已更新，当前暂显示上一组完整结果。" role="status" />
   <div v-if="loading && !loadedData" class="statistics-loading" role="status" aria-label="正在读取统计分析">
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-3"><USkeleton v-for="index in 3" :key="index" class="h-32 w-full" /></div>
-    <USkeleton class="h-80 w-full" />
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3"><USkeleton v-for="index in 3" :key="index" class="h-32 w-full motion-reduce:animate-none" /></div>
+    <USkeleton class="h-80 w-full motion-reduce:animate-none" />
   </div>
 
   <section v-if="overview" class="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="统计对比摘要">

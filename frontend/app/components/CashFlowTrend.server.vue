@@ -11,7 +11,7 @@ defineProps<{
 <template>
   <div class="cash-flow-trend cash-flow-trend--placeholder" :class="`cash-flow-trend--${variant}`" aria-label="现金流趋势正在加载" role="img">
     <div class="cash-flow-placeholder-grid" aria-hidden="true">
-      <USkeleton v-for="index in variant === 'full' ? 8 : 5" :key="index" class="cash-flow-placeholder-bar" />
+      <USkeleton v-for="index in variant === 'full' ? 8 : 5" :key="index" class="cash-flow-placeholder-bar motion-reduce:animate-none" />
     </div>
   </div>
 </template>

@@ -140,6 +140,25 @@
   .pt-button {
     transition: none;
   }
+
+  /* Nuxt UI covers most primitives with motion-reduce variants. These selectors
+     also cover generated arbitrary animation utilities used by modal, popover,
+     tooltip and collapsible content when a component theme omits the variant. */
+  [class*="animate-[collapsible-down_"],
+  [class*="animate-[collapsible-up_"],
+  [class*="animate-[scale-in_"],
+  [class*="animate-[scale-out_"],
+  [data-slot="skeleton"],
+  .animate-pulse {
+    animation: none !important;
+  }
+
+  [class*="transition-[translate"],
+  [class*="transition-[width"],
+  [class*="transition-transform"],
+  [class*="transition-opacity"] {
+    transition: none !important;
+  }
 }
 
 [data-palette-preview] {

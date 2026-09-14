@@ -32,6 +32,9 @@ const emit = defineEmits<{ drilldown: [startAt: string, endAt: string] }>()
 const selectedIndex = ref(-1)
 const chartFocused = ref(false)
 const tableOpen = ref(false)
+const reducedMotion = ref(import.meta.client && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+const chartDuration = computed(() => reducedMotion.value ? 0 : 160)
+let motionQuery: MediaQueryList | undefined
 
 const rows = computed(() => cashFlowChartRows(props.buckets))
 const selected = computed(() => rows.value[selectedIndex.value])
@@ -102,6 +105,20 @@ function xTickFormat(value: number) {
   return localInput(new Date(value).toISOString()).slice(props.granularity === 'day' ? 5 : 0, 10)
 }
 
+function updateReducedMotion(event?: MediaQueryListEvent) {
+  reducedMotion.value = event?.matches ?? motionQuery?.matches ?? false
+}
+
+onMounted(() => {
+  motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+  updateReducedMotion()
+  motionQuery.addEventListener?.('change', updateReducedMotion)
+})
+
+onBeforeUnmount(() => {
+  motionQuery?.removeEventListener?.('change', updateReducedMotion)
+})
+
 watch(() => props.buckets, (next) => {
   selectedIndex.value = next.length ? clampSelectedIndex(selectedIndex.value < 0 ? next.length - 1 : selectedIndex.value, next.length) : -1
 }, { deep: true, immediate: true })
@@ -121,6 +138,8 @@ watch(() => props.buckets, (next) => {
     <div v-else class="cash-flow-chart-shell">
       <div
         class="cash-flow-chart"
+        :data-reduced-motion="reducedMotion"
+        :data-chart-duration="chartDuration"
         tabindex="0"
         role="application"
         aria-label="现金流趋势图，可使用方向键选择时间桶"
@@ -144,12 +163,12 @@ watch(() => props.buckets, (next) => {
             :bar-max-width="variant === 'full' ? 34 : 28"
             :bar-padding="0.22"
             :rounded-corners="3"
-            :duration="160"
+            :duration="chartDuration"
             :events="chartEvents"
             :attributes="chartAttributes"
           />
-          <VisLine :x="x" :y="netY" color="var(--ui-text-highlighted)" :line-width="3" :duration="160" />
-          <VisScatter :x="x" :y="netY" color="var(--ui-text-highlighted)" :size="8" :duration="160" />
+          <VisLine :x="x" :y="netY" color="var(--ui-text-highlighted)" :line-width="3" :duration="chartDuration" />
+          <VisScatter :x="x" :y="netY" color="var(--ui-text-highlighted)" :size="8" :duration="chartDuration" />
           <VisAxis type="x" :tick-format="xTickFormat" :num-ticks="labelIndexes.length" />
           <VisAxis type="y" :tick-format="(value: number) => money(value)" />
           <VisCrosshair
@@ -179,7 +198,7 @@ watch(() => props.buckets, (next) => {
       </div>
     </div>
 
-    <UCollapsible v-if="variant === 'full' && rows.length" v-model:open="tableOpen" class="cash-flow-table-wrap">
+    <UCollapsible v-if="variant === 'full' && rows.length" v-model:open="tableOpen" class="cash-flow-table-wrap" :ui="{ content: 'motion-reduce:animate-none motion-reduce:transition-none' }">
       <UButton class="cash-flow-table-trigger" color="neutral" variant="ghost" :label="tableOpen ? '收起完整数据表' : '查看完整数据表'" :aria-expanded="tableOpen" />
       <template #content>
         <div class="cash-flow-table-scroll">
