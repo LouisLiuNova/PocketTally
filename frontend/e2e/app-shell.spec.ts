@@ -18,9 +18,8 @@ test('宽屏壳层支持路由导航、折叠状态与状态提示', async ({ pa
   const currencyStatus = page.getByLabel('货币：CNY', { exact: true })
   await currencyStatus.hover()
   await expect(page.locator('[data-slot="content"]').filter({ hasText: '货币：CNY' })).toBeVisible()
-  await page.getByLabel('个人账本', { exact: true }).focus()
-  await page.keyboard.press('Tab')
-  await expect(currencyStatus).toBeFocused()
+  await expect(currencyStatus).not.toBeFocused()
+  await expect(currencyStatus).toHaveJSProperty('tabIndex', -1)
   await expect(page.locator('.ledger-status-item [data-slot="label"]')).toHaveCount(0)
 
   await page.getByRole('button', { name: '展开主导航', exact: true }).click()
