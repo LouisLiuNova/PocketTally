@@ -51,7 +51,7 @@ const emit = defineEmits<{
       </UAlert>
 
       <div v-else-if="props.loading && !props.data" class="statistics-drillover-loading" role="status" aria-label="正在读取统计明细">
-        <USkeleton v-for="index in 5" :key="index" class="h-12 w-full motion-reduce:animate-none" />
+        <USkeleton v-for="index in 5" :key="index" aria-hidden="true" class="h-12 w-full motion-reduce:animate-none" />
       </div>
 
       <UEmpty

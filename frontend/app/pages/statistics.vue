@@ -259,8 +259,8 @@ onBeforeUnmount(() => {
   </UAlert>
   <UAlert v-if="showingPreviousSnapshot && !queryError" color="info" variant="soft" icon="i-lucide-refresh-cw" title="正在更新统计" description="筛选条件已更新，当前暂显示上一组完整结果。" role="status" />
   <div v-if="loading && !loadedData" class="statistics-loading" role="status" aria-label="正在读取统计分析">
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-3"><USkeleton v-for="index in 3" :key="index" class="h-32 w-full motion-reduce:animate-none" /></div>
-    <USkeleton class="h-80 w-full motion-reduce:animate-none" />
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3"><USkeleton v-for="index in 3" :key="index" aria-hidden="true" class="h-32 w-full motion-reduce:animate-none" /></div>
+    <USkeleton aria-hidden="true" class="h-80 w-full motion-reduce:animate-none" />
   </div>
 
   <section v-if="overview" class="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="统计对比摘要">

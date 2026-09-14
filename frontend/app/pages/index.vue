@@ -126,8 +126,8 @@ onBeforeUnmount(() => { requestId++ })
     </UPageCard>
 
     <div v-else-if="loading && !loadedData" class="overview-loading" role="status" aria-label="正在读取当前账本状态">
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-3"><USkeleton v-for="index in 3" :key="index" class="h-32 w-full motion-reduce:animate-none" /></div>
-      <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_.9fr]"><USkeleton class="h-72 w-full motion-reduce:animate-none" /><USkeleton class="h-72 w-full motion-reduce:animate-none" /></div>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3"><USkeleton v-for="index in 3" :key="index" aria-hidden="true" class="h-32 w-full motion-reduce:animate-none" /></div>
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_.9fr]"><USkeleton aria-hidden="true" class="h-72 w-full motion-reduce:animate-none" /><USkeleton aria-hidden="true" class="h-72 w-full motion-reduce:animate-none" /></div>
     </div>
 
     <template v-else-if="overview">
