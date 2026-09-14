@@ -62,6 +62,25 @@ function focusConfirmationCancel() {
   nextTick(() => document.querySelector<HTMLButtonElement>('[data-confirmation-cancel]')?.focus())
 }
 
+function selectThemeMode(value: ThemePreference, focus = false) {
+  workspace.theme.value = value
+  if (focus) {
+    nextTick(() => document.querySelector<HTMLButtonElement>(`[data-theme-mode="${value}"]`)?.focus())
+  }
+}
+
+function handleThemeModeKeydown(event: KeyboardEvent, index: number) {
+  const lastIndex = themeModes.length - 1
+  let nextIndex = index
+  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = index === lastIndex ? 0 : index + 1
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = index === 0 ? lastIndex : index - 1
+  if (event.key === 'Home') nextIndex = 0
+  if (event.key === 'End') nextIndex = lastIndex
+  if (nextIndex === index && event.key !== ' ' && event.key !== 'Enter') return
+  event.preventDefault()
+  selectThemeMode(themeModes[nextIndex].value, nextIndex !== index)
+}
+
 useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
 </script>
 
@@ -126,9 +145,12 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
                       type="button"
                       role="radio"
                       :aria-checked="workspace.theme.value === mode.value"
+                      :data-theme-mode="mode.value"
+                      :tabindex="themeModeIndex === themeModes.indexOf(mode) ? 0 : -1"
                       :aria-label="mode.label"
                       :title="mode.label"
-                      @click="workspace.theme.value = mode.value"
+                      @click="selectThemeMode(mode.value)"
+                      @keydown="handleThemeModeKeydown($event, themeModes.indexOf(mode))"
                     >
                       <UIcon :name="mode.icon" aria-hidden="true" />
                     </button>
