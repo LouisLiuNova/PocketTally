@@ -10,6 +10,9 @@ export default defineAppConfig({
       neutral: 'slate',
     },
     button: {
+      slots: {
+        base: 'pt-button',
+      },
       defaultVariants: {
         color: 'primary',
         size: 'md',
