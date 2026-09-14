@@ -130,6 +130,10 @@
     background-color: color-mix(in srgb, var(--ui-primary) 5%, var(--ui-bg-muted));
     color: var(--ui-text);
   }
+
+  .pt-button[class~="ring-accented"]:not(:disabled):not([aria-busy="true"]):hover {
+    box-shadow: inset 0 0 0 1px var(--ui-border-accented);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
