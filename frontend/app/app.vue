@@ -8,6 +8,8 @@ import { MESSAGE_ICONS, type AppMessage } from '~/utils/messages'
 const route = useRoute()
 const workspace = createLedgerWorkspace()
 const messages = useAppMessages()
+const pageTitle = ref<HTMLElement | null>(null)
+let initialPath = route.path
 provide(ledgerWorkspaceKey, workspace)
 
 const appLocale = {
@@ -81,11 +83,19 @@ function handleThemeModeKeydown(event: KeyboardEvent, index: number) {
   selectThemeMode(themeModes[nextIndex].value, nextIndex !== index)
 }
 
+watch(() => route.path, async (path) => {
+  if (path === initialPath) return
+  initialPath = path
+  await nextTick()
+  pageTitle.value?.focus()
+})
+
 useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
 </script>
 
 <template>
   <UApp :locale="appLocale" :toaster="{ position: 'bottom-right', duration: 4000, max: 5, expand: true }">
+    <NuxtRouteAnnouncer />
     <UDashboardGroup class="app-shell" storage="local" storage-key="pockettally-shell" unit="rem">
       <UDashboardSidebar
         id="primary"
@@ -194,7 +204,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
             <template #left>
               <div class="min-w-0">
                 <p class="eyebrow">{{ today }}</p>
-                <h1>{{ currentRoute.title }}</h1>
+                <h1 ref="pageTitle" tabindex="-1" data-page-title>{{ currentRoute.title }}</h1>
                 <UBreadcrumb :items="breadcrumbItems" class="mt-1" :ui="{ link: 'text-xs' }" />
               </div>
             </template>
