@@ -78,6 +78,9 @@ POCKET_TALLY_E2E_DATABASE_PATH=../frontend/.data/e2e-local.sqlite3
 
 不要将个人账本数据库作为 E2E 数据库使用。
 
+Playwright 会先构建前端，再通过 `bun run preview` 启动 Bun 生产预览服务；本地开发
+服务器则通过 `bun run dev` 显式使用 Bun runtime。
+
 ## 4. 标准执行流程
 
 ### 4.1 安装 Chromium

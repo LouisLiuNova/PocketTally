@@ -12,6 +12,6 @@ export default defineConfig({
   })),
   webServer: [
     { command: `cd ../backend && POCKET_TALLY_DATABASE_PATH=${e2eDatabasePath} uv run uvicorn app.main:app --port 8012`, url: 'http://127.0.0.1:8012/api/v1/accounts', reuseExistingServer: false, timeout: 120000 },
-    { command: 'bun run build && HOST=127.0.0.1 PORT=3012 NUXT_API_BASE=http://127.0.0.1:8012 bun .output/server/index.mjs', url: 'http://127.0.0.1:3012/', reuseExistingServer: false, timeout: 180000 },
+    { command: 'bun run build && HOST=127.0.0.1 PORT=3012 NUXT_API_BASE=http://127.0.0.1:8012 bun run preview', url: 'http://127.0.0.1:3012/', reuseExistingServer: false, timeout: 180000 },
   ],
 })

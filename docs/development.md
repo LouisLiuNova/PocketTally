@@ -30,6 +30,8 @@ bun run dev
 
 访问 `http://localhost:3000`。前端默认通过同源 `/api/v1` 代理访问
 `http://127.0.0.1:8000`；后端地址不同时，通过 `NUXT_API_BASE` 覆盖。
+`bun run dev` 会显式使用 Bun runtime 启动 Nuxt 开发服务器，确保本地开发与浏览器验收
+使用与项目锁定版本一致的 Bun 运行时。
 
 后端默认将数据保存到 `backend/data/pocket-tally.sqlite3`。需要使用其他开发账本时，
 设置 `POCKET_TALLY_DATABASE_PATH`。请勿使用个人正式账本进行开发或测试。
