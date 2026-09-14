@@ -164,13 +164,22 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
         <template #footer="{ collapsed }">
           <div class="ledger-status" :data-collapsed="collapsed">
             <UTooltip text="个人账本" :delay-duration="0" :ignore-non-keyboard-focus="false" :content="{ side: 'right' }">
-              <UButton class="ledger-status-item" color="neutral" variant="ghost" icon="i-lucide-book-open" :label="collapsed ? undefined : '个人账本'" aria-label="个人账本" />
+              <div class="ledger-status-item" aria-label="个人账本">
+                <UIcon class="ledger-status-icon" name="i-lucide-book-open" aria-hidden="true" />
+                <span v-if="!collapsed" data-slot="label">个人账本</span>
+              </div>
             </UTooltip>
             <UTooltip text="货币：CNY" :delay-duration="0" :ignore-non-keyboard-focus="false" :content="{ side: 'right' }">
-              <UButton class="ledger-status-item" color="neutral" variant="ghost" icon="i-lucide-circle-dollar-sign" :label="collapsed ? undefined : '货币：CNY'" aria-label="货币：CNY" />
+              <div class="ledger-status-item" aria-label="货币：CNY">
+                <UIcon class="ledger-status-icon" name="i-lucide-circle-dollar-sign" aria-hidden="true" />
+                <span v-if="!collapsed" data-slot="label">货币：CNY</span>
+              </div>
             </UTooltip>
             <UTooltip text="统计边界：Asia/Shanghai" :delay-duration="0" :ignore-non-keyboard-focus="false" :content="{ side: 'right' }">
-              <UButton class="ledger-status-item" color="neutral" variant="ghost" icon="i-lucide-clock-3" :label="collapsed ? undefined : '统计边界：Asia/Shanghai'" aria-label="统计边界：Asia/Shanghai" />
+              <div class="ledger-status-item" aria-label="统计边界：Asia/Shanghai">
+                <UIcon class="ledger-status-icon" name="i-lucide-clock-3" aria-hidden="true" />
+                <span v-if="!collapsed" data-slot="label">统计边界：Asia/Shanghai</span>
+              </div>
             </UTooltip>
           </div>
         </template>
