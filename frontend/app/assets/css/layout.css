@@ -366,7 +366,6 @@
 .palette-choice:hover {
   border-color: var(--ui-border-accented);
   background: var(--ui-bg-elevated);
-  transform: translateY(-1px);
 }
 
 .palette-choice:has([data-state="checked"]) {
@@ -627,6 +626,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .sidebar-theme-switch-thumb,
+  .sidebar-theme-switch-option {
+    transition: none;
+  }
+
   .palette-choice {
     transition: none;
   }

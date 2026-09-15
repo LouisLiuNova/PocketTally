@@ -33,10 +33,10 @@ const locked = computed(() => !!hasRefunds.value || props.editing?.type === 'exp
 const categoryOptions = computed(() => props.categories.filter(category => category.purpose === form.type))
 const remaining = computed(() => props.refund ? (props.refundSummary?.remainingRefundableAmountMinor || 0) : 0)
 const kindItems = [
-  { label: kindLabels.expense, value: 'expense' },
-  { label: kindLabels.income, value: 'income' },
-  { label: kindLabels.transfer, value: 'transfer' },
-  { label: kindLabels.balance_adjustment, value: 'balance_adjustment' },
+  { label: kindLabels.expense, value: 'expense', icon: 'i-lucide-receipt-text' },
+  { label: kindLabels.income, value: 'income', icon: 'i-lucide-circle-arrow-down-left' },
+  { label: kindLabels.transfer, value: 'transfer', icon: 'i-lucide-arrow-left-right' },
+  { label: kindLabels.balance_adjustment, value: 'balance_adjustment', icon: 'i-lucide-scale' },
 ]
 const accountItems = computed(() => props.accounts.map(account => ({ label: `${account.name} · ${money(minor(account.amount))}`, value: account.id })))
 const destinationItems = computed(() => props.accounts.map(account => ({ label: account.name, value: account.id })))
@@ -134,7 +134,17 @@ async function save() {
 
       <div class="transaction-editor-fields">
       <UFormField v-if="!refund" name="type" label="交易类型" required>
-        <USelect v-model="form.type" :items="kindItems" :disabled="!!editing" class="w-full" />
+        <URadioGroup
+          v-model="form.type"
+          class="transaction-type-radio-group"
+          :items="kindItems"
+          :disabled="!!editing"
+          name="transaction-type"
+          aria-label="交易类型"
+          orientation="horizontal"
+          variant="card"
+          :ui="{ item: 'min-w-0 flex-1 p-3', label: 'text-center' }"
+        />
       </UFormField>
 
       <UFormField name="amount" label="金额（元）" :error="fieldErrors.amount" required>
@@ -176,3 +186,30 @@ async function save() {
     </div>
   </UForm>
 </template>
+
+<style scoped>
+.transaction-type-radio-group :deep([data-slot="fieldset"]) {
+  gap: 8px;
+}
+
+.transaction-type-radio-group :deep([data-slot="item"]) {
+  min-width: 0;
+}
+
+.transaction-type-radio-group :deep([data-slot="item"]:has([data-state="checked"])) {
+  border-color: var(--pt-focus-ring);
+  background: var(--pt-primary-container);
+  box-shadow: inset 0 0 0 1px var(--pt-focus-ring);
+}
+
+.transaction-type-radio-group :deep([data-slot="label"]) {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 560px) {
+  .transaction-type-radio-group :deep([data-slot="fieldset"]) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+</style>

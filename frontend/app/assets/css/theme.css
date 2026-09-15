@@ -81,6 +81,13 @@
 
 :root {
   --pt-scrim: rgb(0 0 0);
+  --pt-motion-duration-instant: 0ms;
+  --pt-motion-duration-fast: 120ms;
+  --pt-motion-duration-standard: 180ms;
+  --pt-motion-duration-container: 280ms;
+  --pt-motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --pt-motion-ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --pt-motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
   color-scheme: light;
   --pt-primary: var(--pt-brand-600); --pt-on-primary: #fff;
   --pt-primary-container: var(--pt-brand-100); --pt-on-primary-container: var(--pt-brand-900);
@@ -103,6 +110,55 @@
   --pt-chart-grid: var(--pt-surface-accented); --pt-chart-axis: var(--pt-text-muted);
   --ink: var(--ui-text); --muted: var(--ui-text-muted); --line: var(--ui-border-muted); --paper: var(--pt-surface-page); --card: var(--ui-bg);
   --brand: var(--ui-primary); --brand-soft: var(--pt-brand-300); --brand-dark: var(--pt-brand-700); --nav: var(--pt-surface-inverted);
+}
+
+.pt-button {
+  transition:
+    background-color var(--pt-motion-duration-fast) var(--pt-motion-ease-standard),
+    border-color var(--pt-motion-duration-fast) var(--pt-motion-ease-standard),
+    color var(--pt-motion-duration-fast) var(--pt-motion-ease-standard);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pt-button:not(:disabled):not([aria-busy="true"]):hover {
+    box-shadow: none;
+  }
+
+  .pt-button[class~="hover:bg-elevated"]:not(:disabled):not([aria-busy="true"]):hover,
+  .pt-button[class~="hover:bg-accented/75"]:not(:disabled):not([aria-busy="true"]):hover,
+  .pt-button[class~="hover:bg-accented"]:not(:disabled):not([aria-busy="true"]):hover {
+    background-color: color-mix(in srgb, var(--ui-primary) 5%, var(--ui-bg-muted));
+    color: var(--ui-text);
+  }
+
+  .pt-button[class~="ring-accented"]:not(:disabled):not([aria-busy="true"]):hover {
+    box-shadow: inset 0 0 0 1px var(--ui-border-accented);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-button {
+    transition: none;
+  }
+
+  /* Nuxt UI covers most primitives with motion-reduce variants. These selectors
+     also cover generated arbitrary animation utilities used by modal, popover,
+     tooltip and collapsible content when a component theme omits the variant. */
+  [class*="animate-[collapsible-down_"],
+  [class*="animate-[collapsible-up_"],
+  [class*="animate-[scale-in_"],
+  [class*="animate-[scale-out_"],
+  [data-slot="skeleton"],
+  .animate-pulse {
+    animation: none !important;
+  }
+
+  [class*="transition-[translate"],
+  [class*="transition-[width"],
+  [class*="transition-transform"],
+  [class*="transition-opacity"] {
+    transition: none !important;
+  }
 }
 
 [data-palette-preview] {
@@ -177,6 +233,15 @@ body { background: var(--pt-surface-page); color: var(--ui-text); }
 .transaction-summary { background: var(--pt-primary-container); color: var(--pt-on-primary-container); }
 .transaction-summary span, .transaction-summary p { color: var(--pt-on-primary-container); opacity: .8; }
 .ledger-row:hover, .mvp-transaction:hover { background: var(--ui-bg-muted); }
+.transaction-table tbody tr:has(.transaction-summary-button:hover) { background: color-mix(in srgb, var(--ui-primary) 5%, var(--ui-bg-muted)); }
+
+@media (hover: hover) and (pointer: fine) {
+  .calendar-grid button:not(:disabled):hover {
+    background: color-mix(in srgb, var(--ui-primary) 5%, var(--ui-bg-muted));
+    border-color: var(--ui-primary);
+    box-shadow: none;
+  }
+}
 
 .income-bar, .income-dot, .cash-in { background: var(--pt-chart-income); }
 .expense-bar, .expense-dot, .cash-out { background: var(--pt-chart-expense); }

@@ -5,6 +5,7 @@ import { errorMessage, type TransactionQuery } from '~/composables/useLedger'
 import { defaultTransactionState, monthPeriod, serializeTransactionState } from '~/utils/routeQuery'
 import { localInput, minor, money } from '~/utils/money'
 import { accountNames, signedAmount } from '~/utils/transactionDisplay'
+import { metricIcons } from '~/constants/metricIcons'
 
 const workspace = useLedgerWorkspace()
 const today = localInput().slice(0, 10)
@@ -125,8 +126,8 @@ onBeforeUnmount(() => { requestId++ })
     </UPageCard>
 
     <div v-else-if="loading && !loadedData" class="overview-loading" role="status" aria-label="正在读取当前账本状态">
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-3"><USkeleton v-for="index in 3" :key="index" class="h-32 w-full" /></div>
-      <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_.9fr]"><USkeleton class="h-72 w-full" /><USkeleton class="h-72 w-full" /></div>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3"><USkeleton v-for="index in 3" :key="index" aria-hidden="true" class="h-32 w-full motion-reduce:animate-none" /></div>
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_.9fr]"><USkeleton aria-hidden="true" class="h-72 w-full motion-reduce:animate-none" /><USkeleton aria-hidden="true" class="h-72 w-full motion-reduce:animate-none" /></div>
     </div>
 
     <template v-else-if="overview">
@@ -136,7 +137,7 @@ onBeforeUnmount(() => { requestId++ })
       </UCard>
 
       <section class="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="本期摘要">
-        <MetricSummaryCard label="实际净现金流" :value="money(overview.netCashFlow.currentAmountMinor)" :comparison="formatChange(overview.netCashFlow.changePercent)" emphasis icon="i-lucide-arrow-down-up" />
+        <MetricSummaryCard label="实际净现金流" :value="money(overview.netCashFlow.currentAmountMinor)" :comparison="formatChange(overview.netCashFlow.changePercent)" emphasis :icon="metricIcons.cashFlow" />
         <MetricSummaryCard label="本期普通收入" :value="money(overview.income.currentAmountMinor)" :comparison="formatChange(overview.income.changePercent)" icon="i-lucide-arrow-down-left" />
         <MetricSummaryCard label="消费净支出" :value="money(overview.netExpense.currentAmountMinor)" :comparison="formatChange(overview.netExpense.changePercent)" icon="i-lucide-arrow-up-right" />
       </section>

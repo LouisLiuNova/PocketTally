@@ -8,6 +8,8 @@ import { MESSAGE_ICONS, type AppMessage } from '~/utils/messages'
 const route = useRoute()
 const workspace = createLedgerWorkspace()
 const messages = useAppMessages()
+const pageTitle = ref<HTMLElement | null>(null)
+let initialPath = route.path
 provide(ledgerWorkspaceKey, workspace)
 
 const appLocale = {
@@ -62,11 +64,38 @@ function focusConfirmationCancel() {
   nextTick(() => document.querySelector<HTMLButtonElement>('[data-confirmation-cancel]')?.focus())
 }
 
+function selectThemeMode(value: ThemePreference, focus = false) {
+  workspace.theme.value = value
+  if (focus) {
+    nextTick(() => document.querySelector<HTMLButtonElement>(`[data-theme-mode="${value}"]`)?.focus())
+  }
+}
+
+function handleThemeModeKeydown(event: KeyboardEvent, index: number) {
+  const lastIndex = themeModes.length - 1
+  let nextIndex = index
+  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = index === lastIndex ? 0 : index + 1
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = index === 0 ? lastIndex : index - 1
+  if (event.key === 'Home') nextIndex = 0
+  if (event.key === 'End') nextIndex = lastIndex
+  if (nextIndex === index && event.key !== ' ' && event.key !== 'Enter') return
+  event.preventDefault()
+  selectThemeMode(themeModes[nextIndex].value, nextIndex !== index)
+}
+
+watch(() => route.path, async (path) => {
+  if (path === initialPath) return
+  initialPath = path
+  await nextTick()
+  pageTitle.value?.focus()
+})
+
 useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
 </script>
 
 <template>
   <UApp :locale="appLocale" :toaster="{ position: 'bottom-right', duration: 4000, max: 5, expand: true }">
+    <NuxtRouteAnnouncer />
     <UDashboardGroup class="app-shell" storage="local" storage-key="pockettally-shell" unit="rem">
       <UDashboardSidebar
         id="primary"
@@ -126,9 +155,12 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
                       type="button"
                       role="radio"
                       :aria-checked="workspace.theme.value === mode.value"
+                      :data-theme-mode="mode.value"
+                      :tabindex="themeModeIndex === themeModes.indexOf(mode) ? 0 : -1"
                       :aria-label="mode.label"
                       :title="mode.label"
-                      @click="workspace.theme.value = mode.value"
+                      @click="selectThemeMode(mode.value)"
+                      @keydown="handleThemeModeKeydown($event, themeModes.indexOf(mode))"
                     >
                       <UIcon :name="mode.icon" aria-hidden="true" />
                     </button>
@@ -142,13 +174,22 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
         <template #footer="{ collapsed }">
           <div class="ledger-status" :data-collapsed="collapsed">
             <UTooltip text="个人账本" :delay-duration="0" :ignore-non-keyboard-focus="false" :content="{ side: 'right' }">
-              <UButton class="ledger-status-item" color="neutral" variant="ghost" icon="i-lucide-book-open" :label="collapsed ? undefined : '个人账本'" aria-label="个人账本" />
+              <div class="ledger-status-item" aria-label="个人账本">
+                <UIcon class="ledger-status-icon" name="i-lucide-book-open" aria-hidden="true" />
+                <span v-if="!collapsed" data-slot="label">个人账本</span>
+              </div>
             </UTooltip>
             <UTooltip text="货币：CNY" :delay-duration="0" :ignore-non-keyboard-focus="false" :content="{ side: 'right' }">
-              <UButton class="ledger-status-item" color="neutral" variant="ghost" icon="i-lucide-circle-dollar-sign" :label="collapsed ? undefined : '货币：CNY'" aria-label="货币：CNY" />
+              <div class="ledger-status-item" aria-label="货币：CNY">
+                <UIcon class="ledger-status-icon" name="i-lucide-circle-dollar-sign" aria-hidden="true" />
+                <span v-if="!collapsed" data-slot="label">货币：CNY</span>
+              </div>
             </UTooltip>
             <UTooltip text="统计边界：Asia/Shanghai" :delay-duration="0" :ignore-non-keyboard-focus="false" :content="{ side: 'right' }">
-              <UButton class="ledger-status-item" color="neutral" variant="ghost" icon="i-lucide-clock-3" :label="collapsed ? undefined : '统计边界：Asia/Shanghai'" aria-label="统计边界：Asia/Shanghai" />
+              <div class="ledger-status-item" aria-label="统计边界：Asia/Shanghai">
+                <UIcon class="ledger-status-icon" name="i-lucide-clock-3" aria-hidden="true" />
+                <span v-if="!collapsed" data-slot="label">统计边界：Asia/Shanghai</span>
+              </div>
             </UTooltip>
           </div>
         </template>
@@ -163,7 +204,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
             <template #left>
               <div class="min-w-0">
                 <p class="eyebrow">{{ today }}</p>
-                <h1>{{ currentRoute.title }}</h1>
+                <h1 ref="pageTitle" tabindex="-1" data-page-title>{{ currentRoute.title }}</h1>
                 <UBreadcrumb :items="breadcrumbItems" class="mt-1" :ui="{ link: 'text-xs' }" />
               </div>
             </template>
@@ -217,7 +258,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
       @open-original="workspace.openTransaction"
     />
 
-    <UModal :open="!!workspace.transactionEditor.value" :dismissible="!workspace.editorBusy.value" title="交易表单" @update:open="value => { if (!value && !workspace.editorBusy.value) workspace.transactionEditor.value = null }">
+    <UModal :open="!!workspace.transactionEditor.value" :dismissible="!workspace.editorBusy.value" title="交易表单" :ui="{ content: 'motion-reduce:animate-none motion-reduce:transition-none' }" @update:open="value => { if (!value && !workspace.editorBusy.value) workspace.transactionEditor.value = null }">
       <template #content>
         <LazyTransactionEditor
           v-if="workspace.transactionEditor.value"
@@ -232,7 +273,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
         />
       </template>
     </UModal>
-    <UModal :open="!!workspace.resourceEditor.value" :dismissible="!workspace.editorBusy.value" :title="resourceEditorTitle" @update:open="value => { if (!value && !workspace.editorBusy.value) workspace.resourceEditor.value = null }">
+    <UModal :open="!!workspace.resourceEditor.value" :dismissible="!workspace.editorBusy.value" :title="resourceEditorTitle" :ui="{ content: 'motion-reduce:animate-none motion-reduce:transition-none' }" @update:open="value => { if (!value && !workspace.editorBusy.value) workspace.resourceEditor.value = null }">
       <template #content>
         <LazyResourceEditor
           v-if="workspace.resourceEditor.value"
@@ -244,7 +285,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
         />
       </template>
     </UModal>
-    <UModal :open="!!workspace.confirmation.value" :dismissible="!workspace.busy.value" :title="workspace.confirmation.value?.title" @after:enter="focusConfirmationCancel" @update:open="value => { if (!value && !workspace.busy.value) workspace.confirmation.value = null }">
+    <UModal :open="!!workspace.confirmation.value" :dismissible="!workspace.busy.value" :title="workspace.confirmation.value?.title" :ui="{ content: 'motion-reduce:animate-none motion-reduce:transition-none' }" @after:enter="focusConfirmationCancel" @update:open="value => { if (!value && !workspace.busy.value) workspace.confirmation.value = null }">
       <template #body>
         <p>{{ workspace.confirmation.value?.text }}</p>
         <UAlert v-if="workspace.actionError.value" color="error" variant="soft" icon="i-lucide-circle-alert" title="操作失败" :description="workspace.actionError.value" role="alert" />

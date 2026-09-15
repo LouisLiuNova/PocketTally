@@ -71,14 +71,14 @@ function detailLabel(transaction: Transaction) {
     </template>
 
     <template #actions-cell="{ row }">
-      <UButton color="neutral" variant="ghost" size="sm" :aria-label="detailLabel(row.original)" @click="emit('select', row.original)" @keydown.enter.prevent="emit('select', row.original)">
+      <UButton class="transaction-action-button" color="neutral" variant="ghost" size="sm" :aria-label="detailLabel(row.original)" @click="emit('select', row.original)" @keydown.enter.prevent="emit('select', row.original)">
         详情
       </UButton>
     </template>
 
     <template #loading>
-      <div class="transaction-table-skeleton" aria-label="正在加载交易">
-        <USkeleton v-for="index in 5" :key="index" class="h-12 w-full" />
+      <div class="transaction-table-skeleton" role="status" aria-label="正在读取交易">
+        <USkeleton v-for="index in 5" :key="index" aria-hidden="true" class="h-12 w-full motion-reduce:animate-none" />
       </div>
     </template>
   </UTable>

@@ -28,7 +28,7 @@ const emit = defineEmits<{
     description="查看交易信息与后续操作"
     :close="{ 'aria-label': '关闭交易详情' }"
     :modal="props.modal ?? true"
-    :ui="{ content: 'w-full sm:max-w-xl', body: 'space-y-6' }"
+    :ui="{ content: 'w-full sm:max-w-xl motion-reduce:animate-none motion-reduce:transition-none', body: 'space-y-6' }"
     @update:open="value => { if (!value) emit('close') }"
   >
     <template #body>

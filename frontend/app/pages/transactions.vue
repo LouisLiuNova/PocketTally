@@ -160,7 +160,7 @@ onBeforeUnmount(() => {
         <UButton color="neutral" variant="outline" :icon="advancedOpen ? 'i-lucide-chevron-up' : 'i-lucide-sliders-horizontal'" :label="`高级筛选${activeAdvancedCount ? `（${activeAdvancedCount}）` : ''}`" :aria-expanded="advancedOpen" @click="advancedOpen = !advancedOpen" />
       </div>
 
-      <UCollapsible v-model:open="advancedOpen" class="transaction-advanced-filters">
+      <UCollapsible v-model:open="advancedOpen" class="transaction-advanced-filters" :ui="{ content: 'motion-reduce:animate-none motion-reduce:transition-none' }">
         <template #content>
           <div class="transaction-advanced-grid">
             <label>开始日期<input v-model="startDraft" type="date" @change="commitDates"></label>
