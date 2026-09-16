@@ -17,16 +17,28 @@ test.describe('Issue #61：按钮悬停反馈', () => {
     await expect.poll(() => button.evaluate(element => getComputedStyle(element).transitionDuration)).toBe('0s')
   })
 
-  test('交易列表使用行级 tonal 状态，不把摘要按钮渲染成漂浮卡片', async ({ page }) => {
+  test('交易列表摘要按钮使用 tonal 悬停状态，不渲染成漂浮卡片', async ({ page }) => {
     await page.goto('/')
     await seedDesktopLedger(page.request)
     await page.goto('/transactions')
 
     const summaryButton = page.locator('.transaction-summary-button').first()
     await expect(summaryButton).toBeVisible()
+    const backgroundBeforeHover = await summaryButton.evaluate(element => getComputedStyle(element).backgroundColor)
     await summaryButton.hover()
+    await expect.poll(() => summaryButton.evaluate(element => getComputedStyle(element).backgroundColor)).not.toBe(backgroundBeforeHover)
     await expect(summaryButton).toHaveCSS('box-shadow', 'none')
-    await expect(summaryButton).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
     await expect(summaryButton.locator('strong')).not.toHaveCSS('color', 'rgb(0, 92, 175)')
+  })
+
+  test('分类树可选择项提供 tonal 悬停状态', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('link', { name: '分类与标签', exact: true }).click()
+
+    const treeItem = page.getByRole('treeitem').first()
+    await expect(treeItem).toBeVisible()
+    const backgroundBeforeHover = await treeItem.evaluate(element => getComputedStyle(element).backgroundColor)
+    await treeItem.hover()
+    await expect.poll(() => treeItem.evaluate(element => getComputedStyle(element).backgroundColor)).not.toBe(backgroundBeforeHover)
   })
 })
