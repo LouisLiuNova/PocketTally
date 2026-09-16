@@ -125,7 +125,7 @@ Issue #67 在现有 Nuxt UI 与语义主题之上建立排版契约，不引入 
 
 原有 13–14px 内容声明归入 `text-sm` 正文角色；12px 声明归入 `text-xs` 次级信息角色；18–28px 标题和指标声明分别收敛到 `text-lg` 至 `text-4xl`。原有负字距不再用于业务金额、标题或品牌文字。坐标轴刻度保留 `--pt-type-chart`，日历、交易、分类树、统计详情、表单反馈和错误信息不使用该例外。
 
-遗留原型选择器和通用 CSS 的全量移除仍属于 Issue #37；#67 只修正排版以及由排版直接引发的换行、滚动和可读性布局问题，不把 CSS 清理范围扩展为 #37 的综合验收。
+遗留原型选择器和通用 CSS 的全量移除已在 Issue #37 完成；#67 负责排版以及由排版直接引发的换行、滚动和可读性布局问题。Issue #37 的组件边界、CSS 体积、依赖和完整矩阵证据见 [`docs/issue-37-frontend-acceptance.md`](issue-37-frontend-acceptance.md)。
 
 ### #67 浏览器验收
 
@@ -138,7 +138,7 @@ Issue #67 在现有 Nuxt UI 与语义主题之上建立排版契约，不引入 
 | 指标 | 迁移前 | Issue #33 后 | 说明 |
 | --- | ---: | ---: | --- |
 | `main.css` | 36,297 B / 86 行 | 36,421 B / 90 行 | 增加 Nuxt UI theme token 和字体 token |
-| `mvp.css` | 8,971 B / 10 行 | 8,971 B / 10 行 | 未清理后续 #37 负责的历史样式 |
+| `mvp.css` | 8,971 B / 10 行 | 8,971 B / 10 行 | Issue #33 时尚未清理的历史样式，当前 #37 结果见验收记录 |
 | 源码 CSS 合计 | 45,268 B / 96 行 | 45,392 B / 100 行 | 本 Issue 不以机械删除 CSS 为目标 |
 | 生产客户端 CSS | 259.31 KB | 259.23 KB | `bun run build` 输出 |
 | 生产客户端 CSS gzip | 37.30 KB | 37.29 KB | `bun run build` 输出 |
@@ -152,7 +152,7 @@ wc -c -l app/assets/css/main.css app/assets/css/mvp.css
 bun run build
 ```
 
-生产构建输出中的 `entry.*.css` 是客户端 CSS 体积依据。后续 #37 应在删除遗留通用 CSS 后再次记录同一组指标，不能把本次代表性迁移误报为全量 CSS 清理。
+生产构建输出中的 `entry.*.css` 是客户端 CSS 体积依据。Issue #37 已按同一口径重新测量，具体结果和日期快照见 [`docs/issue-37-frontend-acceptance.md`](issue-37-frontend-acceptance.md)。
 
 ## 验收命令
 
