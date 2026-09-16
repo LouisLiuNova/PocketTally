@@ -285,7 +285,7 @@ onBeforeUnmount(() => {
   <template v-if="loadedData && hasAnalysisData">
     <div class="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-2" aria-label="统计分析区">
       <UCard data-statistics-section="cash-flow" class="min-w-0 lg:col-span-2" variant="outline">
-        <template #header><div class="flex items-start justify-between gap-4"><div><h2 class="m-0 text-base font-semibold text-highlighted">现金流趋势</h2><p class="mt-1 text-xs text-muted">点击时间桶查看流水</p></div></div></template>
+        <template #header><div class="flex items-start justify-between gap-4"><div><h2 class="m-0 text-base font-semibold text-highlighted">现金流趋势</h2><p class="mt-1 text-xs text-muted">点击时间段查看流水</p></div></div></template>
         <div class="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="当前范围现金流汇总">
           <div v-for="item in [{ label: '普通收入', value: cashFlowTotals.incomeAmountMinor }, { label: '退款流入', value: cashFlowTotals.refundAmountMinor }, { label: '支出流出', value: cashFlowTotals.expenseAmountMinor }, { label: '净现金流', value: cashFlowTotals.netCashFlowMinor }]" :key="item.label" class="border-l-2 border-primary pl-2"><span class="block text-xs text-muted">{{ item.label }}</span><strong class="mt-1 block tabular-nums">{{ money(item.value) }}</strong></div>
         </div>

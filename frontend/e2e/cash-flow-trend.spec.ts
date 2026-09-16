@@ -24,7 +24,7 @@ test.describe('现金流趋势图', () => {
     await expect(trend.locator('.cash-flow-detail')).toContainText('普通收入')
     await chart.press('End')
     await chart.press('ArrowLeft')
-    await expect(trend.locator('.cash-flow-detail')).toContainText('当前时间桶')
+    await expect(trend.locator('.cash-flow-detail')).toContainText('时间段')
 
     const bars = trend.locator('[data-cash-flow-index] path')
     await expect(bars).not.toHaveCount(0)

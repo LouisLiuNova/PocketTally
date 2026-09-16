@@ -142,7 +142,7 @@ watch(() => props.buckets, (next) => {
         :data-chart-duration="chartDuration"
         tabindex="0"
         role="application"
-        aria-label="现金流趋势图，可使用方向键选择时间桶"
+        aria-label="现金流趋势图，可使用方向键选择时间段"
         @focus="chartFocused = true"
         @blur="chartFocused = false"
         @keydown="keydown"
@@ -186,7 +186,7 @@ watch(() => props.buckets, (next) => {
       </div>
       <div v-if="selected" class="cash-flow-detail" aria-live="polite">
         <div class="cash-flow-detail-heading">
-          <div><span class="hint">当前时间桶</span><strong>{{ bucketDateFormat(granularity, selected.startAt, selected.endAt) }}</strong></div>
+          <div><span class="hint">时间段</span><strong>{{ bucketDateFormat(granularity, selected.startAt, selected.endAt) }}</strong></div>
           <UButton label="查看该时段流水" color="neutral" variant="outline" size="sm" @click="emit('drilldown', selected.startAt, selected.endAt)" />
         </div>
         <dl>

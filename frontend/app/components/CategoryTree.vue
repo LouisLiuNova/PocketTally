@@ -131,7 +131,7 @@ watch(search, value => { if (value) expandedIds.value = new Set([...expandedIds.
         <template #header>
           <div>
             <h2 class="font-semibold">{{ purposeLabel }}分类结构</h2>
-            <p class="mt-1 text-sm text-muted">使用真实父分类关系组织层级；选择名称查看详情。</p>
+            <p class="mt-1 text-sm text-muted">展开分类并选择一项查看详情。</p>
           </div>
         </template>
 

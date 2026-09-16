@@ -185,7 +185,7 @@ onBeforeUnmount(() => {
       <template #header>
         <div class="transaction-panel-header">
           <div><p class="eyebrow">流水明细</p><h2>交易记录</h2></div>
-          <span class="hint">每页 20 笔 · CNY · Asia/Shanghai</span>
+          <span class="hint">金额单位：元</span>
         </div>
       </template>
       <TransactionTable :transactions="transactions" :loading="loading" @select="workspace.openTransaction" />
