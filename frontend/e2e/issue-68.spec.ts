@@ -36,11 +36,12 @@ test.describe('Issue #68：Reduced Motion 反馈', () => {
 
   test('加载骨架在 Reduced Motion 下保持静态占位', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.route('**/api/v1/**', async route => {
+    await page.goto('/accounts')
+    await page.route('**/api/v1/statistics/overview?**', async route => {
       await new Promise(resolve => setTimeout(resolve, 1500))
       await route.continue()
     })
-    await page.goto('/', { waitUntil: 'domcontentloaded' })
+    await page.getByRole('link', { name: '总览', exact: true }).click()
     const skeleton = page.locator('.animate-pulse').first()
     await expect(skeleton).toBeVisible()
     await expect(skeleton).toHaveCSS('animation-name', 'none')

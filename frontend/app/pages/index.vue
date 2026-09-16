@@ -9,14 +9,31 @@ import { metricIcons } from '~/constants/metricIcons'
 
 const workspace = useLedgerWorkspace()
 const today = localInput().slice(0, 10)
-const transactions = ref<Transaction[]>([])
-const overview = ref<Overview | null>(null)
-const cashFlow = ref<CashFlow | null>(null)
-const categoryStatistics = ref<CategoryStatistics | null>(null)
-const loading = ref(false)
-const loadedData = ref(false)
-const queryError = ref('')
-let requestId = 0
+const requestFetch = useRequestFetch()
+const period = monthPeriod(today)
+const transactionQuery: TransactionQuery = {
+  page: 1,
+  pageSize: 20,
+  startAt: new Date(`${period.start}T00:00:00+08:00`).toISOString(),
+  endAt: new Date(`${period.end}T00:00:00+08:00`).toISOString(),
+  status: 'active',
+}
+const { data, pending: loading, error, refresh } = useAsyncData('dashboard-overview', async (_nuxtApp, { signal }) => {
+  const [transactionData, overview, cashFlow, categoryStatistics] = await Promise.all([
+    requestFetch<Page<Transaction>>('/api/v1/transactions', { query: transactionQuery, signal }),
+    requestFetch<Overview>('/api/v1/statistics/overview', { query: { startDate: period.start, endDate: period.end }, signal }),
+    requestFetch<CashFlow>('/api/v1/statistics/cash-flow', { query: { startDate: period.start, endDate: period.end, granularity: 'day' }, signal }),
+    requestFetch<CategoryStatistics>('/api/v1/statistics/categories', { query: { startDate: period.start, endDate: period.end, granularity: 'day' }, signal }),
+  ])
+  return { transactions: transactionData.items, overview, cashFlow, categoryStatistics }
+}, { lazy: true })
+
+const transactions = computed(() => data.value?.transactions || [])
+const overview = computed(() => data.value?.overview || null)
+const cashFlow = computed(() => data.value?.cashFlow || null)
+const categoryStatistics = computed(() => data.value?.categoryStatistics || null)
+const loadedData = computed(() => !!data.value)
+const queryError = computed(() => error.value ? errorMessage(error.value) : '')
 
 const balance = computed(() => workspace.accounts.value.reduce((sum, account) => sum + minor(account.amount), 0))
 const firstUse = computed(() => workspace.loaded.value && !workspace.accounts.value.length)
@@ -41,35 +58,7 @@ function formatChange(value: number | null) {
 }
 
 async function loadDashboard() {
-  const currentRequest = ++requestId
-  const period = monthPeriod(today)
-  const transactionQuery: TransactionQuery = {
-    page: 1,
-    pageSize: 20,
-    startAt: new Date(`${period.start}T00:00:00+08:00`).toISOString(),
-    endAt: new Date(`${period.end}T00:00:00+08:00`).toISOString(),
-    status: 'active',
-  }
-  loading.value = true
-  queryError.value = ''
-  try {
-    const [transactionData, overviewData, flowData, categoryData] = await Promise.all([
-      $fetch<Page<Transaction>>('/api/v1/transactions', { query: transactionQuery }),
-      $fetch<Overview>('/api/v1/statistics/overview', { query: { startDate: period.start, endDate: period.end } }),
-      $fetch<CashFlow>('/api/v1/statistics/cash-flow', { query: { startDate: period.start, endDate: period.end, granularity: 'day' } }),
-      $fetch<CategoryStatistics>('/api/v1/statistics/categories', { query: { startDate: period.start, endDate: period.end, granularity: 'day' } }),
-    ])
-    if (currentRequest !== requestId) return
-    transactions.value = transactionData.items
-    overview.value = overviewData
-    cashFlow.value = flowData
-    categoryStatistics.value = categoryData
-    loadedData.value = true
-  } catch (error) {
-    if (currentRequest === requestId) queryError.value = errorMessage(error)
-  } finally {
-    if (currentRequest === requestId) loading.value = false
-  }
+  await refresh({ dedupe: 'cancel' })
 }
 
 function showCategoryTransactions(categoryId: string) {
@@ -88,9 +77,7 @@ function showCashBucket(startAt: string, endAt: string) {
   })
 }
 
-onMounted(() => void loadDashboard())
 watch(workspace.refreshRevision, () => void loadDashboard())
-onBeforeUnmount(() => { requestId++ })
 </script>
 
 <template>

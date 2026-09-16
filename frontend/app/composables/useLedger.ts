@@ -32,35 +32,26 @@ export interface StatisticsQuery {
 }
 
 export function useLedger() {
-  const accounts = ref<Account[]>([])
-  const categories = ref<Category[]>([])
-  const tags = ref<Tag[]>([])
-  const loading = ref(false)
-  const loadError = ref('')
-  const loaded = ref(false)
-  let request: Promise<void> | null = null
+  const requestFetch = useRequestFetch()
+  const { data, pending, error, refresh } = useAsyncData('ledger-resources', async (_nuxtApp, { signal }) => {
+    const [accounts, categories, tags] = await Promise.all([
+      requestFetch<Account[]>('/api/v1/accounts', { signal }),
+      requestFetch<Category[]>('/api/v1/categories', { signal }),
+      requestFetch<Tag[]>('/api/v1/tags', { signal }),
+    ])
+    return { accounts, categories, tags }
+  }, { lazy: true })
+
+  const accounts = computed(() => data.value?.accounts || [])
+  const categories = computed(() => data.value?.categories || [])
+  const tags = computed(() => data.value?.tags || [])
+  const loading = pending
+  const loadError = computed(() => error.value ? errorMessage(error.value) : '')
+  const loaded = computed(() => !!data.value)
 
   async function refreshResources() {
-    if (request) return request
-    loading.value = true
-    loadError.value = ''
-    request = Promise.all([
-      $fetch<Account[]>('/api/v1/accounts'),
-      $fetch<Category[]>('/api/v1/categories'),
-      $fetch<Tag[]>('/api/v1/tags'),
-    ]).then(([accountData, categoryData, tagData]) => {
-      accounts.value = accountData
-      categories.value = categoryData
-      tags.value = tagData
-      loaded.value = true
-    }).catch((error) => {
-      loadError.value = errorMessage(error)
-      throw error
-    }).finally(() => {
-      loading.value = false
-      request = null
-    })
-    return request
+    await refresh({ dedupe: 'defer' })
+    if (error.value) throw error.value
   }
 
   return { accounts, categories, tags, loading, loadError, loaded, refreshResources }
