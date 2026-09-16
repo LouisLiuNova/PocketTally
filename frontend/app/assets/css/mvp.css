@@ -196,12 +196,10 @@
   padding: 0;
   text-align: left;
   white-space: normal;
-}
-
-.transaction-summary-button:hover {
-  background: transparent !important;
-  color: var(--ui-text) !important;
-  box-shadow: none !important;
+  cursor: pointer;
+  transition:
+    background-color var(--pt-motion-duration-fast) var(--pt-motion-ease-standard),
+    color var(--pt-motion-duration-fast) var(--pt-motion-ease-standard);
 }
 
 .transaction-type-mark {
@@ -512,6 +510,8 @@
   padding: 4px;
   border-radius: 7px;
   outline: none;
+  cursor: pointer;
+  transition: background-color var(--pt-motion-duration-fast) var(--pt-motion-ease-standard);
 }
 
 .tree-toggle {
@@ -629,6 +629,16 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .transaction-summary-button:not(:disabled):hover {
+    background-color: color-mix(in srgb, var(--ui-primary) 5%, var(--ui-bg-muted)) !important;
+    color: var(--ui-text) !important;
+    box-shadow: none !important;
+  }
+
+  .category-tree-item:hover {
+    background-color: color-mix(in srgb, var(--ui-primary) 5%, var(--ui-bg-muted));
+  }
+
   .calendar-grid button:not(:disabled):hover {
     background: color-mix(in srgb, var(--ui-primary) 5%, var(--ui-bg-muted));
     border-color: var(--ui-primary);
@@ -740,6 +750,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .transaction-summary-button,
+  .category-tree-item {
+    transition: none;
+  }
+
   .calendar-grid button {
     transition: none;
   }
