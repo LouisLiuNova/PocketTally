@@ -51,81 +51,9 @@
   gap: var(--pt-layout-grid-gap);
 }
 
-.metric-grid {
-  grid-template-columns: minmax(0, 1.45fr) repeat(2, minmax(0, 1fr));
-  gap: var(--pt-layout-grid-gap);
-}
-
-.dashboard-grid {
-  grid-template-columns: minmax(0, 1.6fr) minmax(280px, .9fr);
-  grid-template-areas:
-    "flow categories"
-    "recent categories";
-  gap: var(--pt-layout-grid-gap);
-  margin-top: 0;
-}
-
-.overview-flow { grid-area: flow; }
-.overview-categories { grid-area: categories; }
-.overview-recent { grid-area: recent; }
-
-.section-intro {
-  min-width: 0;
-  margin: 0;
-}
-
-.transaction-filters {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  align-items: end;
-  gap: 12px;
-  margin: 0;
-}
-
-.transaction-filters > label {
-  display: grid;
-  min-width: 0;
-  gap: 6px;
-  align-content: end;
-}
-
-.transaction-filters > input,
-.transaction-filters > select,
-.transaction-filters > label > input {
-  width: 100%;
-  min-width: 0;
-}
-
-.transaction-filters > input.search-field {
-  display: block;
-  grid-column: span 2;
-  height: 42px;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .account-card-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--pt-layout-grid-gap);
-}
-
-.panel,
-.metric-card {
-  min-width: 0;
-}
-
-.panel-head > *,
-.mvp-transaction > span {
-  min-width: 0;
-}
-
-.mvp-transaction strong,
-.mvp-transaction small,
-.resource-row span,
-.category-tree-name,
-.category-detail dd {
-  overflow-wrap: anywhere;
 }
 
 .category-workspace {
@@ -533,37 +461,7 @@
   line-height: var(--text-xs--line-height);
 }
 
-@media (max-width: 1280px) {
-  .transaction-filters {
-    grid-template-columns: minmax(13rem, 2fr) repeat(3, minmax(8rem, 1fr));
-  }
-
-  .transaction-filters > input.search-field {
-    grid-column: span 2;
-  }
-}
-
 @media (max-width: 1050px) {
-  .metric-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .metric-card.feature {
-    grid-column: 1 / -1;
-  }
-
-  .dashboard-grid {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: none;
-  }
-
-  .overview-flow,
-  .overview-categories,
-  .overview-recent,
-  .category-workspace {
-    grid-area: auto;
-  }
-
   .account-card-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -574,26 +472,8 @@
 }
 
 @media (max-width: 720px) {
-  .metric-grid,
   .account-card-grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .metric-card.feature {
-    grid-column: auto;
-  }
-
-  .transaction-filters {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .transaction-filters > input.search-field {
-    grid-column: 1 / -1;
-  }
-
-  .transaction-filters > label,
-  .transaction-filters > select {
-    min-width: 0;
   }
 
   .settings-page {

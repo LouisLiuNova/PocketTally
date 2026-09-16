@@ -170,7 +170,7 @@ test('八套暗色在六个主页面和目标宽度下保持完整表面', async
       await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
       await expect(page.locator('html')).toHaveAttribute('data-palette', palette)
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-      const surfaces = page.locator('.app-sidebar, .panel, .metric-card, .settings-card, [data-slot="content"]:visible')
+      const surfaces = page.locator('.app-sidebar, [data-slot="root"]:visible, [data-slot="content"]:visible')
       const surfaceCount = await surfaces.count()
       for (let index = 0; index < surfaceCount; index++) {
         const background = await surfaces.nth(index).evaluate(element => getComputedStyle(element).backgroundColor)
@@ -185,22 +185,6 @@ test('八套暗色在六个主页面和目标宽度下保持完整表面', async
     await page.goto('/settings')
   }
   expect(pageErrors).toEqual([])
-})
-
-test('重点指标使用中性 elevated 表面和小面积品牌强调', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('pockettally-appearance', JSON.stringify({ theme: 'dark', palette: 'ruri' })))
-  await page.goto('/')
-  const feature = page.locator('.metric-card.feature')
-  if (await feature.count()) {
-    const colors = await feature.evaluate((element) => {
-      const style = getComputedStyle(element)
-      const root = getComputedStyle(document.documentElement)
-      return { background: style.backgroundColor, elevated: root.getPropertyValue('--pt-surface-elevated').trim(), container: root.getPropertyValue('--pt-primary-container').trim(), shadow: style.boxShadow, primary: root.getPropertyValue('--pt-primary').trim() }
-    })
-    expect(colors.background).not.toBe(colors.container)
-    expect(colors.shadow).toContain('inset')
-    expect(colors.shadow).toContain(colorChannels(colors.primary).join(', '))
-  }
 })
 
 test('新旧偏好可恢复，未知字段独立回退且首屏属性稳定', async ({ page }) => {

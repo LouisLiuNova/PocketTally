@@ -82,7 +82,7 @@ async function save() {
 </script>
 
 <template>
-  <UForm :state="form" class="modal-editor-form resource-editor" :disabled="busy" :aria-busy="busy" @submit="save">
+  <UForm :state="form" class="modal-editor-form" :disabled="busy" :aria-busy="busy" @submit="save">
     <header class="modal-editor-header"><h2>{{ editorTitle }}</h2><UButton color="neutral" variant="ghost" icon="i-lucide-x" aria-label="关闭" :disabled="busy" @click="emit('close')" /></header>
     <div class="modal-editor-body resource-editor-body">
     <UFormField name="name" label="名称" required>

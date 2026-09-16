@@ -119,8 +119,8 @@ async function save() {
 </script>
 
 <template>
-  <UForm :state="form" class="modal-editor-form transaction-editor" :disabled="busy" :aria-busy="busy" @submit="save">
-    <header class="modal-editor-header transaction-editor-header">
+  <UForm :state="form" class="modal-editor-form" :disabled="busy" :aria-busy="busy" @submit="save">
+    <header class="modal-editor-header">
       <div>
         <p class="eyebrow">记录真实的每一笔</p>
         <h2>{{ refund ? '支出退款' : editing ? '编辑交易' : '记一笔' }}</h2>
@@ -128,7 +128,7 @@ async function save() {
       <UButton color="neutral" variant="ghost" icon="i-lucide-x" aria-label="关闭" :disabled="busy" @click="emit('close')" />
     </header>
 
-    <div class="modal-editor-body transaction-editor-body">
+    <div class="modal-editor-body">
       <UAlert v-if="refund" color="info" variant="soft" icon="i-lucide-rotate-ccw" title="退款摘要" :description="`${refund.description || '原支出'} · 剩余可退 ${money(remaining)} · 退回 ${refund.sourceAccount?.name || '原账户'}`" />
       <UAlert v-if="locked" color="warning" variant="soft" icon="i-lucide-lock-keyhole" title="部分字段已锁定" description="此交易仅可修改说明、发生时间和标签。" />
 

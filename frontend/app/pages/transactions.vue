@@ -181,8 +181,13 @@ onBeforeUnmount(() => {
     </div>
     <div v-if="queryError" role="alert" class="error-box">{{ queryError }}<UButton label="重试" color="neutral" @click="loadTransactions" /></div>
 
-    <section class="panel transaction-panel">
-      <div class="panel-head"><div><p class="eyebrow">流水明细</p><h2>交易记录</h2></div><span class="hint">每页 20 笔 · CNY · Asia/Shanghai</span></div>
+    <UCard class="transaction-panel" variant="outline" :ui="{ body: 'p-0 sm:p-0' }">
+      <template #header>
+        <div class="transaction-panel-header">
+          <div><p class="eyebrow">流水明细</p><h2>交易记录</h2></div>
+          <span class="hint">每页 20 笔 · CNY · Asia/Shanghai</span>
+        </div>
+      </template>
       <TransactionTable :transactions="transactions" :loading="loading" @select="workspace.openTransaction" />
       <div v-if="!loading && !transactions.length" class="transaction-empty-state">
         <p>{{ hasFilters ? '没有符合条件的交易' : '还没有交易记录' }}</p>
@@ -196,6 +201,6 @@ onBeforeUnmount(() => {
         <span aria-live="polite">第 {{ routeState.page }} / {{ pageCount }} 页</span>
         <UButton label="下一页" color="neutral" variant="outline" :disabled="routeState.page >= pageCount" @click="updateRoute({ page: routeState.page + 1 }, false, false)" />
       </div>
-    </section>
+    </UCard>
   </div>
 </template>
