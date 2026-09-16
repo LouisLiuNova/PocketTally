@@ -19,21 +19,25 @@ const transactionQuery: TransactionQuery = {
   status: 'active',
 }
 const { data, pending: loading, error, refresh } = useAsyncData('dashboard-overview', async (_nuxtApp, { signal }) => {
-  const [transactionData, overview, cashFlow, categoryStatistics] = await Promise.all([
+  const [transactionData, overview, categoryStatistics] = await Promise.all([
     requestFetch<Page<Transaction>>('/api/v1/transactions', { query: transactionQuery, signal }),
     requestFetch<Overview>('/api/v1/statistics/overview', { query: { startDate: period.start, endDate: period.end }, signal }),
-    requestFetch<CashFlow>('/api/v1/statistics/cash-flow', { query: { startDate: period.start, endDate: period.end, granularity: 'day' }, signal }),
     requestFetch<CategoryStatistics>('/api/v1/statistics/categories', { query: { startDate: period.start, endDate: period.end, granularity: 'day' }, signal }),
   ])
-  return { transactions: transactionData.items, overview, cashFlow, categoryStatistics }
+  return { transactions: transactionData.items, overview, categoryStatistics }
 }, { lazy: true })
 
 const transactions = computed(() => data.value?.transactions || [])
 const overview = computed(() => data.value?.overview || null)
-const cashFlow = computed(() => data.value?.cashFlow || null)
 const categoryStatistics = computed(() => data.value?.categoryStatistics || null)
 const loadedData = computed(() => !!data.value)
 const queryError = computed(() => error.value ? errorMessage(error.value) : '')
+const cashFlow = ref<CashFlow | null>(null)
+const cashFlowPending = ref(true)
+const cashFlowError = ref('')
+let cashFlowRequestId = 0
+let cashFlowAbortController: AbortController | null = null
+const cashFlowLoading = computed(() => cashFlowPending.value && !cashFlow.value && !cashFlowError.value)
 
 const balance = computed(() => workspace.accounts.value.reduce((sum, account) => sum + minor(account.amount), 0))
 const firstUse = computed(() => workspace.loaded.value && !workspace.accounts.value.length)
@@ -58,7 +62,33 @@ function formatChange(value: number | null) {
 }
 
 async function loadDashboard() {
-  await refresh({ dedupe: 'cancel' })
+  await Promise.allSettled([
+    refresh({ dedupe: 'cancel' }),
+    loadCashFlow(),
+  ])
+}
+
+async function loadCashFlow() {
+  const currentRequestId = ++cashFlowRequestId
+  cashFlowAbortController?.abort()
+  const controller = new AbortController()
+  cashFlowAbortController = controller
+  cashFlowPending.value = true
+  cashFlowError.value = ''
+  try {
+    const data = await requestFetch<CashFlow>('/api/v1/statistics/cash-flow', {
+      query: { startDate: period.start, endDate: period.end, granularity: 'day' },
+      signal: controller.signal,
+    })
+    if (currentRequestId === cashFlowRequestId) cashFlow.value = data
+  } catch (error) {
+    if (currentRequestId === cashFlowRequestId && !controller.signal.aborted) cashFlowError.value = errorMessage(error)
+  } finally {
+    if (currentRequestId === cashFlowRequestId) {
+      cashFlowPending.value = false
+      cashFlowAbortController = null
+    }
+  }
 }
 
 function showCategoryTransactions(categoryId: string) {
@@ -78,6 +108,12 @@ function showCashBucket(startAt: string, endAt: string) {
 }
 
 watch(workspace.refreshRevision, () => void loadDashboard())
+onMounted(() => void loadCashFlow())
+onBeforeUnmount(() => {
+  cashFlowRequestId++
+  cashFlowAbortController?.abort()
+  cashFlowAbortController = null
+})
 </script>
 
 <template>
@@ -132,7 +168,15 @@ watch(workspace.refreshRevision, () => void loadDashboard())
       <section class="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-[1.6fr_.9fr]" aria-label="总览工作区">
         <UCard class="min-w-0" variant="outline">
           <template #header><div class="flex items-start justify-between gap-4"><div><h2 class="m-0 text-base font-semibold text-highlighted">现金流趋势摘要</h2><p class="mt-1 text-xs text-muted">查看本月每日流入、流出和净额方向</p></div><NuxtLink class="text-sm text-primary hover:underline" to="/statistics">查看完整分析 →</NuxtLink></div></template>
-          <LazyCashFlowTrend :buckets="cashFlow?.buckets || []" granularity="day" variant="compact" @drilldown="showCashBucket" />
+          <div v-if="cashFlowLoading" class="cash-flow-loading" role="status" aria-label="正在读取现金流趋势">
+            <div class="cash-flow-loading-grid" aria-hidden="true">
+              <USkeleton v-for="index in 5" :key="index" class="cash-flow-loading-bar motion-reduce:animate-none" />
+            </div>
+          </div>
+          <UAlert v-if="cashFlowError" class="mb-4" color="error" variant="soft" icon="i-lucide-circle-alert" title="现金流趋势读取失败" :description="cashFlowError" role="alert">
+            <template #actions><UButton label="重试" color="error" variant="soft" :loading="cashFlowPending" @click="loadCashFlow" /></template>
+          </UAlert>
+          <LazyCashFlowTrend v-if="cashFlow" :buckets="cashFlow.buckets" granularity="day" variant="compact" @drilldown="showCashBucket" />
         </UCard>
 
         <UCard class="min-w-0" variant="outline">
@@ -164,5 +208,30 @@ watch(workspace.refreshRevision, () => void loadDashboard())
 .overview-loading {
   display: grid;
   gap: 20px;
+}
+
+.cash-flow-loading {
+  min-width: 0;
+  height: 190px;
+}
+
+.cash-flow-loading-grid {
+  display: flex;
+  align-items: end;
+  justify-content: space-around;
+  gap: 10px;
+  height: 100%;
+  padding: 24px 12px;
+  border-radius: 10px;
+  background: var(--ui-bg-muted);
+}
+
+.cash-flow-loading-bar {
+  width: 9%;
+  height: 45%;
+}
+
+.cash-flow-loading-bar:nth-child(2n) {
+  height: 68%;
 }
 </style>
