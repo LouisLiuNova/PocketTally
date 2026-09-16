@@ -181,7 +181,7 @@ export function createLedgerWorkspace() {
     theme.value = savedAppearance.theme
     palette.value = savedAppearance.palette
     applyAppearance()
-    void syncResources()
+    if (!ledger.loaded.value) void syncResources()
   })
 
   return {

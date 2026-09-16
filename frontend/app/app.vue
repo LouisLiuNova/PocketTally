@@ -235,6 +235,17 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
                 @update:open="value => { if (!value) messages.dismiss(message.id) }"
               />
             </div>
+            <UAlert
+              v-if="workspace.loadError.value && !workspace.loaded.value && !messages.persistent.value.some(message => message.id === 'workspace-resource-sync')"
+              color="error"
+              variant="soft"
+              icon="i-lucide-circle-alert"
+              title="账本服务同步失败"
+              :description="workspace.loadError.value"
+              role="alert"
+            >
+              <template #actions><UButton label="重试" color="error" variant="soft" :loading="workspace.loading.value" @click="workspace.refreshWorkspace" /></template>
+            </UAlert>
             <p v-if="workspace.loading.value && !workspace.loaded.value" role="status" class="empty-state">正在从账本服务同步资源…</p>
 
               <NuxtPage />
