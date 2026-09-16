@@ -61,6 +61,7 @@
 }
 
 .category-workspace .category-tree-layout {
+  display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(240px, .65fr);
   gap: var(--pt-layout-grid-gap);
   align-items: stretch;

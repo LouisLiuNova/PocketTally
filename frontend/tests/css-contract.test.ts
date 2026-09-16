@@ -58,4 +58,18 @@ describe('Issue #37：遗留通用 CSS 契约', () => {
     expect(appConfig).toContain("base: 'pt-button'")
     expect(packageJson).not.toMatch(/shadcn/i)
   })
+
+  test('分类工作区的结构与详情保持双列布局契约', () => {
+    const layoutCss = readFileSync('app/assets/css/layout.css', 'utf8')
+    const categoryLayout = layoutCss.match(/\.category-workspace \.category-tree-layout\s*\{([^}]*)\}/)?.[1] || ''
+
+    expect(categoryLayout).toContain('display: grid')
+    expect(categoryLayout).toContain('grid-template-columns: minmax(0, 1.35fr) minmax(240px, .65fr)')
+
+    const mvpCss = readFileSync('app/assets/css/mvp.css', 'utf8')
+    expect(mvpCss).toContain('.category-tree-row {')
+    expect(mvpCss).toContain('display: flex')
+    expect(mvpCss).toContain('.category-detail {')
+    expect(mvpCss).toContain('grid-template-columns: 58px minmax(0, 1fr)')
+  })
 })

@@ -468,6 +468,137 @@
   min-width: 0;
 }
 
+/* 分类树：行内操作、层级缩进和详情字段需要明确的业务布局关系。 */
+.category-tree-layout {
+  min-width: 0;
+}
+
+.category-tree-panel,
+.category-inspector {
+  min-width: 0;
+}
+
+.category-tree-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.category-tree {
+  border-top: 1px solid var(--ui-border-muted);
+}
+
+.category-tree-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 8px max(12px, calc(12px + var(--depth) * 24px));
+  border-bottom: 1px solid var(--ui-border-muted);
+}
+
+.category-tree-row.selected {
+  background: color-mix(in srgb, var(--pt-primary-container) 72%, var(--ui-bg));
+  box-shadow: inset 3px 0 var(--pt-focus-ring);
+}
+
+.category-tree-item {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 7px;
+  padding: 4px;
+  border-radius: 7px;
+  outline: none;
+}
+
+.tree-toggle {
+  flex: 0 0 auto;
+}
+
+.tree-branch {
+  width: 18px;
+  flex: 0 0 auto;
+  color: var(--ui-border);
+  font-size: var(--text-xs);
+}
+
+.category-icon,
+.category-inspector-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 8px;
+}
+
+.category-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.category-inspector-icon {
+  width: 40px;
+  height: 40px;
+  font-size: var(--text-lg);
+}
+
+.category-tree-name {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.category-tree-name small,
+.category-detail dt,
+.category-detail dd,
+.anomaly-row small {
+  margin-top: 3px;
+  color: var(--ui-text-muted);
+}
+
+.category-inspector {
+  align-self: start;
+}
+
+.category-detail {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 12px 10px;
+  margin: 8px 0 24px;
+}
+
+.category-detail dt,
+.category-detail dd {
+  margin: 0;
+}
+
+.category-detail dd {
+  color: var(--ui-text);
+}
+
+.category-anomalies {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+
+.anomaly-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--ui-border-muted);
+}
+
+.anomaly-row span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
 /* #67：Nuxt UI 组合内容中的业务文字仍遵循最小可读字阶。 */
 .category-tree-name strong {
   overflow: visible;
@@ -550,6 +681,15 @@
 }
 
 @media (max-width: 720px) {
+  .category-tree-toolbar {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .category-tree-toolbar > [data-slot="root"] {
+    flex-basis: 100%;
+  }
+
   .transaction-toolbar-primary {
     align-items: stretch;
   }
