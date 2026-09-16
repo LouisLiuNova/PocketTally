@@ -122,7 +122,8 @@ const emit = defineEmits<{
 .statistics-drillover-total-label {
   display: block;
   color: var(--ui-text-muted);
-  font-size: 11px;
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
 }
 
 .statistics-drillover-total strong {
@@ -144,7 +145,8 @@ const emit = defineEmits<{
 .statistics-drillover-transaction small,
 .statistics-drillover-transaction time {
   color: var(--ui-text-muted);
-  font-size: 11px;
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
 }
 
 @media (max-width: 640px) {

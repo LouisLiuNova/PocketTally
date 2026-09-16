@@ -173,7 +173,7 @@ async function save() {
   width: 34px;
   height: 34px;
   border-radius: 9px;
-  font-size: 18px;
+  font-size: var(--text-lg);
 }
 
 .category-icon-preview > span:last-child {
@@ -185,6 +185,7 @@ async function save() {
 
 .category-icon-preview small {
   color: var(--ui-text-muted);
-  font-size: 11px;
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
 }
 </style>

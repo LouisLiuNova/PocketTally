@@ -62,7 +62,7 @@ function handleSearch(value: string) {
 function focusNode(node: CategoryTreeNode | undefined) {
   if (!node) return
   selectedId.value = node.category.id; focusedId.value = node.category.id
-  nextTick(() => document.querySelector<HTMLElement>(`[data-category-id="${CSS.escape(node.category.id)}"]`)?.focus())
+  if (import.meta.client) nextTick(() => document.querySelector<HTMLElement>(`[data-category-id="${CSS.escape(node.category.id)}"]`)?.focus())
 }
 function handleKeydown(event: KeyboardEvent, node: CategoryTreeNode) {
   const index = visibleNodes.value.findIndex(item => item.category.id === node.category.id)
@@ -114,7 +114,7 @@ watch(() => props.categories, (next, previous) => {
     const parent = parentId(changed)
     if (parent) expandedIds.value = new Set([...expandedIds.value, parent])
     selectedId.value = changed.id; focusedId.value = changed.id
-    nextTick(() => document.querySelector<HTMLElement>(`[data-category-id="${CSS.escape(changed.id)}"]`)?.focus())
+    if (import.meta.client) nextTick(() => document.querySelector<HTMLElement>(`[data-category-id="${CSS.escape(changed.id)}"]`)?.focus())
   } else if (!selectedCategory.value || selectedCategory.value.purpose !== props.purpose) {
     const first = tree.value.roots[0]?.category
     selectedId.value = first?.id || ''

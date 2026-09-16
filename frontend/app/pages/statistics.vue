@@ -300,7 +300,7 @@ onBeforeUnmount(() => {
           <template #amountMinor-cell="{ row }"><strong class="tabular-nums">{{ money(row.original.amountMinor) }}</strong></template>
           <template #actions-cell="{ row }"><UButton color="neutral" variant="ghost" size="sm" label="查看明细" @click="openExpenseDrill(row.original.name, { categoryId: row.original.categoryId, includeDescendants: true })" /></template>
         </UTable>
-        <div v-for="parent in categoryStatistics?.items.filter(item => item.children.length)" :key="`${parent.categoryId}-children`" class="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted"><span>{{ parent.name }} 下钻：</span><UButton v-for="child in parent.children" :key="child.categoryId" color="neutral" variant="outline" size="xs" :label="`${child.name} ${money(child.amountMinor)}`" @click="openExpenseDrill(`${parent.name} / ${child.name}`, { categoryId: child.categoryId, includeDescendants: true })" /></div>
+        <div v-for="parent in categoryStatistics?.items.filter(item => item.children.length)" :key="`${parent.categoryId}-children`" class="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted"><span>{{ parent.name }} 下钻：</span><UButton v-for="child in parent.children" :key="child.categoryId" color="neutral" variant="outline" size="sm" :label="`${child.name} ${money(child.amountMinor)}`" @click="openExpenseDrill(`${parent.name} / ${child.name}`, { categoryId: child.categoryId, includeDescendants: true })" /></div>
       </UCard>
 
       <UCard data-statistics-section="tags" variant="outline">
@@ -314,8 +314,10 @@ onBeforeUnmount(() => {
 
       <UCard data-statistics-section="calendar" variant="outline">
         <template #header><div class="flex items-start justify-between gap-4"><div><h2 class="m-0 text-base font-semibold text-highlighted">收支日历</h2><p class="mt-1 text-xs text-muted">点击日期查看服务端筛选的当日流水</p></div><UFormField label="月份" name="statistics-month"><UInput :model-value="routeState.month" type="month" @change="updateRoute({ month: selectValue($event) })" /></UFormField></div></template>
-        <div class="calendar-grid calendar-grid--weekdays" aria-hidden="true"><span v-for="weekday in weekdayLabels" :key="weekday" class="calendar-weekday">{{ weekday }}</span></div>
-        <div class="calendar-grid"><span v-for="(day, index) in calendarCells" :key="day?.date || `blank-${index}`" :class="{ 'calendar-grid__blank': !day }" :aria-hidden="day ? undefined : 'true'"><template v-if="day"><button :aria-label="`${day.date}，净现金流 ${money(day.netCashFlowMinor)}，流入 ${money(day.incomeAmountMinor + day.refundAmountMinor)}，退款 ${money(day.refundAmountMinor)}，支出 ${money(day.expenseAmountMinor)}`" @click="showCalendarDay(day.date)"><b>{{ day.date.slice(-2) }}</b><span v-if="day.incomeAmountMinor + day.refundAmountMinor" class="calendar-day-inflow">+{{ money(day.incomeAmountMinor + day.refundAmountMinor) }}</span><span v-if="day.expenseAmountMinor" class="calendar-day-outflow">−{{ money(day.expenseAmountMinor) }}</span><small v-if="!day.incomeAmountMinor && !day.refundAmountMinor && !day.expenseAmountMinor" class="calendar-day-empty">无收支</small></button></template></span></div>
+        <div class="calendar-scroll" tabindex="0" aria-label="收支日历，可横向滚动">
+          <div class="calendar-grid calendar-grid--weekdays" aria-hidden="true"><span v-for="weekday in weekdayLabels" :key="weekday" class="calendar-weekday">{{ weekday }}</span></div>
+          <div class="calendar-grid"><span v-for="(day, index) in calendarCells" :key="day?.date || `blank-${index}`" :class="{ 'calendar-grid__blank': !day }" :aria-hidden="day ? undefined : 'true'"><template v-if="day"><button :aria-label="`${day.date}，净现金流 ${money(day.netCashFlowMinor)}，流入 ${money(day.incomeAmountMinor + day.refundAmountMinor)}，退款 ${money(day.refundAmountMinor)}，支出 ${money(day.expenseAmountMinor)}`" @click="showCalendarDay(day.date)"><b>{{ day.date.slice(-2) }}</b><span v-if="day.incomeAmountMinor + day.refundAmountMinor" class="calendar-day-inflow">+{{ money(day.incomeAmountMinor + day.refundAmountMinor) }}</span><span v-if="day.expenseAmountMinor" class="calendar-day-outflow">−{{ money(day.expenseAmountMinor) }}</span><small v-if="!day.incomeAmountMinor && !day.refundAmountMinor && !day.expenseAmountMinor" class="calendar-day-empty">无收支</small></button></template></span></div>
+        </div>
       </UCard>
     </div>
   </template>
@@ -359,14 +361,31 @@ onBeforeUnmount(() => {
   margin-bottom: 8px;
 }
 
+.calendar-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-gutter: stable;
+}
+
+.calendar-scroll:focus-visible {
+  outline: 2px solid var(--pt-focus-ring);
+  outline-offset: 2px;
+}
+
 .calendar-weekday {
   color: var(--ui-text-muted);
-  font-size: 11px;
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
   text-align: center;
 }
 
 .calendar-grid__blank {
   min-width: 0;
+}
+
+.calendar-scroll > .calendar-grid {
+  min-width: 31rem;
 }
 
 .calendar-grid__blank:not(:has(button)) {
@@ -389,7 +408,7 @@ onBeforeUnmount(() => {
 
 @media (max-width: 720px) {
   .calendar-grid {
-    min-width: 0;
+    min-width: 31rem;
     grid-template-columns: repeat(7, minmax(0, 1fr));
   }
 

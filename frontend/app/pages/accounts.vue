@@ -61,15 +61,15 @@ function accountActions(account: Account): DropdownMenuItem[][] {
       >
         <template #header>
           <div class="flex min-w-0 items-center justify-between gap-3">
-            <h3 class="truncate font-semibold">{{ account.name }}</h3>
-            <UBadge color="neutral" variant="soft" size="sm">
+            <h3 class="break-words font-semibold">{{ account.name }}</h3>
+            <UBadge color="neutral" variant="soft" size="md">
               {{ account.type === 'debit' ? '借记账户' : '信用账户' }}
             </UBadge>
           </div>
         </template>
 
         <strong class="text-3xl font-semibold tabular-nums">{{ money(minor(account.amount)) }}</strong>
-        <p class="min-h-10 text-sm text-muted">{{ account.description || account.cardNumber || '余额来自有效交易' }}</p>
+        <p class="text-sm text-muted">{{ account.description || account.cardNumber || '余额来自有效交易' }}</p>
 
         <template #footer>
           <UButton color="neutral" variant="outline" icon="i-lucide-receipt-text" label="流水" @click="showAccountLedger(account.id)" />
