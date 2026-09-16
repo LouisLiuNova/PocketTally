@@ -61,7 +61,7 @@
 
 ### P2：前端体验收敛
 
-- [x] 按 Issue #46 完成前端用户可见文案审计，移除开发验收、实现细节和冗余说明，保留必要的账务语义、错误恢复和无障碍提示；审计记录见 [`docs/issue-46-frontend-copy-audit.md`](docs/issue-46-frontend-copy-audit.md)。
+- [x] 按 Issue #46 完成前端用户可见文案审计，移除开发验收、实现细节和冗余说明，保留必要的账务语义、错误恢复和无障碍提示；审计记录见 [`issue-46-frontend-copy-audit.md`](issue-46-frontend-copy-audit.md)。
 
 ### P1：v0.2 公网单用户发布
 
