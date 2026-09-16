@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { APPEARANCE_PALETTES, type PaletteName, type ThemePreference } from '~/constants/appearance'
-import type { MessageLevel } from '~/utils/messages'
 
 const workspace = useLedgerWorkspace()
 
@@ -16,34 +15,6 @@ const paletteOptions = APPEARANCE_PALETTES.map(item => ({
   label: `${item.label} ${item.description}`,
   displayLabel: item.label,
 }))
-const messages = useAppMessages()
-const previewLevels: Array<{ level: MessageLevel; label: string; title: string; description: string }> = [
-  { level: 'info', label: '触发信息', title: '信息示例', description: '这是一个短生命周期的信息 Toast，默认约 4 秒后消失。' },
-  { level: 'success', label: '触发成功', title: '成功示例', description: '这是一个保存或操作成功后的 Toast，默认约 4 秒后消失。' },
-  { level: 'warning', label: '触发警告', title: '警告示例', description: '这是一个较长生命周期的警告 Toast，默认约 8 秒后消失。' },
-  { level: 'error', label: '触发错误', title: '错误示例', description: '这是一个需要持续处理的错误 UAlert，不会自动消失。' },
-]
-
-function previewMessageId(level: MessageLevel) {
-  return `settings-message-preview-${level}`
-}
-
-function triggerPreview(item: typeof previewLevels[number]) {
-  const id = previewMessageId(item.level)
-  messages.push({
-    id,
-    level: item.level,
-    title: item.title,
-    description: item.description,
-    persistent: item.level === 'error',
-    action: item.level === 'error' ? { label: '再次触发', onSelect: () => triggerPreview(item) } : undefined,
-  })
-}
-
-function clearPreviewMessages() {
-  previewLevels.forEach(item => messages.dismiss(previewMessageId(item.level)))
-}
-
 function selectPaletteWithArrow(event: KeyboardEvent) {
   if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key)) return
   const target = event.target as HTMLElement
@@ -67,7 +38,7 @@ function selectPaletteWithArrow(event: KeyboardEvent) {
       <div>
         <p class="eyebrow">偏好设置</p>
         <h2>外观</h2>
-        <p class="hint">调整 PocketTally 的主题和配色，修改会立即应用并保存在当前浏览器中。</p>
+        <p class="hint">主题和配色会立即生效。</p>
       </div>
       <span class="settings-intro-icon" aria-hidden="true"><UIcon name="i-lucide-sliders-horizontal" /></span>
     </header>
@@ -106,7 +77,7 @@ function selectPaletteWithArrow(event: KeyboardEvent) {
         <div class="settings-card-heading">
           <div>
             <h3>配色</h3>
-            <p>选择一套适合你的品牌色。每个选项都同时显示名称和色板。</p>
+            <p>选择喜欢的配色。</p>
           </div>
           <span class="settings-current-palette">当前：{{ selectedPalette?.label }}</span>
         </div>
@@ -143,29 +114,5 @@ function selectPaletteWithArrow(event: KeyboardEvent) {
       <p class="settings-selection-status" role="status">已选择「{{ selectedPalette?.label }}」配色</p>
     </UCard>
 
-    <UCard class="settings-card" variant="outline">
-      <template #header>
-        <div class="settings-card-heading">
-          <div>
-            <h3>消息反馈预览</h3>
-            <p>手动触发各级别反馈，审阅 Toast、持久 UAlert、关闭按钮和操作按钮的效果。</p>
-          </div>
-          <UIcon name="i-lucide-message-square-more" aria-hidden="true" />
-        </div>
-      </template>
-      <div class="settings-message-actions" aria-label="消息等级预览操作">
-        <UButton
-          v-for="item in previewLevels"
-          :key="item.level"
-          :color="item.level"
-          variant="soft"
-          :label="item.label"
-          :aria-label="`${item.label}：${item.description}`"
-          @click="triggerPreview(item)"
-        />
-        <UButton color="neutral" variant="outline" label="清空预览消息" @click="clearPreviewMessages" />
-      </div>
-      <UAlert color="neutral" variant="subtle" icon="i-lucide-eye" title="审阅提示" description="信息、成功和警告显示在右下角 Toast；错误显示在页面内容顶部并持续保留。切换亮色/暗色与八套配色可检查语义色 token。" />
-    </UCard>
   </section>
 </template>
