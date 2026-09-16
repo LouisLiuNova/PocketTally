@@ -22,6 +22,12 @@
 - 业务专属的数据可视化、分类树交互和确有必要的复杂布局可以保留自有实现，但应复用 Nuxt UI 的主题 token、交互状态和无障碍基础，不复制 Button、Dialog、Card 等通用组件行为。
 - 不得同时引入与 Nuxt UI 职责重叠的完整 UI 组件库。新增前端依赖前，应先确认 Nuxt UI、Nuxt、自有现有依赖或浏览器原生能力不能满足需求。
 
+### CSS 收敛验收
+
+- 全局 CSS 只保留字体、语义 token、应用壳层和确有必要的跨页面基础规则；页面业务布局、数据可视化、分类树和日历等专属样式必须限定在明确的页面或组件边界内。
+- 通用按钮、卡片、表单控件、弹层、导航、反馈、空态和加载态应由 Nuxt UI 承担；`frontend/tests/css-contract.test.ts` 用于防止已删除的遗留原型选择器和重叠 UI 依赖回流。
+- Issue #37 的 CSS、构建体积、依赖和浏览器验收证据维护在 [`docs/issue-37-frontend-acceptance.md`](docs/issue-37-frontend-acceptance.md)；后续修改应同步更新该记录和相关自动化测试。
+
 ## Python 代码
 
 - 类型注解必须遵循 Python 3.14 风格，不为旧版本 Python 添加向前兼容写法。
