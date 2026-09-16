@@ -224,7 +224,8 @@ watch(() => props.buckets, (next) => {
   gap: 8px 16px;
   margin-bottom: 12px;
   color: var(--pt-chart-axis);
-  font-size: 12px;
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
 }
 
 .cash-flow-legend span {
@@ -306,7 +307,8 @@ watch(() => props.buckets, (next) => {
 }
 
 .cash-flow-detail-heading strong {
-  font-size: 14px;
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
 }
 
 .cash-flow-detail dl {
@@ -324,13 +326,15 @@ watch(() => props.buckets, (next) => {
 
 .cash-flow-detail dt {
   color: var(--ui-text-muted);
-  font-size: 11px;
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
 }
 
 .cash-flow-detail dd {
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: 13px;
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
   font-variant-numeric: tabular-nums;
 }
 
@@ -353,7 +357,8 @@ watch(() => props.buckets, (next) => {
   width: 100%;
   min-width: 620px;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
 }
 
 .cash-flow-table-scroll th,
@@ -384,7 +389,8 @@ watch(() => props.buckets, (next) => {
   min-width: 150px;
   padding: 4px;
   color: var(--ui-text);
-  font-size: 12px;
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
 }
 
 .cash-flow-tooltip strong {

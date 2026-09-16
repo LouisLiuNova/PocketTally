@@ -5,6 +5,66 @@
 @media(max-width:900px){.transaction-advanced-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.transaction-table th:nth-child(2),.transaction-table td:nth-child(2),.transaction-table th:nth-child(3),.transaction-table td:nth-child(3),.transaction-table th:nth-child(5),.transaction-table td:nth-child(5){display:none}.transaction-table th:nth-child(1){width:68%}.transaction-table th:nth-child(4){width:20%}.transaction-table th:nth-child(6){width:12%}.transaction-summary-mobile-context{display:block}.transaction-detail-actions{justify-content:stretch}.transaction-detail-actions>*{flex:1}.transaction-detail-amount{font-size:28px}}
 @media(max-width:560px){.transaction-toolbar-primary{align-items:stretch}.transaction-search{flex-basis:100%;min-width:0}.native-filter{flex:1;justify-content:space-between}.native-filter select{flex:1;min-width:0}.transaction-advanced-grid{grid-template-columns:1fr}.transaction-panel>.panel-head{padding-inline:14px}.transaction-table td{padding:12px 8px}.transaction-table th{padding-inline:8px}.transaction-table th:nth-child(1){width:62%}.transaction-table th:nth-child(4){width:25%}.transaction-table th:nth-child(6){width:13%}.transaction-type-mark{min-width:36px;font-size:10px}.transaction-summary-copy strong{font-size:12px}.transaction-summary-meta{display:none}.transaction-pagination{gap:8px;padding-inline:10px}.transaction-pagination span{white-space:nowrap}.transaction-editor-actions{align-items:stretch;flex-direction:column}.transaction-editor-actions button{width:100%}}
 
+/* #67：统一业务次级信息，并允许长名称与错误信息自然换行。 */
+.hint,
+.native-filter,
+.transaction-advanced-grid label,
+.transaction-results-bar,
+.transaction-pagination,
+.transaction-account,
+.transaction-table time,
+.transaction-detail-list,
+.cash-flow-integrity-warning,
+.category-tree-name small,
+.category-detail dt,
+.category-detail dd,
+.anomaly-row small,
+.cash-flow-summary span {
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+}
+
+.calendar-grid span,
+.calendar-grid small,
+.transaction-type-mark,
+.transaction-summary-copy strong,
+.transaction-summary-meta,
+.transaction-summary-mobile-context,
+.cash-flow-summary strong {
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+}
+
+.transaction-summary-copy strong,
+.transaction-summary-meta,
+.transaction-summary-mobile-context,
+.category-tree-name strong,
+.category-detail dd {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.category-tree-name small,
+.category-detail dt,
+.category-detail dd,
+.anomaly-row small {
+  margin-top: 3px;
+}
+
+.transaction-detail-amount {
+  font-size: var(--text-4xl);
+  line-height: var(--text-4xl--line-height);
+}
+
+@media (max-width: 900px) {
+  .transaction-detail-amount {
+    font-size: var(--text-3xl);
+    line-height: var(--text-3xl--line-height);
+  }
+}
+
 /* 列表交互以行级 tonal 状态表达，不让内部摘要按钮脱离表格浮起。 */
 .transaction-summary-button:hover {
   background: transparent !important;
@@ -31,3 +91,38 @@
 .resource-editor-body,.transaction-editor-fields{display:grid;gap:14px}
 @media(min-width:640px){.modal-editor-form{max-height:calc(100dvh - 4rem)}.modal-editor-header{padding:24px 24px 0}.modal-editor-body{padding:18px 24px}.modal-editor-actions{padding:14px 24px 24px}}
 @media(max-width:560px){.transaction-editor-actions{align-items:stretch;flex-direction:column}.transaction-editor-actions button{width:100%}}
+
+/* #67：覆盖文件末尾的历史 MVP 声明，确保业务文字仍遵循排版契约。 */
+.category-tree-name strong {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal !important;
+}
+
+.category-tree-name small,
+.category-detail dt,
+.category-detail dd,
+.anomaly-row small,
+.cash-flow-summary span,
+.transaction-type-mark {
+  font-size: var(--text-xs) !important;
+  line-height: var(--text-xs--line-height);
+}
+
+.category-detail dd {
+  overflow-wrap: anywhere;
+}
+
+.page-flow--statistics [data-statistics-section="category"] small {
+  font-size: var(--text-xs) !important;
+  line-height: var(--text-xs--line-height);
+  overflow-wrap: anywhere;
+}
+
+.resource-management-page [data-slot="badge"],
+.resource-management-page [role="tab"] [class*="text-[10px]"],
+.resource-management-page [role="tab"] .truncate {
+  font-size: var(--text-xs) !important;
+  line-height: var(--text-xs--line-height);
+}

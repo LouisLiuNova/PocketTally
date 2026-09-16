@@ -2,7 +2,24 @@
 @import "@nuxt/ui";
 
 @theme static {
-  --font-sans: "Inter", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+  /* #67 排版字阶：业务正文从 14px/22px 起步，所有行高使用无单位值。 */
+  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.5714;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.4444;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.4;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.3333;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 1.2667;
+  --text-4xl: 2.25rem;
+  --text-4xl--line-height: 1.2222;
   --color-brand-50: var(--pt-brand-50);
   --color-brand-100: var(--pt-brand-100);
   --color-brand-200: var(--pt-brand-200);
@@ -16,25 +33,29 @@
   --color-brand-950: var(--pt-brand-950);
 }
 
-:root { --ui-radius:0.75rem; }
+:root {
+  --ui-radius:0.75rem;
+  --pt-type-chart: 0.6875rem;
+  --pt-leading-chart: 1.2727;
+}
 * { box-sizing:border-box; }
-body { margin:0; background:var(--paper); color:var(--ink); font-family:var(--font-sans); }
+body { margin:0; background:var(--paper); color:var(--ink); font-family:var(--font-sans); font-size:var(--text-sm); line-height:var(--text-sm--line-height); }
 button { font:inherit; }
 :where(button, input, select, textarea, [tabindex]):focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
 .app-shell { min-height:100vh; }
 .app-sidebar { background:var(--pt-surface-page); color:var(--ui-text); border-right:1px solid var(--ui-border-muted); }
 .sidebar-collapse-button { color:var(--ui-text)!important; background:var(--ui-bg)!important; border:1px solid var(--ui-border-muted)!important; }
 .sidebar-collapse-button:hover { background:var(--ui-bg-muted)!important; }
-.shell-brand { min-width:0; display:flex; align-items:center; gap:10px; color:inherit; font-size:18px; font-weight:750; letter-spacing:-.02em; text-decoration:none; }
-.shell-brand-mark { width:34px; height:34px; flex:0 0 34px; border-radius:10px; display:grid; place-items:center; background:var(--pt-brand-300); color:var(--pt-brand-900); font-size:20px; }
+.shell-brand { min-width:0; display:flex; align-items:center; gap:10px; color:inherit; font-size:var(--text-lg); line-height:var(--text-lg--line-height); font-weight:750; letter-spacing:normal; text-decoration:none; }
+.shell-brand-mark { width:34px; height:34px; flex:0 0 34px; border-radius:10px; display:grid; place-items:center; background:var(--pt-brand-300); color:var(--pt-brand-900); font-size:var(--text-lg); }
 .ledger-status { min-width:0; width:100%; display:grid; gap:3px; }
 .ledger-status-item { min-width:0; width:100%; display:flex; align-items:center; gap:.5rem; padding:.5rem .625rem; border-radius:.5rem; color:var(--ui-text-muted); cursor:default; }
 .ledger-status-icon { flex:0 0 auto; width:1.25rem; height:1.25rem; }
-.ledger-status-item [data-slot="label"] { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
+.ledger-status-item [data-slot="label"] { min-width:0; overflow-wrap:anywhere; font-size:var(--text-xs); line-height:var(--text-xs--line-height); }
 .ledger-status[data-collapsed="true"] { justify-items:center; }
 .ledger-status[data-collapsed="true"] .ledger-status-item { width:auto; justify-content:center; padding-inline:.5rem; }
-.eyebrow { margin:0 0 5px; color:var(--muted); font-size:12px; font-weight:650; letter-spacing:.06em; text-transform:uppercase; }
-h1,h2,p { margin-top:0; } h1 { margin-bottom:0; font-size:27px; letter-spacing:-.04em; } h2 { margin:0; font-size:20px; letter-spacing:-.025em; }
+.eyebrow { margin:0 0 5px; color:var(--muted); font-size:var(--text-xs); line-height:var(--text-xs--line-height); font-weight:650; letter-spacing:.04em; text-transform:uppercase; }
+h1,h2,p { margin-top:0; } h1 { margin-bottom:0; font-size:var(--text-2xl); line-height:var(--text-2xl--line-height); letter-spacing:normal; } h2 { margin:0; font-size:var(--text-xl); line-height:var(--text-xl--line-height); letter-spacing:normal; }
 .top-actions { display:flex; gap:8px; align-items:center; }
 .metric-grid { display:grid; grid-template-columns:1.45fr 1fr 1fr; gap:16px; }
 .metric-card,.panel { background:var(--card); border:1px solid var(--line); border-radius:18px; box-shadow:0 1px 2px color-mix(in srgb,var(--ui-text) 12%,transparent); }

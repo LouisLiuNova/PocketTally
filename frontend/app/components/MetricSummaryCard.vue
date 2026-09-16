@@ -34,7 +34,8 @@ defineProps<{
   justify-content: space-between;
   gap: 8px;
   color: var(--ui-text-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
   font-weight: 600;
 }
 
@@ -46,15 +47,17 @@ defineProps<{
   display: block;
   margin-top: 10px;
   overflow-wrap: anywhere;
-  font-size: clamp(1.35rem, 2vw, 1.85rem);
+  font-size: var(--text-3xl);
+  line-height: var(--text-3xl--line-height);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.03em;
+  letter-spacing: normal;
 }
 
 .metric-summary-card p {
   margin: 5px 0 0;
   color: var(--ui-text-muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
 }
 
 .metric-summary-card--emphasis {
