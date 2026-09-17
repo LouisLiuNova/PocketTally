@@ -57,7 +57,7 @@ frontend/node_modules
 Playwright Chromium
 ```
 
-Playwright E2E 会自动启动：
+本地 Playwright E2E 会自动启动：
 
 ```text
 后端：127.0.0.1:8012
@@ -92,7 +92,12 @@ cd frontend
 bun --bun playwright install chromium
 ```
 
-Linux 环境还需要满足 Chromium 的系统依赖要求。
+Linux 环境还需要满足 Chromium 的系统依赖要求；GitHub Actions 使用以下命令一次安装
+Chromium 和系统依赖：
+
+```bash
+bun --bun playwright install --with-deps chromium
+```
 
 ### 4.2 前端基础检查
 
@@ -123,7 +128,19 @@ bun run test:e2e \
 
 当前配置保留失败截图和 trace。Nuxt 首次构建较慢，E2E 前端服务等待上限为 180 秒，后端等待上限为 120 秒。
 
-### 4.4 仓库级检查
+### 4.4 GitHub Actions
+
+`.github/workflows/e2e.yml` 在面向 `main` 的 Pull Request 和 `main` push 上运行稳定命名的
+`Chromium E2E` job。它依次完成依赖安装、Chromium 与 Linux 系统依赖安装、前端生产构建，
+然后启动使用独立 SQLite 文件的后端和 Bun preview 服务，最后执行
+`bun run test:e2e:matrix`。CI 下 Playwright 复用已经通过健康检查的服务；本地配置仍保留
+自动启动服务的行为。
+
+失败时会上传 `frontend/test-results/`，其中包含失败截图、trace 以及
+`ci-logs/backend.log`、`ci-logs/frontend.log`（若对应阶段已生成）。安装、启动和断言分别
+使用独立的 Actions step，便于定位失败阶段。
+
+### 4.5 仓库级检查
 
 ```bash
 cd backend
@@ -272,6 +289,8 @@ frontend/test-results/
 ```bash
 bunx playwright show-trace test-results/<失败目录>/trace.zip
 ```
+
+GitHub Actions 失败时还会在同一 artifact 的 `ci-logs/` 下保留后端和前端启动日志。
 
 如果出现端口占用，先确认是否仍有测试残留进程，再只清理占用 8012 或 3012 的测试服务。不要停止个人账本服务或删除默认账本数据库。
 

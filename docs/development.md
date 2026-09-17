@@ -65,6 +65,13 @@ uvx ruff check .
 uv run --group docs python ../scripts/docs.py check
 ```
 
+提交到 `main` 的 Pull Request 或向 `main` push 时，`containers.yml` 会分别运行
+`backend-quality`、`frontend-quality` 和 `development-smoke`，之后才运行两个平台的
+Compose smoke。前端 `typecheck`、单元测试和生产构建不会与后端检查混在同一个 job 中。
+`e2e.yml` 另行运行 `Chromium E2E`，使用隔离 SQLite 账本执行 1280、1440、1920 三档
+完整矩阵；它不在版本 tag 上运行。CI 的 required checks 是否已配置，需在实际 PR 上以仓库
+分支保护设置为准。
+
 提交前还应在项目根目录执行：
 
 ```bash
