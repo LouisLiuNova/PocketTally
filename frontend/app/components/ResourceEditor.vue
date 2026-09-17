@@ -126,7 +126,7 @@ async function save() {
         </UInputMenu>
         <div class="category-icon-preview" aria-live="polite">
           <span class="category-icon-preview__icon" :style="{ color: form.color, backgroundColor: `${form.color}22` }"><UIcon :name="selectedCategoryIcon?.icon || DEFAULT_CATEGORY_ICON" aria-hidden="true" /></span>
-          <span><strong>预览：{{ selectedCategoryIcon?.label || '文件夹' }}</strong><small v-if="!hasKnownCategoryIcon">历史图标将原样保留；选择新图标后才会替换。</small><small v-else>保存后会同步显示在分类树和分类详情中。</small></span>
+          <span><strong>预览：{{ selectedCategoryIcon?.label || '文件夹' }}</strong><small v-if="!hasKnownCategoryIcon">历史图标将原样保留；选择新图标后才会替换。</small></span>
         </div>
       </UFormField>
     </template>

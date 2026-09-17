@@ -59,6 +59,10 @@
 - [x] 按 Issue #19 将分类管理升级为用途 Tab、可展开多层分类树和分类详情检查器；支持子分类创建、移动确认、删除冲突、搜索祖先展开、异常链路保护及 ARIA 键盘访问。
 - [x] 按 Issue #17 补齐前端纯键盘主流程、弹窗焦点约束与恢复、错误提示、重复提交和自动化无障碍验收；Chromium 矩阵覆盖创建账户/分类、调账、支出、详情、退款、作废、筛选和统计下钻。
 
+### P2：前端体验收敛
+
+- [x] 按 Issue #46 完成前端用户可见文案审计，移除开发验收、实现细节和冗余说明，保留必要的账务语义、错误恢复和无障碍提示；审计记录见 [`issue-46-frontend-copy-audit.md`](issue-46-frontend-copy-audit.md)。
+
 ### P1：v0.2 公网单用户发布
 
 - [ ] 按 [Issue #22](https://github.com/LouisLiuNova/PocketTally/issues/22) 完成公网发布前的单用户鉴权安全边界；先形成威胁模型并决定技术方案，鉴权验收前不得部署公网 VPS、配置公网端口转发或把 Caddy/HTTPS 当作身份验证替代品。该 Issue 已挂入 [`v0.2 公网单用户发布`](https://github.com/LouisLiuNova/PocketTally/milestone/1) Milestone。

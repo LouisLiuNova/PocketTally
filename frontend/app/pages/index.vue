@@ -180,9 +180,9 @@ onBeforeUnmount(() => {
         </UCard>
 
         <UCard class="min-w-0" variant="outline">
-          <template #header><div class="flex items-start justify-between gap-4"><div><h2 class="m-0 text-base font-semibold text-highlighted">支出分类 Top 5</h2><p class="mt-1 text-xs text-muted">按本期消费净支出排序</p></div></div></template>
+          <template #header><div class="flex items-start justify-between gap-4"><div><h2 class="m-0 text-base font-semibold text-highlighted">支出分类排行</h2><p class="mt-1 text-xs text-muted">按本期消费净支出排序</p></div></div></template>
           <UEmpty v-if="!categoryRows.length" icon="i-lucide-folder-open" title="本期暂无消费" description="记录一笔支出后，这里会显示分类分布。" variant="subtle" />
-          <UTable v-else :data="categoryRows" :columns="categoryColumns" caption="支出分类 Top 5" :ui="{ td: 'align-middle' }">
+          <UTable v-else :data="categoryRows" :columns="categoryColumns" caption="支出分类排行" :ui="{ td: 'align-middle' }">
             <template #name-cell="{ row }"><span class="font-medium text-highlighted">{{ row.original.name }}</span></template>
             <template #amountMinor-cell="{ row }"><strong class="tabular-nums">{{ money(row.original.amountMinor) }}</strong></template>
             <template #actions-cell="{ row }"><UButton color="neutral" variant="ghost" size="sm" label="查看流水" @click="showCategoryTransactions(row.original.categoryId)" /></template>
@@ -190,7 +190,7 @@ onBeforeUnmount(() => {
         </UCard>
 
         <UCard class="min-w-0 lg:col-span-2" variant="outline">
-          <template #header><div class="flex items-start justify-between gap-4"><div><h2 class="m-0 text-base font-semibold text-highlighted">近期流水</h2><p class="mt-1 text-xs text-muted">最近 5 笔有效交易</p></div><NuxtLink class="text-sm text-primary hover:underline" to="/transactions">查看分页流水 →</NuxtLink></div></template>
+          <template #header><div class="flex items-start justify-between gap-4"><div><h2 class="m-0 text-base font-semibold text-highlighted">近期流水</h2><p class="mt-1 text-xs text-muted">最近 5 笔有效交易</p></div><NuxtLink class="text-sm text-primary hover:underline" to="/transactions">查看全部流水 →</NuxtLink></div></template>
           <UEmpty v-if="!recentTransactions.length" icon="i-lucide-receipt-text" title="暂无交易" description="点击右上角“记一笔”开始记录。" variant="subtle" />
           <UTable v-else :data="recentTransactions" :columns="transactionColumns" caption="近期流水" :ui="{ td: 'align-middle' }">
             <template #transaction-cell="{ row }"><UButton color="neutral" variant="ghost" class="justify-start text-left" :aria-label="`查看详情：${row.original.description || kindLabels[row.original.type]}`" @click="workspace.openTransaction(row.original)"><span class="mr-2 rounded bg-elevated px-2 py-1 text-xs text-muted">{{ kindLabels[row.original.type] }}</span><span class="truncate">{{ row.original.description || kindLabels[row.original.type] }}</span></UButton></template>

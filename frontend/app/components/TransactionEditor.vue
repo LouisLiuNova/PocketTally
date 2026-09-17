@@ -122,7 +122,7 @@ async function save() {
   <UForm :state="form" class="modal-editor-form" :disabled="busy" :aria-busy="busy" @submit="save">
     <header class="modal-editor-header">
       <div>
-        <p class="eyebrow">记录真实的每一笔</p>
+        <p class="eyebrow">交易信息</p>
         <h2>{{ refund ? '支出退款' : editing ? '编辑交易' : '记一笔' }}</h2>
       </div>
       <UButton color="neutral" variant="ghost" icon="i-lucide-x" aria-label="关闭" :disabled="busy" @click="emit('close')" />
@@ -181,7 +181,6 @@ async function save() {
       <UAlert v-if="error" color="error" variant="soft" icon="i-lucide-circle-alert" title="保存失败" :description="error" role="alert" aria-live="polite" />
     </div>
     <div class="modal-editor-actions transaction-editor-actions">
-      <span class="hint">保存后同步账户余额</span>
       <UButton type="submit" label="保存交易" :loading="busy" :aria-busy="busy" :disabled="busy" />
     </div>
   </UForm>

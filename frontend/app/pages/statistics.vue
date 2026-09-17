@@ -285,7 +285,7 @@ onBeforeUnmount(() => {
   <template v-if="loadedData && hasAnalysisData">
     <div class="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-2" aria-label="统计分析区">
       <UCard data-statistics-section="cash-flow" class="min-w-0 lg:col-span-2" variant="outline">
-        <template #header><div class="flex items-start justify-between gap-4"><div><h2 class="m-0 text-base font-semibold text-highlighted">现金流趋势</h2><p class="mt-1 text-xs text-muted">点击时间桶查看流水</p></div></div></template>
+        <template #header><div class="flex items-start justify-between gap-4"><div><h2 class="m-0 text-base font-semibold text-highlighted">现金流趋势</h2><p class="mt-1 text-xs text-muted">点击时间段查看流水</p></div></div></template>
         <div class="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="当前范围现金流汇总">
           <div v-for="item in [{ label: '普通收入', value: cashFlowTotals.incomeAmountMinor }, { label: '退款流入', value: cashFlowTotals.refundAmountMinor }, { label: '支出流出', value: cashFlowTotals.expenseAmountMinor }, { label: '净现金流', value: cashFlowTotals.netCashFlowMinor }]" :key="item.label" class="border-l-2 border-primary pl-2"><span class="block text-xs text-muted">{{ item.label }}</span><strong class="mt-1 block tabular-nums">{{ money(item.value) }}</strong></div>
         </div>
@@ -300,20 +300,20 @@ onBeforeUnmount(() => {
           <template #amountMinor-cell="{ row }"><strong class="tabular-nums">{{ money(row.original.amountMinor) }}</strong></template>
           <template #actions-cell="{ row }"><UButton color="neutral" variant="ghost" size="sm" label="查看明细" @click="openExpenseDrill(row.original.name, { categoryId: row.original.categoryId, includeDescendants: true })" /></template>
         </UTable>
-        <div v-for="parent in categoryStatistics?.items.filter(item => item.children.length)" :key="`${parent.categoryId}-children`" class="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted"><span>{{ parent.name }} 下钻：</span><UButton v-for="child in parent.children" :key="child.categoryId" color="neutral" variant="outline" size="sm" :label="`${child.name} ${money(child.amountMinor)}`" @click="openExpenseDrill(`${parent.name} / ${child.name}`, { categoryId: child.categoryId, includeDescendants: true })" /></div>
+        <div v-for="parent in categoryStatistics?.items.filter(item => item.children.length)" :key="`${parent.categoryId}-children`" class="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted"><span>{{ parent.name }} 的子分类：</span><UButton v-for="child in parent.children" :key="child.categoryId" color="neutral" variant="outline" size="sm" :label="`${child.name} ${money(child.amountMinor)}`" @click="openExpenseDrill(`${parent.name} / ${child.name}`, { categoryId: child.categoryId, includeDescendants: true })" /></div>
       </UCard>
 
       <UCard data-statistics-section="tags" variant="outline">
-        <template #header><div><h2 class="m-0 text-base font-semibold text-highlighted">Tag 汇总</h2><p class="mt-1 text-xs text-muted">一笔交易可完整计入多个 Tag，不提供 Tag 合计或占比。</p></div></template>
-        <UTable :data="tagStatistics?.items || []" :columns="tagColumns" caption="Tag 汇总" :ui="{ td: 'align-middle' }" empty="暂无 Tag 数据">
+        <template #header><div><h2 class="m-0 text-base font-semibold text-highlighted">标签汇总</h2><p class="mt-1 text-xs text-muted">一笔交易可归入多个标签，各标签金额可能重复计算。</p></div></template>
+        <UTable :data="tagStatistics?.items || []" :columns="tagColumns" caption="标签汇总" :ui="{ td: 'align-middle' }" empty="暂无标签数据">
           <template #name-cell="{ row }"><span class="inline-flex items-center gap-2"><i class="size-2 rounded-full" :style="{ background: row.original.color }" aria-hidden="true" />{{ row.original.name }}</span></template>
           <template #netExpenseMinor-cell="{ row }"><strong class="tabular-nums">{{ money(row.original.netExpenseMinor) }}</strong></template>
-          <template #actions-cell="{ row }"><UButton color="neutral" variant="ghost" size="sm" label="查看明细" @click="openExpenseDrill(`Tag：${row.original.name}`, { tagId: row.original.tagId })" /></template>
+          <template #actions-cell="{ row }"><UButton color="neutral" variant="ghost" size="sm" label="查看明细" @click="openExpenseDrill(`标签：${row.original.name}`, { tagId: row.original.tagId })" /></template>
         </UTable>
       </UCard>
 
       <UCard data-statistics-section="calendar" variant="outline">
-        <template #header><div class="flex items-start justify-between gap-4"><div><h2 class="m-0 text-base font-semibold text-highlighted">收支日历</h2><p class="mt-1 text-xs text-muted">点击日期查看服务端筛选的当日流水</p></div><UFormField label="月份" name="statistics-month"><UInput :model-value="routeState.month" type="month" @change="updateRoute({ month: selectValue($event) })" /></UFormField></div></template>
+        <template #header><div class="flex items-start justify-between gap-4"><div><h2 class="m-0 text-base font-semibold text-highlighted">收支日历</h2><p class="mt-1 text-xs text-muted">点击日期查看当天流水</p></div><UFormField label="月份" name="statistics-month"><UInput :model-value="routeState.month" type="month" @change="updateRoute({ month: selectValue($event) })" /></UFormField></div></template>
         <div class="calendar-scroll" tabindex="0" aria-label="收支日历，可横向滚动">
           <div class="calendar-grid calendar-grid--weekdays" aria-hidden="true"><span v-for="weekday in weekdayLabels" :key="weekday" class="calendar-weekday">{{ weekday }}</span></div>
           <div class="calendar-grid"><span v-for="(day, index) in calendarCells" :key="day?.date || `blank-${index}`" :class="{ 'calendar-grid__blank': !day }" :aria-hidden="day ? undefined : 'true'"><template v-if="day"><button :aria-label="`${day.date}，净现金流 ${money(day.netCashFlowMinor)}，流入 ${money(day.incomeAmountMinor + day.refundAmountMinor)}，退款 ${money(day.refundAmountMinor)}，支出 ${money(day.expenseAmountMinor)}`" @click="showCalendarDay(day.date)"><b>{{ day.date.slice(-2) }}</b><span v-if="day.incomeAmountMinor + day.refundAmountMinor" class="calendar-day-inflow">+{{ money(day.incomeAmountMinor + day.refundAmountMinor) }}</span><span v-if="day.expenseAmountMinor" class="calendar-day-outflow">−{{ money(day.expenseAmountMinor) }}</span><small v-if="!day.incomeAmountMinor && !day.refundAmountMinor && !day.expenseAmountMinor" class="calendar-day-empty">无收支</small></button></template></span></div>
