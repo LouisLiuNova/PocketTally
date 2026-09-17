@@ -172,6 +172,15 @@ venv.bak/
 /site
 /.docs-build
 /.venv-docs
+/docs-site/node_modules/
+/docs-site/.next/
+/docs-site/.source/
+/docs-site/.generated-content/
+/docs-site/out/
+/docs-site/tsconfig.tsbuildinfo
+/docs-site/public/contracts/
+!/docs-site/lib/
+!/docs-site/lib/**
 /data/
 /backups/
 

@@ -38,10 +38,11 @@ docker compose up -d --no-build
 
 ## 文档
 
-- [完整文档](https://louisliunova.github.io/PocketTally/)：使用边界、业务规则和技术参考
+- [用户指南](https://louisliunova.github.io/PocketTally/docs/user-guide/)：首次使用、日常记账、备份和升级
+- [开发者指南](https://louisliunova.github.io/PocketTally/docs/developer-guide/)：本地开发、测试、契约和文档发布
+- [完整文档](https://louisliunova.github.io/PocketTally/docs/)：业务规则、数据模型和接口参考
 - [部署与备份](https://louisliunova.github.io/PocketTally/deployment/)：内网部署、升级、备份和恢复
 - [发行说明](https://louisliunova.github.io/PocketTally/releases/v0.1.0/)：版本能力与已知限制
-- [参与开发](https://louisliunova.github.io/PocketTally/development/)：本地开发、测试和文档维护
 
 ## 许可
 

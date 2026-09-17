@@ -2,6 +2,7 @@
 
 docs-install:
 	cd backend && uv sync --group docs
+	cd docs-site && bun install --frozen-lockfile
 
 docs-check:
 	cd backend && uv run --group docs python ../scripts/docs.py check

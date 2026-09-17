@@ -84,7 +84,7 @@ git diff --check
 
 ## 文档
 
-文档站从仓库内的业务规则、数据模型和接口契约构建。安装依赖后，可以在项目根目录执行：
+文档站使用独立的 Fumadocs 应用，从仓库内的业务规则、数据模型和接口契约构建。安装依赖后，可以在项目根目录执行：
 
 ```bash
 make docs-install
@@ -93,7 +93,8 @@ make docs-build
 make docs-serve
 ```
 
-本地预览地址为 `http://127.0.0.1:8001/`。生成内容位于 `.docs-build/` 和 `site/`，
-不提交到仓库。
+本地预览地址为 `http://127.0.0.1:8001/`。生成内容位于 `docs-site/.generated-content/` 和
+`docs-site/out/`，不提交到仓库。Next.js 静态构建使用 Node.js 20.9 或更高版本，JavaScript
+依赖仍由 Bun 安装和锁定。
 
 不同信息的事实来源与同步要求见[文档首页](index.md)和[业务规则](business-rules.md)。
