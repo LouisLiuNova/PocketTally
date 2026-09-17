@@ -18,7 +18,9 @@ from jsonschema.validators import validator_for
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_DOCS = ROOT / "docs"
-BUILD_DOCS = ROOT / ".docs-build"
+BUILD_DOCS = ROOT / "docs-site" / ".generated-content" / "docs"
+BUILD_ROOT = ROOT / "docs-site" / ".generated-content"
+PUBLIC_CONTRACTS = ROOT / "docs-site" / "public" / "contracts"
 HTTP_METHODS = {"delete", "get", "head", "options", "patch", "post", "put", "trace"}
 
 
@@ -515,7 +517,7 @@ def http_models_markdown() -> str:
                     f"| `{name}` | {schema_type(value)} | {'是' if name in required else '否'} | {field_description} |"
                 )
             lines.append("")
-        lines.append(f"[查看原始 JSON Schema](contracts/models/{path.name})")
+        lines.append(f"[查看原始 JSON Schema](/contracts/models/{path.name})")
         lines.append("")
     return "\n".join(lines)
 
@@ -550,26 +552,6 @@ def api_status_markdown(rows: list[tuple[str, Operation]]) -> str:
     return "\n".join(lines)
 
 
-def api_reference_html() -> str:
-    """生成使用固定版本 Redoc 的独立 API 参考页面。"""
-
-    return """<!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PocketTally API 参考</title>
-  <style>body{margin:0;padding:0} .back{position:fixed;right:1rem;top:.5rem;z-index:10;background:#fff;padding:.45rem .7rem;border:1px solid #ddd;border-radius:.25rem;font:14px sans-serif}</style>
-</head>
-<body>
-  <a class="back" href="api-status/">返回文档站</a>
-  <redoc spec-url="contracts/apis/openapi.yaml" hide-download-button="false"></redoc>
-  <script src="https://cdn.jsdelivr.net/npm/redoc@2.5.3/bundles/redoc.standalone.js"></script>
-</body>
-</html>
-"""
-
-
 def git_version() -> tuple[str, str]:
     """读取当前提交短 SHA 和构建时间。"""
 
@@ -585,7 +567,7 @@ def git_version() -> tuple[str, str]:
 
 
 def prepare() -> list[tuple[str, Operation]]:
-    """校验事实来源并生成临时 MkDocs 输入目录。"""
+    """校验事实来源并生成 Fumadocs 临时内容目录。"""
 
     openapi, apidog = validate_contracts()
     actual = actual_openapi()
@@ -597,8 +579,14 @@ def prepare() -> list[tuple[str, Operation]]:
     tables, relations = parse_dbml((SOURCE_DOCS / "contracts/db.dbml").read_text(encoding="utf-8"))
 
     if BUILD_DOCS.exists():
-        shutil.rmtree(BUILD_DOCS)
+        shutil.rmtree(BUILD_ROOT)
+    if PUBLIC_CONTRACTS.exists():
+        shutil.rmtree(PUBLIC_CONTRACTS)
     shutil.copytree(SOURCE_DOCS, BUILD_DOCS, ignore=shutil.ignore_patterns("requirements.lock"))
+    shutil.copytree(SOURCE_DOCS / "contracts", BUILD_ROOT / "contracts")
+    shutil.rmtree(BUILD_DOCS / "contracts")
+    PUBLIC_CONTRACTS.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(SOURCE_DOCS / "contracts", PUBLIC_CONTRACTS)
     shutil.copy2(ROOT / "TODO.md", BUILD_DOCS / "TODO.md")
     shutil.copy2(ROOT / "TODO-IMP.md", BUILD_DOCS / "TODO-IMP.md")
     business_rules = BUILD_DOCS / "business-rules.md"
@@ -616,25 +604,110 @@ def prepare() -> list[tuple[str, Operation]]:
     (BUILD_DOCS / "data-models.md").write_text(dbml_markdown(tables, relations), encoding="utf-8")
     (BUILD_DOCS / "http-models.md").write_text(http_models_markdown(), encoding="utf-8")
     (BUILD_DOCS / "api-status.md").write_text(api_status_markdown(rows), encoding="utf-8")
-    (BUILD_DOCS / "api-reference.html").write_text(api_reference_html(), encoding="utf-8")
+    api_reference = BUILD_DOCS / "api-reference.mdx"
+    api_reference.write_text(
+        "---\n"
+        "title: API 参考\n"
+        "description: PocketTally OpenAPI 3.1 接口契约。\n"
+        "---\n\n"
+        "<OpenAPIPage document=\"pockettally\" />\n",
+        encoding="utf-8",
+    )
+    (BUILD_ROOT / "contracts/openapi.yaml").write_text(
+        (SOURCE_DOCS / "contracts/apis/openapi.yaml").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    mark_historical_pages()
     generated = BUILD_DOCS / "generated"
     generated.mkdir()
     sha, generated_at = git_version()
     generated.joinpath("version.md").write_text(
-        f"\n---\n\n文档版本：[`{sha}`](https://github.com/LouisLiuNova/PocketTally/commit/{sha}) · 生成时间：{generated_at}\n",
+        f"---\ntitle: 文档版本\n---\n\n文档版本：[`{sha}`](https://github.com/LouisLiuNova/PocketTally/commit/{sha}) · 生成时间：{generated_at}\n",
         encoding="utf-8",
     )
+    ensure_frontmatter()
+    write_navigation()
     return rows
 
 
-def run_mkdocs(command: str) -> None:
-    """准备文档输入并调用 MkDocs。"""
+def mark_historical_pages() -> None:
+    """为历史验收材料添加元数据，使其保留直达 URL 但不进入搜索。"""
+
+    historical = {
+        "frontend-prototype-feedback.md",
+        "frontend-ui-baseline.md",
+        "issue-36-frontend-acceptance.md",
+        "issue-37-frontend-acceptance.md",
+        "issue-46-frontend-copy-audit.md",
+        "issue-48-frontend-chunk-splitting.md",
+        "statistics-performance.md",
+    }
+    for filename in historical:
+        path = BUILD_DOCS / filename
+        content = path.read_text(encoding="utf-8")
+        if content.startswith("---\n"):
+            continue
+        title = content.splitlines()[0].removeprefix("# ").strip()
+        path.write_text(
+            f"---\ntitle: {json.dumps(title, ensure_ascii=False)}\nsearch: false\nhistorical: true\n---\n\n"
+            f"> [!NOTE]\n> 这是历史记录页面，保留用于追溯，不代表当前验收结果。\n\n{content.removeprefix(f'# {title}').lstrip()}\n",
+            encoding="utf-8",
+        )
+
+
+def ensure_frontmatter() -> None:
+    """为现有 Markdown 补齐 Fumadocs 所需的标题元数据。"""
+
+    for path in BUILD_DOCS.rglob("*.md"):
+        content = path.read_text(encoding="utf-8")
+        if content.startswith("---\n"):
+            continue
+        title = next(
+            (line.removeprefix("# ").strip() for line in content.splitlines() if line.startswith("# ")),
+            path.stem,
+        )
+        path.write_text(
+            f"---\ntitle: {json.dumps(title, ensure_ascii=False)}\n---\n\n{content}",
+            encoding="utf-8",
+        )
+
+
+def write_navigation() -> None:
+    """写入 Fumadocs 页面树，控制用户和开发者入口顺序。"""
+
+    navigation = """{
+  "pages": [
+    "index",
+    "user-guide",
+    "deployment",
+    "business-rules",
+    "releases/v0.1.0",
+    "developer-guide",
+    "development",
+    "frontend-testing-plan",
+    "frontend-theme",
+    "data-models",
+    "http-models",
+    "api-status",
+    "api-reference"
+  ]
+}
+"""
+    (BUILD_DOCS / "meta.json").write_text(navigation, encoding="utf-8")
+
+
+def run_docs_site(command: str) -> None:
+    """准备文档输入并调用独立 Fumadocs 应用。"""
 
     prepare()
-    arguments = [sys.executable, "-m", "mkdocs", command, "--config-file", str(ROOT / "mkdocs.yml"), "--strict"]
-    if command == "serve":
-        arguments.extend(["--dev-addr", "127.0.0.1:8001"])
-    subprocess.run(arguments, cwd=ROOT, check=True)
+    if command == "build":
+        # Next.js 16 的静态导出需要 Node 20.9+；Bun 负责依赖安装和开发脚本。
+        arguments = ["node", "node_modules/next/dist/bin/next", "build"]
+    else:
+        arguments = ["bun", "run", "dev", "--", "--hostname", "127.0.0.1", "--port", "8001"]
+    subprocess.run(arguments, cwd=ROOT / "docs-site", check=True)
+    if command == "build":
+        subprocess.run(["bun", "run", "check-links"], cwd=ROOT / "docs-site", check=True)
 
 
 def main() -> None:
@@ -649,7 +722,7 @@ def main() -> None:
             counts = {status: sum(1 for item_status, _ in rows if item_status == status) for status in ("已实现", "设计中", "仅实现")}
             print(f"文档契约有效：已实现 {counts['已实现']}，设计中 {counts['设计中']}，仅实现 {counts['仅实现']}")
         else:
-            run_mkdocs(arguments.command)
+            run_docs_site("build" if arguments.command == "build" else "dev")
     except (DocumentationError, subprocess.CalledProcessError) as exc:
         parser.exit(1, f"文档构建失败：{exc}\n")
 
