@@ -179,6 +179,8 @@ venv.bak/
 /docs-site/out/
 /docs-site/tsconfig.tsbuildinfo
 /docs-site/public/contracts/
+!/docs-site/lib/
+!/docs-site/lib/**
 /data/
 /backups/
 
