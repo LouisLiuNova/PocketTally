@@ -1,18 +1,26 @@
 import { expect, test } from '@playwright/test'
 
 test.describe('Issue #66：新标签页首次加载卡片', () => {
-  test('服务端首屏已有卡片数据，首次打开和刷新均无需等待客户端补取', async ({ page }) => {
+  test('服务端首屏已有核心卡片数据，现金流趋势独立客户端加载', async ({ page }) => {
     const accountName = `首次加载账户-${Date.now()}`
     const created = await page.request.post('http://127.0.0.1:8012/api/v1/accounts', {
       data: { type: 'debit', name: accountName },
     })
     expect(created.ok()).toBe(true)
 
-    const browserApiRequests: string[] = []
+    const browserCoreApiRequests: string[] = []
+    const browserCashFlowRequests: string[] = []
+    const browserCashFlowResponses: number[] = []
     const consoleErrors: string[] = []
     const pageErrors: string[] = []
     page.on('request', request => {
-      if (request.url().includes('/api/v1/')) browserApiRequests.push(request.url())
+      const url = request.url()
+      if (!url.includes('/api/v1/')) return
+      if (url.includes('/api/v1/statistics/cash-flow')) browserCashFlowRequests.push(url)
+      else browserCoreApiRequests.push(url)
+    })
+    page.on('response', response => {
+      if (response.url().includes('/api/v1/statistics/cash-flow')) browserCashFlowResponses.push(response.status())
     })
     page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()) })
     page.on('pageerror', error => pageErrors.push(error.message))
@@ -22,18 +30,27 @@ test.describe('Issue #66：新标签页首次加载卡片', () => {
     await expect(page.getByRole('region', { name: '本期摘要' })).toBeVisible()
     await expect(page.getByRole('button', { name: '记一笔', exact: true })).toBeEnabled()
     await expect(page.getByRole('status', { name: '正在读取当前账本状态' })).toHaveCount(0)
-    expect(browserApiRequests).toEqual([])
+    await expect.poll(() => browserCashFlowRequests.length).toBe(1)
+    await expect.poll(() => browserCashFlowResponses.length).toBe(1)
+    expect(browserCashFlowResponses).toEqual([200])
+    expect(browserCoreApiRequests).toEqual([])
     const responseEndMs = await page.evaluate(() => Math.round((performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming).responseEnd))
-    console.log(`首次加载证据：${test.info().project.name}，HTML 响应 ${responseEndMs} ms，浏览器 API 请求 ${browserApiRequests.length}，Console 错误 ${consoleErrors.length}，页面错误 ${pageErrors.length}`)
+    console.log(`首次加载证据：${test.info().project.name}，HTML 响应 ${responseEndMs} ms，核心浏览器 API 请求 ${browserCoreApiRequests.length}，现金流 API 请求 ${browserCashFlowRequests.length}，Console 错误 ${consoleErrors.length}，页面错误 ${pageErrors.length}`)
     await test.info().attach('first-load-evidence.json', {
-      body: Buffer.from(JSON.stringify({ browser: test.info().project.name, responseEndMs, browserApiRequests, consoleErrors, pageErrors }, null, 2)),
+      body: Buffer.from(JSON.stringify({ browser: test.info().project.name, responseEndMs, browserCoreApiRequests, browserCashFlowRequests, browserCashFlowResponses, consoleErrors, pageErrors }, null, 2)),
       contentType: 'application/json',
     })
 
+    browserCoreApiRequests.length = 0
+    browserCashFlowRequests.length = 0
+    browserCashFlowResponses.length = 0
     const refreshedResponse = await page.reload()
     expect(await refreshedResponse?.text()).toContain('本期摘要')
     await expect(page.getByRole('region', { name: '本期摘要' })).toBeVisible()
-    expect(browserApiRequests).toEqual([])
+    await expect.poll(() => browserCashFlowRequests.length).toBe(1)
+    await expect.poll(() => browserCashFlowResponses.length).toBe(1)
+    expect(browserCashFlowResponses).toEqual([200])
+    expect(browserCoreApiRequests).toEqual([])
     expect(consoleErrors).toEqual([])
     expect(pageErrors).toEqual([])
 
