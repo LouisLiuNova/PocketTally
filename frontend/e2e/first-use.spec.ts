@@ -23,7 +23,7 @@ test('全新账本无需创建分类即可录入第一笔收入和支出', async
   await expect(page.getByText(account, { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: '记一笔', exact: true }).click()
-  await selectOption(page, '交易类型', '收入')
+  await page.getByRole('radio', { name: '收入', exact: true }).check()
   await page.getByLabel('金额（元）', { exact: true }).fill('100')
   await page.getByLabel('说明', { exact: true }).fill(incomeDescription)
   await selectOption(page, '收款账户', account)
