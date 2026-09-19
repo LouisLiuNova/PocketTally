@@ -1,4 +1,6 @@
 -- SQLite reference DDL corresponding to the runtime SQLModel schema.
+-- Default categories are runtime initialization data and are intentionally not
+-- represented by this structural reference DDL.
 -- Foreign-key enforcement must be enabled per SQLite connection:
 --   PRAGMA foreign_keys = ON;
 

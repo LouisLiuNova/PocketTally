@@ -5,8 +5,8 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import func, text
-from sqlmodel import Session, select
+from sqlalchemy import func
+from sqlmodel import Session, SQLModel, select
 
 from app.database import create_database_engine, initialize_database
 from app.ledger import (
@@ -33,10 +33,9 @@ def make_engine(database_path: Path):
     """创建账本测试使用的临时运行时数据库。"""
 
     engine = create_database_engine(database_path)
+    # 账本单元测试自行构造最小分类数据，使用已有空模式避免默认种子干扰。
+    SQLModel.metadata.create_all(engine)
     initialize_database(engine)
-    # 账本服务测试自行准备分类，避免与新账本默认分类混淆。
-    with engine.begin() as connection:
-        connection.execute(text("DELETE FROM categories"))
     return engine
 
 

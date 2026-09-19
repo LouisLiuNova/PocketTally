@@ -31,18 +31,17 @@ docker compose up -d --no-build
 
 1. 创建账户
 2. 通过调账录入当前余额
-3. 按需编辑或补充已预置的收入和支出分类
-4. 开始记账
+3. 直接使用内置的常用收入和支出分类开始记账
+4. 按个人习惯调整、删除或新增分类
 
 在保存真实数据前，请先按照[部署指南](https://louisliunova.github.io/PocketTally/deployment/)创建并校验备份。
 
 ## 文档
 
-- [用户指南](https://louisliunova.github.io/PocketTally/docs/user-guide/)：首次使用、日常记账、备份和升级
-- [开发者指南](https://louisliunova.github.io/PocketTally/docs/developer-guide/)：本地开发、测试、契约和文档发布
-- [完整文档](https://louisliunova.github.io/PocketTally/docs/)：业务规则、数据模型和接口参考
+- [完整文档](https://louisliunova.github.io/PocketTally/)：使用边界、业务规则和技术参考
 - [部署与备份](https://louisliunova.github.io/PocketTally/deployment/)：内网部署、升级、备份和恢复
 - [发行说明](https://louisliunova.github.io/PocketTally/releases/v0.1.0/)：版本能力与已知限制
+- [参与开发](https://louisliunova.github.io/PocketTally/development/)：本地开发、测试和文档维护
 
 ## 许可
 

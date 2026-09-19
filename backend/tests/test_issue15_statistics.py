@@ -29,7 +29,11 @@ async def test_pagination_filters_and_cross_period_refund_statistics(tmp_path: P
         child = await create_resource(
             client,
             "/api/v1/categories",
-            {"name": "测试餐饮", "purpose": "expense", "parentCategoryId": root["id"]},
+            {
+                "name": "测试餐饮",
+                "purpose": "expense",
+                "parentCategoryId": root["id"],
+            },
         )
         tag = await create_resource(client, "/api/v1/tags", {"name": "必要"})
         expense = await create_resource(

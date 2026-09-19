@@ -3,14 +3,97 @@
 import fcntl
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import BinaryIO
 
-from sqlalchemy import URL, Connection, Engine, event, insert, text
+from sqlalchemy import URL, Connection, Engine, event, text
 from sqlmodel import SQLModel, create_engine
 
 import app.models  # noqa: F401  # 注册 SQLModel 表元数据。
 from app.models import Category, CategoryPurpose, new_id
+
+
+@dataclass(frozen=True, slots=True)
+class DefaultCategory:
+    """描述全新账本应创建的一个默认分类。"""
+
+    name: str
+    purpose: CategoryPurpose
+    icon_name: str
+    icon_color: str
+
+
+DEFAULT_CATEGORIES = (
+    DefaultCategory("工资", CategoryPurpose.INCOME, "i-lucide-briefcase", "#005CAF"),
+    DefaultCategory("奖金", CategoryPurpose.INCOME, "i-lucide-gift", "#FFA400"),
+    DefaultCategory("兼职副业", CategoryPurpose.INCOME, "i-lucide-laptop", "#6F5C9A"),
+    DefaultCategory(
+        "投资收益",
+        CategoryPurpose.INCOME,
+        "i-lucide-chart-no-axes-combined",
+        "#42602D",
+    ),
+    DefaultCategory(
+        "其他收入",
+        CategoryPurpose.INCOME,
+        "i-lucide-circle-ellipsis",
+        "#48929B",
+    ),
+    DefaultCategory("餐饮", CategoryPurpose.EXPENSE, "i-lucide-utensils", "#C73E3A"),
+    DefaultCategory("交通", CategoryPurpose.EXPENSE, "i-lucide-bus", "#005CAF"),
+    DefaultCategory("住房", CategoryPurpose.EXPENSE, "i-lucide-house", "#A86F4C"),
+    DefaultCategory(
+        "生活缴费",
+        CategoryPurpose.EXPENSE,
+        "i-lucide-receipt-text",
+        "#FFA400",
+    ),
+    DefaultCategory(
+        "购物",
+        CategoryPurpose.EXPENSE,
+        "i-lucide-shopping-bag",
+        "#6F5C9A",
+    ),
+    DefaultCategory(
+        "娱乐",
+        CategoryPurpose.EXPENSE,
+        "i-lucide-gamepad-2",
+        "#48929B",
+    ),
+    DefaultCategory(
+        "医疗",
+        CategoryPurpose.EXPENSE,
+        "i-lucide-heart-pulse",
+        "#C73E3A",
+    ),
+    DefaultCategory(
+        "教育",
+        CategoryPurpose.EXPENSE,
+        "i-lucide-graduation-cap",
+        "#42602D",
+    ),
+    DefaultCategory(
+        "通讯网络",
+        CategoryPurpose.EXPENSE,
+        "i-lucide-smartphone",
+        "#005CAF",
+    ),
+    DefaultCategory("旅行", CategoryPurpose.EXPENSE, "i-lucide-plane", "#48929B"),
+    DefaultCategory(
+        "人情往来",
+        CategoryPurpose.EXPENSE,
+        "i-lucide-handshake",
+        "#A86F4C",
+    ),
+    DefaultCategory(
+        "其他支出",
+        CategoryPurpose.EXPENSE,
+        "i-lucide-circle-ellipsis",
+        "#6F5C9A",
+    ),
+)
 
 LEGACY_BALANCE_TRIGGERS = (
     "tr_transactions_sync_account_balances_insert",
@@ -75,25 +158,6 @@ REQUIRED_INDEXES = (
         "CREATE INDEX IF NOT EXISTS ix_transactions_type_status_refund_of "
         "ON transactions (type, is_void, refund_of_transaction_id)"
     ),
-)
-
-DEFAULT_CATEGORIES = (
-    ("工资", CategoryPurpose.INCOME),
-    ("奖金", CategoryPurpose.INCOME),
-    ("兼职", CategoryPurpose.INCOME),
-    ("投资收益", CategoryPurpose.INCOME),
-    ("其他收入", CategoryPurpose.INCOME),
-    ("餐饮", CategoryPurpose.EXPENSE),
-    ("交通", CategoryPurpose.EXPENSE),
-    ("住房", CategoryPurpose.EXPENSE),
-    ("日用", CategoryPurpose.EXPENSE),
-    ("购物", CategoryPurpose.EXPENSE),
-    ("娱乐", CategoryPurpose.EXPENSE),
-    ("医疗", CategoryPurpose.EXPENSE),
-    ("教育", CategoryPurpose.EXPENSE),
-    ("通讯", CategoryPurpose.EXPENSE),
-    ("人情往来", CategoryPurpose.EXPENSE),
-    ("其他支出", CategoryPurpose.EXPENSE),
 )
 
 
@@ -188,35 +252,35 @@ def create_database_engine(database_path: Path) -> Engine:
 
 
 def _seed_default_categories(connection: Connection) -> None:
-    """在空分类表中一次性写入默认一级分类。
+    """在当前初始化事务中写入完整的默认分类集合。
 
     Args:
-        connection: 已开启事务的数据库连接。
-
-    Notes:
-        分类表只要存在一条记录就视为用户已经拥有自己的分类集合，
-        不再自动补齐默认分类。调用方通过同一事务保证检查和写入的原子性。
+        connection: 已持有 SQLite 初始化写锁的数据库连接。
     """
 
-    has_category = connection.execute(text("SELECT 1 FROM categories LIMIT 1")).first()
-    if has_category is not None:
-        return
-
-    connection.execute(
-        insert(Category),
-        [
-            {
-                "id": new_id(),
-                "name": name,
-                "purpose": purpose.value,
-            }
-            for name, purpose in DEFAULT_CATEGORIES
-        ],
+    # 使用相邻但不同的时间戳，在不增加排序字段的前提下保留产品定义顺序。
+    seed_time = datetime.now(UTC).replace(tzinfo=None) - timedelta(
+        microseconds=len(DEFAULT_CATEGORIES)
     )
+    rows = [
+        {
+            "id": new_id(),
+            "name": item.name,
+            "purpose": item.purpose,
+            "description": None,
+            "parent_category_id": None,
+            "icon_color": item.icon_color,
+            "icon_name": item.icon_name,
+            "created_at": seed_time + timedelta(microseconds=index),
+            "updated_at": seed_time + timedelta(microseconds=index),
+        }
+        for index, item in enumerate(DEFAULT_CATEGORIES)
+    ]
+    connection.execute(Category.__table__.insert(), rows)
 
 
 def initialize_database(engine: Engine) -> None:
-    """创建运行时数据库结构并为新账本预置默认分类。
+    """原子创建运行时模式，并仅为全新数据库预置默认分类。
 
     Args:
         engine: 待初始化的 SQLite Engine。
@@ -226,33 +290,38 @@ def initialize_database(engine: Engine) -> None:
     """
 
     with engine.connect() as connection:
+        # 先取得写锁，使并发初始化按顺序判断数据库是否为全新状态。
+        connection.exec_driver_sql("BEGIN IMMEDIATE")
+        table_names = set(
+            connection.execute(
+                text("SELECT name FROM sqlite_master WHERE type = 'table'")
+            ).scalars()
+        )
+        is_new_database = not table_names.intersection(SQLModel.metadata.tables)
         trigger_names = set(
             connection.execute(
                 text("SELECT name FROM sqlite_master WHERE type = 'trigger'")
             ).scalars()
         )
-    legacy_triggers = trigger_names.intersection(LEGACY_BALANCE_TRIGGERS)
-    if legacy_triggers:
-        names = ", ".join(sorted(legacy_triggers))
-        raise RuntimeError(
-            f"数据库包含旧余额触发器：{names}；请使用新的开发数据库"
-        )
-
-    SQLModel.metadata.create_all(engine)
-    with engine.connect() as connection:
-        # BEGIN IMMEDIATE 将空表检查与批量插入串行化，避免并发初始化各自看到空表。
-        connection.exec_driver_sql("BEGIN IMMEDIATE")
         try:
+            legacy_triggers = trigger_names.intersection(LEGACY_BALANCE_TRIGGERS)
+            if legacy_triggers:
+                names = ", ".join(sorted(legacy_triggers))
+                raise RuntimeError(
+                    f"数据库包含旧余额触发器：{names}；请使用新的开发数据库"
+                )
+
+            SQLModel.metadata.create_all(connection)
             for statement in REQUIRED_INDEXES:
                 connection.exec_driver_sql(statement)
             for statement in UPDATED_AT_TRIGGERS:
                 connection.exec_driver_sql(statement)
-            _seed_default_categories(connection)
+            if is_new_database:
+                _seed_default_categories(connection)
+            connection.commit()
         except BaseException:
             connection.rollback()
             raise
-        else:
-            connection.commit()
 
 
 __all__ = (

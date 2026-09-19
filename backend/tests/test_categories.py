@@ -4,8 +4,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from sqlalchemy import text
-from sqlmodel import Session
+from sqlmodel import Session, SQLModel
 
 from app.categories import (
     CategoryHierarchyError,
@@ -29,10 +28,9 @@ def make_engine(database_path: Path):
     """创建分类测试使用的临时运行时数据库。"""
 
     engine = create_database_engine(database_path)
+    # 分类服务测试自行构造最小数据，使用已有空模式避免默认种子干扰。
+    SQLModel.metadata.create_all(engine)
     initialize_database(engine)
-    # 这些服务测试需要自行构造分类树；默认分类行为由 test_database.py 单独覆盖。
-    with engine.begin() as connection:
-        connection.execute(text("DELETE FROM categories"))
     return engine
 
 

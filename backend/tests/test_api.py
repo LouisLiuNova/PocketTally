@@ -11,6 +11,7 @@ from sqlmodel import Session
 
 import app.ledger as ledger_module
 from app.config import Settings
+from app.database import DEFAULT_CATEGORIES
 from app.main import create_app
 from app.models import Category, Transaction, TransactionTag, TransactionType
 
@@ -26,6 +27,63 @@ async def create_resource(
     assert response.status_code == 201, response.text
     assert response.headers["Location"].endswith(f"/{response.json()['id']}")
     return response.json()
+
+
+@pytest.mark.asyncio
+async def test_default_categories_are_regular_api_resources(tmp_path: Path) -> None:
+    """验证默认分类通过现有 API 可见并保持普通资源的编辑删除行为。"""
+
+    app = create_app(
+        Settings(environment="test", database_path=tmp_path / "defaults-api.sqlite3")
+    )
+    async with (
+        app.router.lifespan_context(app),
+        AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client,
+    ):
+        categories = (await client.get("/api/v1/categories")).json()
+        assert [category["name"] for category in categories] == [
+            item.name for item in DEFAULT_CATEGORIES
+        ]
+        assert [category["purpose"] for category in categories] == [
+            item.purpose.value for item in DEFAULT_CATEGORIES
+        ]
+
+        wage = next(category for category in categories if category["name"] == "工资")
+        renamed = await client.patch(
+            f"/api/v1/categories/{wage['id']}",
+            json={"name": "固定薪酬"},
+        )
+        assert renamed.status_code == 200
+        assert renamed.json()["name"] == "固定薪酬"
+
+        bonus = next(category for category in categories if category["name"] == "奖金")
+        deleted = await client.delete(f"/api/v1/categories/{bonus['id']}")
+        assert deleted.status_code == 204
+
+        account = await create_resource(
+            client,
+            "/api/v1/accounts",
+            {"type": "debit", "name": "默认分类测试账户"},
+        )
+        other_income = next(
+            category for category in categories if category["name"] == "其他收入"
+        )
+        transaction = await client.post(
+            "/api/v1/transactions",
+            json={
+                "type": "income",
+                "destinationAccountId": account["id"],
+                "amount": 100,
+                "categoryId": other_income["id"],
+                "occurredAt": datetime.now(UTC).isoformat(),
+            },
+        )
+        assert transaction.status_code == 201
+        protected = await client.delete(
+            f"/api/v1/categories/{other_income['id']}"
+        )
+        assert protected.status_code == 409
+        assert protected.json()["code"] == "category_in_use"
 
 
 @pytest.mark.asyncio
