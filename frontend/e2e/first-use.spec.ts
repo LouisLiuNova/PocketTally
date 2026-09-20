@@ -1,15 +1,19 @@
 import { expect, test, type Page } from '@playwright/test'
+import { seedDesktopLedger } from './helpers/ledger-fixtures'
+import { localInput } from '../app/utils/money'
 
 async function selectOption(page: Page, label: string, option: string) {
   await page.getByRole('dialog').last().getByLabel(label, { exact: true }).click()
   await page.getByRole('option', { name: option, exact: true }).click()
 }
 
-test('全新账本无需创建分类即可录入第一笔收入和支出', async ({ page }) => {
+test('共享流水超过 20 笔且同一分钟时首次记账仍可查询', async ({ page }) => {
   const suffix = Date.now().toString()
   const account = `首次使用账户${suffix}`
   const incomeDescription = `首次工资${suffix}`
   const expenseDescription = `首次餐饮${suffix}`
+  const fixture = await seedDesktopLedger(page.request)
+  const occurredAt = localInput(fixture.occurredAt)
 
   await page.goto('/categories')
   await expect(page.getByText('餐饮', { exact: true })).toBeVisible()
@@ -26,6 +30,7 @@ test('全新账本无需创建分类即可录入第一笔收入和支出', async
   await page.getByRole('radio', { name: '收入', exact: true }).check()
   await page.getByLabel('金额（元）', { exact: true }).fill('100')
   await page.getByLabel('说明', { exact: true }).fill(incomeDescription)
+  await page.getByLabel('发生时间', { exact: true }).fill(occurredAt)
   await selectOption(page, '收款账户', account)
   await selectOption(page, '分类', '工资')
   await page.getByRole('button', { name: '保存交易', exact: true }).click()
@@ -34,6 +39,7 @@ test('全新账本无需创建分类即可录入第一笔收入和支出', async
   await page.getByRole('button', { name: '记一笔', exact: true }).click()
   await page.getByLabel('金额（元）', { exact: true }).fill('20')
   await page.getByLabel('说明', { exact: true }).fill(expenseDescription)
+  await page.getByLabel('发生时间', { exact: true }).fill(occurredAt)
   await page.getByRole('dialog').last().getByLabel('账户', { exact: true }).click()
   const accountOption = await page.getByRole('option').allTextContents()
   await page.getByRole('option', {
@@ -45,6 +51,9 @@ test('全新账本无需创建分类即可录入第一笔收入和支出', async
   await expect(page.getByRole('button', { name: '保存交易', exact: true })).toBeHidden()
 
   await page.goto('/transactions')
+  const search = page.getByLabel('搜索交易', { exact: true })
+  await search.fill(incomeDescription)
   await expect(page.getByText(incomeDescription, { exact: true })).toBeVisible()
+  await search.fill(expenseDescription)
   await expect(page.getByText(expenseDescription, { exact: true })).toBeVisible()
 })

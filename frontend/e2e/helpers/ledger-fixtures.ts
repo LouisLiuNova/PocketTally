@@ -45,5 +45,5 @@ export async function seedDesktopLedger(request: APIRequestContext) {
     })
   }
 
-  return { suffix, longName, wallet, bank, expense, income, tag, expenseTransaction }
+  return { suffix, longName, wallet, bank, expense, income, tag, expenseTransaction, occurredAt }
 }
