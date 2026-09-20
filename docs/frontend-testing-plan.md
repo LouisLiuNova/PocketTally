@@ -50,7 +50,7 @@
 运行前确认以下工具和依赖可用：
 
 ```text
-Bun 1.3.13
+Bun 1.4.2
 uv 0.9.18
 frontend/node_modules
 @playwright/test

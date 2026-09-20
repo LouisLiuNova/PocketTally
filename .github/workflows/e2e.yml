@@ -36,7 +36,7 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.13
+          bun-version: 1.4.2
       - name: Install frontend dependencies
         working-directory: frontend
         run: bun install --frozen-lockfile
@@ -95,7 +95,7 @@ jobs:
         env:
           CI: true
           POCKET_TALLY_E2E_DATABASE_PATH: ${{ runner.temp }}/pockettally-e2e-${{ matrix.viewport }}/e2e.sqlite3
-        run: bun run test:e2e --project=chromium-${{ matrix.viewport }}
+        run: bun run test:e2e --project=chromium-${{ matrix.viewport }} --reporter=line
       - name: Stop isolated E2E services
         if: always()
         env:
@@ -118,7 +118,7 @@ jobs:
             fi
           done
       - name: Upload E2E failure artifacts
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v4
         with:
           name: frontend-e2e-failure-${{ github.run_id }}-${{ matrix.viewport }}

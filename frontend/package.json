@@ -1,7 +1,7 @@
 {
   "name": "pockettally-frontend",
   "private": true,
-  "packageManager": "bun@1.3.13",
+  "packageManager": "bun@1.4.2",
   "type": "module",
   "scripts": {
     "dev": "bun --bun nuxt dev",

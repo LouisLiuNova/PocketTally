@@ -5,7 +5,7 @@
 
 ## 环境要求
 
-- 前端：[Bun](https://bun.sh/) 1.3.13
+- 前端：[Bun](https://bun.sh/) 1.4.2
 - 后端：[Python](https://www.python.org/) 3.14 与 [uv](https://docs.astral.sh/uv/)
 
 ## 本地启动
