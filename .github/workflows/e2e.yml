@@ -15,9 +15,13 @@ concurrency:
 
 jobs:
   chromium-e2e:
-    name: Chromium E2E
+    name: Chromium E2E (${{ matrix.viewport }}px)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        viewport: [1280, 1440, 1920]
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -44,7 +48,7 @@ jobs:
         run: bun run build
       - name: Start isolated E2E services
         env:
-          E2E_DIR: ${{ runner.temp }}/pockettally-e2e
+          E2E_DIR: ${{ runner.temp }}/pockettally-e2e-${{ matrix.viewport }}
         run: |
           set -euo pipefail
           mkdir -p "$E2E_DIR" frontend/test-results/ci-logs
@@ -86,16 +90,16 @@ jobs:
             fi
             sleep 2
           done
-      - name: Run Chromium 1280 1440 1920 matrix
+      - name: Run Chromium ${{ matrix.viewport }} E2E
         working-directory: frontend
         env:
           CI: true
-          POCKET_TALLY_E2E_DATABASE_PATH: ${{ runner.temp }}/pockettally-e2e/e2e.sqlite3
-        run: bun run test:e2e:matrix
+          POCKET_TALLY_E2E_DATABASE_PATH: ${{ runner.temp }}/pockettally-e2e-${{ matrix.viewport }}/e2e.sqlite3
+        run: bun run test:e2e --project=chromium-${{ matrix.viewport }}
       - name: Stop isolated E2E services
         if: always()
         env:
-          E2E_DIR: ${{ runner.temp }}/pockettally-e2e
+          E2E_DIR: ${{ runner.temp }}/pockettally-e2e-${{ matrix.viewport }}
         run: |
           for pid_file in "$E2E_DIR/backend.pid" "$E2E_DIR/frontend.pid"; do
             if [ -f "$pid_file" ]; then
@@ -105,7 +109,7 @@ jobs:
       - name: Collect E2E service logs
         if: always()
         env:
-          E2E_DIR: ${{ runner.temp }}/pockettally-e2e
+          E2E_DIR: ${{ runner.temp }}/pockettally-e2e-${{ matrix.viewport }}
         run: |
           mkdir -p frontend/test-results/ci-logs
           for log_file in "$E2E_DIR/backend.log" "$E2E_DIR/frontend.log"; do
@@ -117,7 +121,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-e2e-failure-${{ github.run_id }}
+          name: frontend-e2e-failure-${{ github.run_id }}-${{ matrix.viewport }}
           path: frontend/test-results/
           if-no-files-found: ignore
           retention-days: 14

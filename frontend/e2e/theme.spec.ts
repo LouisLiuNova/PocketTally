@@ -189,7 +189,8 @@ test('八套暗色在六个主页面和目标宽度下保持完整表面', async
 
 test('新旧偏好可恢复，未知字段独立回退且首屏属性稳定', async ({ page }) => {
   await page.addInitScript(() => {
-    if (!localStorage.getItem('pockettally-appearance')) localStorage.setItem('pockettally-appearance', JSON.stringify({ theme: 'dark', palette: 'yamabuki' }))
+    localStorage.setItem('pockettally-appearance', JSON.stringify({ theme: 'dark', palette: 'yamabuki' }))
+    localStorage.removeItem('pockettally-color-mode')
   })
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')

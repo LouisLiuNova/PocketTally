@@ -204,12 +204,12 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
 
       <UDashboardPanel class="app-main">
         <template #header>
-          <UDashboardNavbar :title="currentRoute.title" :ui="{ root: 'h-auto min-h-20 py-3', left: 'items-start', title: 'sr-only' }">
+          <UDashboardNavbar :title="currentRoute.title" :ui="{ root: 'h-auto min-h-20 py-3', left: 'items-start flex-1', title: 'sr-only' }">
             <template #toggle>
               <UDashboardSidebarToggle aria-label="打开主导航" />
             </template>
             <template #left>
-              <div class="min-w-0">
+              <div class="min-w-0 flex-1">
                 <p class="eyebrow">{{ today }}</p>
                 <h1 ref="pageTitle" tabindex="-1" data-page-title>{{ currentRoute.title }}</h1>
                 <UBreadcrumb :items="breadcrumbItems" class="mt-1" :ui="{ link: 'text-xs' }" />
@@ -217,9 +217,9 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
             </template>
             <template #right>
               <div class="top-actions">
-                <UButton color="neutral" variant="outline" icon="i-lucide-refresh-cw" label="刷新" :loading="workspace.loading.value" :aria-busy="workspace.loading.value" @click="workspace.refreshWorkspace" />
-                <UButton icon="i-lucide-plus" label="记一笔" :disabled="!workspace.loaded.value || workspace.loading.value || !!workspace.loadError.value" @click="workspace.transactionEditor.value = {}" />
-                <UButton color="neutral" variant="ghost" icon="i-lucide-log-out" label="退出" @click="logout" />
+                <UButton color="neutral" variant="outline" icon="i-lucide-refresh-cw" label="刷新" aria-label="刷新" :ui="{ label: 'hidden sm:inline' }" :loading="workspace.loading.value" :aria-busy="workspace.loading.value" @click="workspace.refreshWorkspace" />
+                <UButton icon="i-lucide-plus" label="记一笔" aria-label="记一笔" :ui="{ label: 'hidden sm:inline' }" :disabled="!workspace.loaded.value || workspace.loading.value || !!workspace.loadError.value" @click="workspace.transactionEditor.value = {}" />
+                <UButton color="neutral" variant="ghost" icon="i-lucide-log-out" label="退出" aria-label="退出" :ui="{ label: 'hidden sm:inline' }" @click="logout" />
               </div>
             </template>
           </UDashboardNavbar>
