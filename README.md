@@ -32,22 +32,25 @@ docker compose up -d --no-build
 docker compose run --rm backend pocket-tally-auth init --username owner
 ```
 
-认证边界、恢复命令和生产反向代理要求见[认证与会话](docs/authentication.md)及[部署指南](https://louisliunova.github.io/PocketTally/deployment/)。
+认证边界、恢复命令和生产反向代理要求见[认证与会话](docs/authentication.md)及[部署指南](https://louisliunova.github.io/PocketTally/deployment/)。完整的用户操作流程见[用户指南](https://louisliunova.github.io/PocketTally/user-guide/)。
 
 然后访问 `http://localhost:54425`。
 
-首次使用建议依次完成：
+给第一次使用者的最短路径：
 
 1. 创建账户
-2. 通过调账录入当前余额
-3. 直接使用内置的常用收入和支出分类开始记账
-4. 按个人习惯调整、删除或新增分类
+2. 通过“调账”录入当前余额
+3. 在“记一笔”中记录收入、支出或转账
+4. 按需要调整分类、添加标签，并在统计页检查结果
+
+需要修正历史记录时，优先使用“作废交易”保留审计记录；从支出详情发起退款，避免把退款重复记成普通收入。更多页面操作、筛选、备份和恢复说明见[用户指南](https://louisliunova.github.io/PocketTally/user-guide/)。
 
 在保存真实数据前，请先按照[部署指南](https://louisliunova.github.io/PocketTally/deployment/)创建并校验备份。
 
 ## 文档
 
 - [完整文档](https://louisliunova.github.io/PocketTally/)：使用边界、业务规则和技术参考
+- [用户指南](https://louisliunova.github.io/PocketTally/user-guide/)：登录、首笔记账、日常查询、退款、作废和备份
 - [部署与备份](https://louisliunova.github.io/PocketTally/deployment/)：内网部署、升级、备份和恢复
 - [发行说明](https://louisliunova.github.io/PocketTally/releases/v0.1.0/)：版本能力与已知限制
 - [参与开发](https://louisliunova.github.io/PocketTally/development/)：本地开发、测试和文档维护
