@@ -39,10 +39,7 @@ async def test_health_uses_lifespan_resources_and_dependencies(
     body = response.json()
     assert body["status"] == "ok"
     assert body["ready"] is True
-    assert body["environment"] == "test"
-    assert body["version"] == "0.1.0"
-    assert body["request_id"] == "test-id"
-    assert body["uptime_seconds"] >= 0
+    assert set(body) == {"status", "ready"}
 
 
 @pytest.mark.asyncio

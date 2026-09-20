@@ -5,8 +5,10 @@ from dataclasses import dataclass
 from typing import Annotated
 
 from fastapi import Depends, Request
+from sqlalchemy.orm import Session as SqlAlchemySession
 from sqlmodel import Session
 
+from app.auth import AuthenticatedSession, authenticate_request
 from app.config import Settings, get_settings
 from app.lifespan import AppResources
 
@@ -52,6 +54,36 @@ def get_session(resources: ResourcesDep) -> Iterator[Session]:
 
 
 SessionDep = Annotated[Session, Depends(get_session, scope="function")]
+
+
+def get_auth_session(resources: ResourcesDep, settings: SettingsDep) -> Iterator[SqlAlchemySession]:
+    """提供独立鉴权库的请求事务。"""
+
+    if resources.auth_engine is None or not settings.is_auth_enabled():
+        yield None  # type: ignore[misc]
+        return
+    with SqlAlchemySession(resources.auth_engine) as session, session.begin():
+        yield session
+
+
+AuthSessionDep = Annotated[SqlAlchemySession, Depends(get_auth_session, scope="function")]
+
+
+def get_authenticated(
+    request: Request,
+    settings: SettingsDep,
+    auth_session: AuthSessionDep,
+) -> AuthenticatedSession | None:
+    """验证受保护路由的当前所有者。"""
+
+    if not settings.is_auth_enabled():
+        return None
+    if auth_session is None:
+        raise RuntimeError("鉴权资源尚未就绪")
+    return authenticate_request(auth_session, request, settings)
+
+
+AuthDep = Annotated[AuthenticatedSession | None, Depends(get_authenticated)]
 
 
 @dataclass(frozen=True, slots=True)

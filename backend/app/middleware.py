@@ -6,6 +6,8 @@ from uuid import uuid4
 from fastapi import FastAPI, Request, Response
 from loguru import logger
 
+from app.auth import cookie_name
+
 
 def register_middleware(app: FastAPI) -> None:
     """注册请求上下文和访问日志中间件。
@@ -31,6 +33,12 @@ def register_middleware(app: FastAPI) -> None:
 
         request_id = request.headers.get("X-Request-ID") or uuid4().hex
         request.state.request_id = request_id
+        # 只有 Nuxt 内部代理可以写入该 Header；开发/测试直接使用 socket peer。
+        request.state.client_ip = (
+            request.headers.get("x-pockettally-client-ip")
+            if request.app.state.settings.environment == "production"
+            else (request.client.host if request.client else "unknown")
+        )
         started = perf_counter()
 
         with logger.contextualize(request_id=request_id):
@@ -46,6 +54,12 @@ def register_middleware(app: FastAPI) -> None:
 
             elapsed_ms = (perf_counter() - started) * 1000
             response.headers["X-Request-ID"] = request_id
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            response.headers["Referrer-Policy"] = "no-referrer"
+            if request.url.path.startswith("/api/"):
+                response.headers["Cache-Control"] = "no-store"
+            if response.status_code == 401 and request.url.path.startswith("/api/"):
+                response.delete_cookie(cookie_name(request.app.state.settings), path="/")
             logger.info(
                 "{} {} -> {} ({:.2f} ms)",
                 request.method,

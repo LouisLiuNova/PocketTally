@@ -30,6 +30,19 @@ class Settings(BaseSettings):
     log_file: str | None = None
     database_path: Path = Path("data/pocket-tally.sqlite3")
     backup_directory: Path = Path("backups")
+    auth_database_path: Path | None = None
+    public_origin: str | None = None
+    auth_enabled: bool | None = None
+    trusted_proxy_cidrs: tuple[str, ...] = ()
+
+    def is_auth_enabled(self) -> bool:
+        """返回当前运行模式是否启用鉴权。
+
+        旧的业务单元测试使用 ``environment=test`` 且没有认证夹具；测试环境
+        默认关闭只是兼容这些纯业务测试，生产和其它运行模式始终开启。
+        """
+
+        return self.auth_enabled if self.auth_enabled is not None else self.environment != "test"
 
 
 @lru_cache

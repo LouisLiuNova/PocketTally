@@ -1,0 +1,28 @@
+// 独立鉴权库结构契约；不要与账本库 db.dbml 合并。
+
+Table owner {
+  id INTEGER [pk]
+  username TEXT [notnull, unique, note: '固定所有者用户名']
+  password_hash TEXT [notnull, note: 'Argon2id 哈希，不保存明文密码']
+  created_at DATETIME [notnull]
+  password_changed_at DATETIME [notnull]
+}
+
+Table sessions {
+  id TEXT [pk]
+  token_digest TEXT [notnull, unique, note: '服务端不透明令牌的 SHA-256 摘要']
+  created_at DATETIME [notnull]
+  last_seen_at DATETIME [notnull, note: '30 分钟空闲过期']
+  absolute_expires_at DATETIME [notnull, note: '12 小时绝对过期']
+  client_ip TEXT [notnull]
+  user_agent TEXT [notnull]
+}
+
+Table login_throttle {
+  id INTEGER [pk, increment]
+  client_ip TEXT [notnull, unique, note: '客户端地址哈希']
+  failures INTEGER [notnull, default: 0]
+  window_started_at DATETIME [notnull]
+  blocked_until DATETIME
+  updated_at DATETIME [notnull]
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/auth.login.schema.json",
+  "title": "LoginRequest",
+  "description": "登录凭据；密码原样传递，服务端只保存 Argon2id 哈希。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["username", "password"],
+  "properties": {
+    "username": { "type": "string", "minLength": 3, "maxLength": 64 },
+    "password": { "type": "string", "minLength": 1, "maxLength": 128 }
+  }
+}

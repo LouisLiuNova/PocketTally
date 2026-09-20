@@ -6,6 +6,12 @@ from app.schemas.account import (
     AccountSummary,
     AccountUpdate,
 )
+from app.schemas.auth import (
+    LoginRequest,
+    PasswordChangeRequest,
+    SessionList,
+    SessionRead,
+)
 from app.schemas.base import ContractModel, HexColor, UpdateModel, to_camel
 from app.schemas.category import (
     CategoryCreate,
@@ -70,11 +76,15 @@ __all__ = (
     "ExpenseTransactionTotals",
     "ExpensesResponse",
     "HexColor",
+    "LoginRequest",
     "OtherCategory",
     "OverviewResponse",
+    "PasswordChangeRequest",
     "Period",
     "PeriodAmount",
     "RefundSummary",
+    "SessionList",
+    "SessionRead",
     "TagAmount",
     "TagCreate",
     "TagRead",
