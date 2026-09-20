@@ -5,6 +5,11 @@ export default defineEventHandler(async (event) => {
   const target = new URL(`/api/v1/${path}`, config.apiBase)
   target.search = getRequestURL(event).search
   const headers = getProxyRequestHeaders(event)
+  // Keep the browser-facing host for local same-origin validation. The target
+  // URL points at the backend, so proxyRequest otherwise replaces Host with
+  // 127.0.0.1:8000 and the backend rejects Origin http://127.0.0.1:3000.
+  const requestHost = getRequestHeader(event, 'host')
+  if (requestHost) headers.host = requestHost
   for (const name of ['forwarded', 'x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-real-ip', 'x-pockettally-client-ip']) {
     delete headers[name]
   }
