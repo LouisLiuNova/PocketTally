@@ -61,7 +61,7 @@ async function loadTransactions(state = routeState.value) {
   loading.value = true
   queryError.value = ''
   try {
-    const result = await $fetch<Page<Transaction>>('/api/v1/transactions', { query: apiQuery(state) })
+    const result = await useApi()<Page<Transaction>>('/api/v1/transactions', { query: apiQuery(state) })
     if (currentRequest !== requestId) return
     transactions.value = result.items
     transactionTotal.value = result.total

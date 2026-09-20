@@ -74,7 +74,7 @@ async function save() {
   if (props.kind === 'categories') body = { ...body, ...(!item ? { purpose: form.purpose } : {}), parentCategoryId: form.parentCategoryId === topLevelCategoryValue ? null : form.parentCategoryId, iconColor: form.color, iconName: form.iconName || DEFAULT_CATEGORY_ICON }
   busy.value = true; error.value = ''; emit('busy', true)
   try {
-    await $fetch(`/api/v1/${props.kind}${item ? `/${item.id}` : ''}`, { method: item ? 'PATCH' : 'POST', body, retry: 0 })
+    await useApi()(`/api/v1/${props.kind}${item ? `/${item.id}` : ''}`, { method: item ? 'PATCH' : 'POST', body, retry: 0 })
     emit('saved')
   } catch (e) { error.value = errorMessage(e) }
   finally { busy.value = false; emit('busy', false) }

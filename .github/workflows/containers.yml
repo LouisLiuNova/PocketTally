@@ -144,6 +144,7 @@ jobs:
     env:
       POCKET_TALLY_BACKEND_IMAGE: pockettally-backend-smoke
       POCKET_TALLY_FRONTEND_IMAGE: pockettally-frontend-smoke
+      POCKET_TALLY_AUTH_ENABLED: "false"
       POCKET_TALLY_IMAGE_TAG: ${{ matrix.slug }}
       POCKET_TALLY_DATA_DIR: ${{ github.workspace }}/.container-smoke/${{ matrix.slug }}/data
       POCKET_TALLY_BACKUP_DIR: ${{ github.workspace }}/.container-smoke/${{ matrix.slug }}/backups

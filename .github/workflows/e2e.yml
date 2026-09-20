@@ -54,7 +54,10 @@ jobs:
 
           (
             cd backend
-            exec env POCKET_TALLY_DATABASE_PATH="$database" \
+            printf 'PocketTally-E2E-Password-2026!\nPocketTally-E2E-Password-2026!\n' | env POCKET_TALLY_DATABASE_PATH="$database" POCKET_TALLY_AUTH_ENABLED=true \
+              uv run pocket-tally-auth init --username e2e-owner
+            exec env POCKET_TALLY_DATABASE_PATH="$database" POCKET_TALLY_AUTH_ENABLED=true \
+              POCKET_TALLY_PUBLIC_ORIGIN=http://127.0.0.1:3012 \
               uv run uvicorn app.main:app --host 127.0.0.1 --port 8012
           ) >"$backend_log" 2>&1 &
           echo $! >"$E2E_DIR/backend.pid"
@@ -66,7 +69,7 @@ jobs:
           echo $! >"$E2E_DIR/frontend.pid"
 
           for attempt in $(seq 1 60); do
-            if curl --fail --silent http://127.0.0.1:8012/api/v1/accounts >/dev/null \
+            if curl --fail --silent http://127.0.0.1:8012/api/v1/health >/dev/null \
               && curl --fail --silent http://127.0.0.1:3012/ >/dev/null; then
               exit 0
             fi

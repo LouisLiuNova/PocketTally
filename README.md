@@ -11,8 +11,9 @@ PocketTally 是一款轻量、私有的个人记账应用。数据保存在你�
 - 搜索和筛选交易，查看多维度收支统计
 - 创建、校验和恢复账本备份
 
-> [!WARNING]
-> 当前版本没有登录功能，请勿将服务暴露到公网，也不要让其他程序直接修改数据库。
+> [!IMPORTANT]
+> 当前主线已启用单所有者登录。生产环境仍必须通过 HTTPS 反向代理发布，并配置
+> `POCKET_TALLY_PUBLIC_ORIGIN`；登录凭据和会话存放在独立的鉴权 SQLite 文件中。
 
 ## 快速开始
 
@@ -24,6 +25,14 @@ mkdir -p data backups
 docker compose pull frontend backend
 docker compose up -d --no-build
 ```
+
+首次启动后，在后端容器中初始化唯一所有者（命令只会在鉴权库为空时成功）：
+
+```bash
+docker compose run --rm backend pocket-tally-auth init --username owner
+```
+
+认证边界、恢复命令和生产反向代理要求见[认证与会话](docs/authentication.md)及[部署指南](https://louisliunova.github.io/PocketTally/deployment/)。
 
 然后访问 `http://localhost:54425`。
 

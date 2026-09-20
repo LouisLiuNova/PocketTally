@@ -12,6 +12,10 @@ uv run pocket-tally-backend
 API 文档位于 <http://127.0.0.1:8000/docs>，健康检查端点为
 `GET /api/v1/health`。
 
+生产环境会关闭 `/docs`、`/redoc` 和 `/openapi.json`。账本资源默认需要单所有者会话；
+首次启动后使用 `pocket-tally-auth init --username <用户名>` 初始化，忘记密码使用
+`pocket-tally-auth reset-password`，这两个命令都只操作独立的鉴权 SQLite 文件。
+
 当前运行时已提供账户、树状分类和标签的创建、列表、详情、更新与删除接口，
 交易 CRUD、退款摘要、组合筛选分页和六类服务端统计接口。交易列表返回
 `{items,total,page,pageSize}`，使用 `status=active|voided|all` 控制作废状态；统计和
@@ -29,6 +33,9 @@ API 文档位于 <http://127.0.0.1:8000/docs>，健康检查端点为
 已有账本幂等补建不改变数据的必要统计索引。全新数据库会在同一个初始化事务中创建
 5 个收入分类和 12 个支出分类；已经存在 PocketTally 业务表的数据库不会自动补种，
 即使其中的分类为空也保持不变。
+
+生产鉴权必须同时设置 `POCKET_TALLY_PUBLIC_ORIGIN=https://<实际域名>`，并让 FastAPI
+只接受可信反向代理的内部转发；账本备份工具不会包含鉴权库。
 
 当前开发阶段不自动升级旧数据库。如果启动时报出旧余额触发器，请切换到新的
 开发数据库；应用不会删除或改写旧数据。

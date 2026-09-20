@@ -6,6 +6,7 @@ import { ledgerWorkspaceKey } from '~/composables/useLedgerWorkspace'
 import { MESSAGE_ICONS, type AppMessage } from '~/utils/messages'
 
 const route = useRoute()
+const auth = useAuth()
 const workspace = createLedgerWorkspace()
 const messages = useAppMessages()
 const pageTitle = ref<HTMLElement | null>(null)
@@ -83,6 +84,11 @@ function handleThemeModeKeydown(event: KeyboardEvent, index: number) {
   selectThemeMode(themeModes[nextIndex].value, nextIndex !== index)
 }
 
+async function logout() {
+  await auth.logout()
+  await navigateTo('/login')
+}
+
 watch(() => route.path, async (path) => {
   if (path === initialPath) return
   initialPath = path
@@ -96,7 +102,8 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
 <template>
   <UApp :locale="appLocale" :toaster="{ position: 'bottom-right', duration: 4000, max: 5, expand: true }">
     <NuxtRouteAnnouncer />
-    <UDashboardGroup class="app-shell" storage="local" storage-key="pockettally-shell" unit="rem">
+    <NuxtPage v-if="route.path === '/login'" />
+    <UDashboardGroup v-else class="app-shell" storage="local" storage-key="pockettally-shell" unit="rem">
       <UDashboardSidebar
         id="primary"
         class="app-sidebar"
@@ -212,6 +219,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
               <div class="top-actions">
                 <UButton color="neutral" variant="outline" icon="i-lucide-refresh-cw" label="刷新" :loading="workspace.loading.value" :aria-busy="workspace.loading.value" @click="workspace.refreshWorkspace" />
                 <UButton icon="i-lucide-plus" label="记一笔" :disabled="!workspace.loaded.value || workspace.loading.value || !!workspace.loadError.value" @click="workspace.transactionEditor.value = {}" />
+                <UButton color="neutral" variant="ghost" icon="i-lucide-log-out" label="退出" @click="logout" />
               </div>
             </template>
           </UDashboardNavbar>
@@ -249,6 +257,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
             <p v-if="workspace.loading.value && !workspace.loaded.value" role="status" class="empty-state">正在从账本服务同步资源…</p>
 
               <NuxtPage />
+
             </UContainer>
           </main>
         </template>

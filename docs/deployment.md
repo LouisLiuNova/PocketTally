@@ -1,13 +1,13 @@
-# Docker Compose 内网部署
+# Docker Compose 部署
 
-PocketTally v0.1.0 提供 `frontend`、`backend` 两个业务容器和一个按需备份工具，支持
-macOS ARM64 与 Linux x86_64。SQLite 数据和备份均保存在宿主机绑定目录中。v0.1.0
-是首个已发布的 SQLite 数据库基线。
+PocketTally 提供 `frontend`、`backend` 两个业务容器和一个按需备份工具，支持 macOS
+ARM64 与 Linux x86_64。SQLite 数据和备份均保存在宿主机绑定目录中；认证使用同一数据
+目录中的独立 `pocket-tally-auth.sqlite3`。
 
-> [!WARNING]
-> 当前版本没有登录鉴权，只允许部署在可信内网。不得在路由器上转发端口，不得给容器
-> 分配公网入口，也不得直接部署到公网 VPS。默认端口 `54425` 只是高位端口，不是安全
-> 措施；公网发布必须等待 `v0.2 公网单用户发布` 里程碑的鉴权任务完成。
+> [!IMPORTANT]
+> 生产发布必须通过 HTTPS 反向代理，并设置 `POCKET_TALLY_PUBLIC_ORIGIN` 为浏览器实际
+> 访问的精确 Origin。默认端口 `54425` 只是前端监听端口，不是安全措施；FastAPI 端口
+> 不得直接暴露公网。
 
 ## 前置条件
 
@@ -38,6 +38,20 @@ mkdir -p data backups
 docker compose pull frontend backend
 docker compose up -d --no-build
 ```
+
+生产环境在 `.env` 中设置实际 HTTPS Origin：
+
+```dotenv
+POCKET_TALLY_PUBLIC_ORIGIN=https://ledger.example.com
+```
+
+首次启动后初始化唯一所有者：
+
+```bash
+docker compose run --rm backend pocket-tally-auth init --username owner
+```
+
+密码重设、会话撤销和 HTTPS/CSRF 边界见[认证与会话](authentication.md)。
 
 Linux 用户建议把 `.env` 中的 UID/GID 改为当前用户，便于在宿主机管理文件：
 
@@ -82,11 +96,14 @@ FastAPI 的 `8000` 端口只在 Compose 网络内可见。若其他设备无法�
 | `POCKET_TALLY_HTTP_PORT` | `54425` | 前端在宿主机的端口。 |
 | `POCKET_TALLY_DATA_DIR` | `./data` | SQLite 数据目录，可改为绝对路径。 |
 | `POCKET_TALLY_BACKUP_DIR` | `./backups` | 一致快照目录，可改为绝对路径。 |
+| `POCKET_TALLY_PUBLIC_ORIGIN` | 空（生产必须设置） | 浏览器实际 HTTPS Origin，用于同源和 CSRF 校验。 |
+| `POCKET_TALLY_AUTH_ENABLED` | `true` | 是否启用鉴权；仅测试/容器冒烟可显式关闭。 |
 | `POCKET_TALLY_UID` / `POCKET_TALLY_GID` | `10001` | Linux 宿主机上的文件所有者；必须大于 0。 |
 | `POCKET_TALLY_IMAGE_TAG` | `0.1.0` | 正式部署固定版本；不得改用可变的 `latest`。 |
 
-数据库固定保存为数据目录中的 `pocket-tally.sqlite3`。不要手工编辑数据库，也不要让其他
-程序写入该文件。
+数据库固定保存为数据目录中的 `pocket-tally.sqlite3`；鉴权库为同目录的
+`pocket-tally-auth.sqlite3`。不要手工编辑这两个数据库，也不要让其他程序写入；账本备份
+不包含鉴权库，鉴权库必须通过宿主机加密备份策略单独保护。
 
 ## 日志与日常操作
 
@@ -135,6 +152,10 @@ curl --fail http://127.0.0.1:54425/api/v1/health
 > [!IMPORTANT]
 > 备份只有在另一块磁盘或另一台设备上存在副本时，才能抵御宿主磁盘故障。至少定期把
 > `backups` 中已校验的文件同步到独立存储。
+
+鉴权库不由 `backup` 工具恢复。若需要恢复密码或全部会话，请使用
+`docker compose run --rm backend pocket-tally-auth reset-password` 或
+`revoke-sessions`，不要用账本备份覆盖鉴权库。
 
 ## 正式镜像地址、升级与回退
 
