@@ -141,11 +141,11 @@ async function loadStatistics(state = routeState.value) {
   queryError.value = ''
   try {
     const [summary, flow, categoryData, tagData, calendarData] = await Promise.all([
-      $fetch<Overview>('/api/v1/statistics/overview', { query: selectedPeriod }),
-      $fetch<CashFlow>('/api/v1/statistics/cash-flow', { query: withGranularity }),
-      $fetch<CategoryStatistics>('/api/v1/statistics/categories', { query: { ...withGranularity, parentCategoryId: state.parentCategoryId || undefined } }),
-      $fetch<TagStatistics>('/api/v1/statistics/tags', { query: selectedPeriod }),
-      $fetch<CalendarStatistics>('/api/v1/statistics/calendar', { query: { month: state.month } }),
+      useApi()<Overview>('/api/v1/statistics/overview', { query: selectedPeriod }),
+      useApi()<CashFlow>('/api/v1/statistics/cash-flow', { query: withGranularity }),
+      useApi()<CategoryStatistics>('/api/v1/statistics/categories', { query: { ...withGranularity, parentCategoryId: state.parentCategoryId || undefined } }),
+      useApi()<TagStatistics>('/api/v1/statistics/tags', { query: selectedPeriod }),
+      useApi()<CalendarStatistics>('/api/v1/statistics/calendar', { query: { month: state.month } }),
     ])
     if (currentRequest !== requestId) return
     overview.value = summary
@@ -197,7 +197,7 @@ async function openExpenseDrill(title: string, query: Record<string, string | bo
   const currentPeriod = period.value
   drill.value = { title, query, data: null, error: '', loading: true }
   try {
-    const data = await $fetch<ExpenseTransactionPage>('/api/v1/statistics/expense-transactions', {
+    const data = await useApi()<ExpenseTransactionPage>('/api/v1/statistics/expense-transactions', {
       query: { ...currentPeriod, page: 1, pageSize: 100, ...query },
     })
     if (drill.value?.title === title) drill.value = { title, query, data, error: '', loading: false }

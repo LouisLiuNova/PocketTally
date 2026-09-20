@@ -10,6 +10,8 @@ import {
 } from '~/constants/appearance'
 
 export function createLedgerWorkspace() {
+  const route = useRoute()
+  const api = useApi()
   const ledger = useLedger()
   const messages = useAppMessages()
   const selected = ref<Transaction | null>(null)
@@ -70,13 +72,13 @@ export function createLedgerWorkspace() {
     refundLoading.value = false
     try {
       selected.value = typeof transaction === 'string'
-        ? await $fetch<Transaction>(`/api/v1/transactions/${transaction}`)
+        ? await api<Transaction>(`/api/v1/transactions/${transaction}`)
         : transaction
       messages.dismiss(`transaction-detail-${transactionId}`)
       if (selected.value.type === 'expense') {
         refundLoading.value = true
         try {
-          refundSummary.value = await $fetch<RefundSummary>(`/api/v1/transactions/${selected.value.id}/refund-summary`)
+          refundSummary.value = await api<RefundSummary>(`/api/v1/transactions/${selected.value.id}/refund-summary`)
         } catch (error) {
           refundError.value = errorMessage(error)
         } finally {
@@ -100,7 +102,7 @@ export function createLedgerWorkspace() {
     refundLoading.value = true
     refundError.value = ''
     try {
-      refundSummary.value = await $fetch<RefundSummary>(`/api/v1/transactions/${selected.value.id}/refund-summary`)
+      refundSummary.value = await api<RefundSummary>(`/api/v1/transactions/${selected.value.id}/refund-summary`)
     } catch (error) {
       refundError.value = errorMessage(error)
     } finally {
@@ -138,7 +140,7 @@ export function createLedgerWorkspace() {
     busy.value = true
     actionError.value = ''
     try {
-      await $fetch(confirmation.value.path, { method: confirmation.value.method, retry: 0 })
+      await api(confirmation.value.path, { method: confirmation.value.method, retry: 0 })
       confirmation.value = null
       messages.push({ id: 'operation-success', level: 'success', title: '操作成功', description: '账本操作已完成。' })
       await refreshWorkspace()
@@ -181,7 +183,11 @@ export function createLedgerWorkspace() {
     theme.value = savedAppearance.theme
     palette.value = savedAppearance.palette
     applyAppearance()
-    if (!ledger.loaded.value) void syncResources()
+    if (route.path !== '/login' && !ledger.loaded.value) void syncResources()
+  })
+
+  watch(() => route.path, (path) => {
+    if (path !== '/login' && !ledger.loaded.value) void syncResources()
   })
 
   return {

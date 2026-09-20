@@ -27,6 +27,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version=settings.app_version,
         debug=settings.debug,
         lifespan=lifespan,
+        docs_url=None if settings.environment == "production" else "/docs",
+        redoc_url=None if settings.environment == "production" else "/redoc",
+        openapi_url=None if settings.environment == "production" else "/openapi.json",
     )
     application.state.settings = settings
     # 让所有 Settings 依赖都使用构建此应用实例时的配置，尤其适用于测试和嵌入式使用。

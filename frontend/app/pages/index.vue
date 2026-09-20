@@ -9,7 +9,7 @@ import { metricIcons } from '~/constants/metricIcons'
 
 const workspace = useLedgerWorkspace()
 const today = localInput().slice(0, 10)
-const requestFetch = useRequestFetch()
+const requestFetch = useApi()
 const period = monthPeriod(today)
 const transactionQuery: TransactionQuery = {
   page: 1,

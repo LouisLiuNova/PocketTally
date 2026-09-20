@@ -21,7 +21,6 @@ paths:
                 additionalProperties:
                   anyOf:
                   - type: string
-                  - type: number
                   - type: boolean
                 type: object
                 title: Response Health Api V1 Health Get
@@ -1735,6 +1734,128 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /auth/login:
+    post:
+      tags:
+      - auth
+      summary: Login Route
+      description: 验证所有者凭据并轮换会话。
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRead'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/session:
+    get:
+      tags:
+      - auth
+      summary: Get Auth Session Route
+      description: 返回当前会话，匿名请求统一失败。
+      operationId: getAuthSession
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRead'
+  /auth/logout:
+    post:
+      tags:
+      - auth
+      summary: Logout Route
+      description: 删除当前会话。
+      operationId: logout
+      responses:
+        '204':
+          description: Successful Response
+  /auth/sessions:
+    get:
+      tags:
+      - auth
+      summary: List Sessions Route
+      description: 返回当前所有者的非敏感会话摘要。
+      operationId: listAuthSessions
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionList'
+    delete:
+      tags:
+      - auth
+      summary: Revoke All Sessions Route
+      description: 撤销所有会话。
+      operationId: revokeAllAuthSessions
+      responses:
+        '204':
+          description: Successful Response
+  /auth/sessions/{session_id}:
+    delete:
+      tags:
+      - auth
+      summary: Revoke Session Route
+      description: 撤销指定会话。
+      operationId: revokeAuthSession
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Session Id
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/password:
+    put:
+      tags:
+      - auth
+      summary: Change Password Route
+      description: 重新验证当前密码、更新密码并轮换全部会话。
+      operationId: changePassword
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRead'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
 components:
   schemas:
     AccountCreate:
@@ -2982,5 +3103,113 @@ components:
       minProperties: 1
       title: TransactionUpdate
       description: 部分更新交易的请求模型。
+    LoginRequest:
+      properties:
+        username:
+          type: string
+          maxLength: 64
+          minLength: 3
+          title: Username
+        password:
+          type: string
+          maxLength: 128
+          minLength: 1
+          title: Password
+      additionalProperties: false
+      type: object
+      required:
+      - username
+      - password
+      title: LoginRequest
+    PasswordChangeRequest:
+      properties:
+        currentPassword:
+          type: string
+          maxLength: 128
+          minLength: 1
+          title: Currentpassword
+        newPassword:
+          type: string
+          maxLength: 128
+          minLength: 1
+          title: Newpassword
+      additionalProperties: false
+      type: object
+      required:
+      - currentPassword
+      - newPassword
+      title: PasswordChangeRequest
+    SessionList:
+      properties:
+        sessions:
+          items:
+            $ref: '#/components/schemas/SessionRead'
+          type: array
+          title: Sessions
+      additionalProperties: false
+      type: object
+      title: SessionList
+    SessionRead:
+      properties:
+        id:
+          type: string
+          title: Id
+        username:
+          type: string
+          title: Username
+        current:
+          type: boolean
+          title: Current
+        createdAt:
+          title: Createdat
+        lastSeenAt:
+          title: Lastseenat
+        absoluteExpiresAt:
+          title: Absoluteexpiresat
+      additionalProperties: false
+      type: object
+      required:
+      - id
+      - username
+      - current
+      - createdAt
+      - lastSeenAt
+      - absoluteExpiresAt
+      title: SessionRead
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
 servers:
 - url: /api/v1

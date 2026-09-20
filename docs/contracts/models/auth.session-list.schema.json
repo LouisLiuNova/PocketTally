@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/auth.session-list.schema.json",
+  "title": "SessionList",
+  "description": "当前所有者的会话列表。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sessions"],
+  "properties": {
+    "sessions": {
+      "type": "array",
+      "items": { "$ref": "auth.session.schema.json" }
+    }
+  }
+}

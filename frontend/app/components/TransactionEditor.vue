@@ -103,7 +103,7 @@ async function save() {
   busy.value = true
   emit('busy', true)
   try {
-    await $fetch(`/api/v1/transactions${props.refund ? '/refunds' : props.editing ? `/${props.editing.id}` : ''}`, {
+    await useApi()(`/api/v1/transactions${props.refund ? '/refunds' : props.editing ? `/${props.editing.id}` : ''}`, {
       method: props.editing ? 'PATCH' : 'POST',
       body,
       retry: 0,

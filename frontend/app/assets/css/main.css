@@ -186,3 +186,11 @@ h2 {
   align-items: center;
   gap: 8px;
 }
+
+.auth-page {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: 1.5rem;
+  background: var(--ui-bg);
+}

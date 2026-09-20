@@ -50,7 +50,7 @@
 运行前确认以下工具和依赖可用：
 
 ```text
-Bun 1.3.13
+Bun 1.4.2
 uv 0.9.18
 frontend/node_modules
 @playwright/test
@@ -130,11 +130,12 @@ bun run test:e2e \
 
 ### 4.4 GitHub Actions
 
-`.github/workflows/e2e.yml` 在面向 `main` 的 Pull Request 和 `main` push 上运行稳定命名的
-`Chromium E2E` job。它依次完成依赖安装、Chromium 与 Linux 系统依赖安装、前端生产构建，
-然后启动使用独立 SQLite 文件的后端和 Bun preview 服务，最后执行
-`bun run test:e2e:matrix`。CI 下 Playwright 复用已经通过健康检查的服务；本地配置仍保留
-自动启动服务的行为。
+`.github/workflows/e2e.yml` 在面向 `main` 的 Pull Request 和 `main` push 上运行三个
+并行的 `Chromium E2E (1280px/1440px/1920px)` job。每个 job 独立完成依赖安装、Chromium
+与 Linux 系统依赖安装、前端生产构建，启动使用独立 SQLite 文件的后端和 Bun preview
+服务，然后只执行对应视口的 Playwright 项目；`fail-fast: false` 确保一个视口失败时其余
+视口仍然完成。CI 下 Playwright 复用已经通过健康检查的服务；本地配置仍保留自动启动
+服务的行为。
 
 失败时会上传 `frontend/test-results/`，其中包含失败截图、trace 以及
 `ci-logs/backend.log`、`ci-logs/frontend.log`（若对应阶段已生成）。安装、启动和断言分别

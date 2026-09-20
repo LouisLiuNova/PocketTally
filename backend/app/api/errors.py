@@ -29,6 +29,7 @@ class ApiError(Exception):
         message: str,
         *,
         details: dict[str, Any] | list[Any] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> None:
         """初始化稳定 API 错误。
 
@@ -37,6 +38,7 @@ class ApiError(Exception):
             code: 稳定机器错误码。
             message: 面向客户端的简体中文说明。
             details: 可选的结构化错误详情。
+            headers: 可选的响应头。
         """
 
         super().__init__(message)
@@ -44,6 +46,7 @@ class ApiError(Exception):
         self.code = code
         self.message = message
         self.details = details
+        self.headers = headers or {}
 
 
 def error_response(error: ApiError) -> JSONResponse:
@@ -54,7 +57,7 @@ def error_response(error: ApiError) -> JSONResponse:
         message=error.message,
         details=error.details,
     ).model_dump(mode="json", by_alias=True, exclude_none=True)
-    return JSONResponse(status_code=error.status_code, content=body)
+    return JSONResponse(status_code=error.status_code, content=body, headers=error.headers)
 
 
 def register_exception_handlers(application: FastAPI) -> None:

@@ -32,7 +32,7 @@ export interface StatisticsQuery {
 }
 
 export function useLedger() {
-  const requestFetch = useRequestFetch()
+  const requestFetch = useApi()
   const { data, pending, error, refresh } = useAsyncData('ledger-resources', async (_nuxtApp, { signal }) => {
     const [accounts, categories, tags] = await Promise.all([
       requestFetch<Account[]>('/api/v1/accounts', { signal }),

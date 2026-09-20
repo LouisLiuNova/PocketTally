@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pockettally.app/models/auth.session.schema.json",
+  "title": "SessionRead",
+  "description": "当前所有者会话的非敏感摘要。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "username", "current", "createdAt", "lastSeenAt", "absoluteExpiresAt"],
+  "properties": {
+    "id": { "type": "string" },
+    "username": { "type": "string" },
+    "current": { "type": "boolean" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "lastSeenAt": { "type": "string", "format": "date-time" },
+    "absoluteExpiresAt": { "type": "string", "format": "date-time" }
+  }
+}

@@ -15,9 +15,13 @@ concurrency:
 
 jobs:
   chromium-e2e:
-    name: Chromium E2E
+    name: Chromium E2E (${{ matrix.viewport }}px)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        viewport: [1280, 1440, 1920]
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -32,7 +36,7 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.13
+          bun-version: 1.4.2
       - name: Install frontend dependencies
         working-directory: frontend
         run: bun install --frozen-lockfile
@@ -44,7 +48,7 @@ jobs:
         run: bun run build
       - name: Start isolated E2E services
         env:
-          E2E_DIR: ${{ runner.temp }}/pockettally-e2e
+          E2E_DIR: ${{ runner.temp }}/pockettally-e2e-${{ matrix.viewport }}
         run: |
           set -euo pipefail
           mkdir -p "$E2E_DIR" frontend/test-results/ci-logs
@@ -54,7 +58,10 @@ jobs:
 
           (
             cd backend
-            exec env POCKET_TALLY_DATABASE_PATH="$database" \
+            printf 'PocketTally-E2E-Password-2026!\nPocketTally-E2E-Password-2026!\n' | env POCKET_TALLY_DATABASE_PATH="$database" POCKET_TALLY_AUTH_ENABLED=true \
+              uv run pocket-tally-auth init --username e2e-owner
+            exec env POCKET_TALLY_DATABASE_PATH="$database" POCKET_TALLY_AUTH_ENABLED=true \
+              POCKET_TALLY_PUBLIC_ORIGIN=http://127.0.0.1:3012 \
               uv run uvicorn app.main:app --host 127.0.0.1 --port 8012
           ) >"$backend_log" 2>&1 &
           echo $! >"$E2E_DIR/backend.pid"
@@ -66,7 +73,7 @@ jobs:
           echo $! >"$E2E_DIR/frontend.pid"
 
           for attempt in $(seq 1 60); do
-            if curl --fail --silent http://127.0.0.1:8012/api/v1/accounts >/dev/null \
+            if curl --fail --silent http://127.0.0.1:8012/api/v1/health >/dev/null \
               && curl --fail --silent http://127.0.0.1:3012/ >/dev/null; then
               exit 0
             fi
@@ -83,16 +90,16 @@ jobs:
             fi
             sleep 2
           done
-      - name: Run Chromium 1280 1440 1920 matrix
+      - name: Run Chromium ${{ matrix.viewport }} E2E
         working-directory: frontend
         env:
           CI: true
-          POCKET_TALLY_E2E_DATABASE_PATH: ${{ runner.temp }}/pockettally-e2e/e2e.sqlite3
-        run: bun run test:e2e:matrix
+          POCKET_TALLY_E2E_DATABASE_PATH: ${{ runner.temp }}/pockettally-e2e-${{ matrix.viewport }}/e2e.sqlite3
+        run: bun run test:e2e --project=chromium-${{ matrix.viewport }} --reporter=line
       - name: Stop isolated E2E services
         if: always()
         env:
-          E2E_DIR: ${{ runner.temp }}/pockettally-e2e
+          E2E_DIR: ${{ runner.temp }}/pockettally-e2e-${{ matrix.viewport }}
         run: |
           for pid_file in "$E2E_DIR/backend.pid" "$E2E_DIR/frontend.pid"; do
             if [ -f "$pid_file" ]; then
@@ -102,7 +109,7 @@ jobs:
       - name: Collect E2E service logs
         if: always()
         env:
-          E2E_DIR: ${{ runner.temp }}/pockettally-e2e
+          E2E_DIR: ${{ runner.temp }}/pockettally-e2e-${{ matrix.viewport }}
         run: |
           mkdir -p frontend/test-results/ci-logs
           for log_file in "$E2E_DIR/backend.log" "$E2E_DIR/frontend.log"; do
@@ -111,10 +118,10 @@ jobs:
             fi
           done
       - name: Upload E2E failure artifacts
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-e2e-failure-${{ github.run_id }}
+          name: frontend-e2e-failure-${{ github.run_id }}-${{ matrix.viewport }}
           path: frontend/test-results/
           if-no-files-found: ignore
           retention-days: 14

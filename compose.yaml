@@ -62,6 +62,9 @@ services:
       POCKET_TALLY_LOG_LEVEL: ${POCKET_TALLY_LOG_LEVEL:-INFO}
       POCKET_TALLY_LOG_JSON: "true"
       POCKET_TALLY_DATABASE_PATH: /data/pocket-tally.sqlite3
+      POCKET_TALLY_AUTH_DATABASE_PATH: /data/pocket-tally-auth.sqlite3
+      POCKET_TALLY_AUTH_ENABLED: ${POCKET_TALLY_AUTH_ENABLED:-true}
+      POCKET_TALLY_PUBLIC_ORIGIN: ${POCKET_TALLY_PUBLIC_ORIGIN:-}
       POCKET_TALLY_BACKUP_DIRECTORY: /backups
     volumes:
       - type: bind
