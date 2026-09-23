@@ -10,3 +10,10 @@
 body {
   background: var(--color-fd-background);
 }
+
+.docs-home {
+  background:
+    radial-gradient(ellipse 70% 55% at 82% 8%, color-mix(in oklch, var(--color-fd-primary) 11%, transparent), transparent 75%),
+    radial-gradient(ellipse 55% 44% at 4% 48%, color-mix(in oklch, var(--color-fd-primary) 6%, transparent), transparent 78%),
+    var(--color-fd-background);
+}

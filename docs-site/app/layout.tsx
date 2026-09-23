@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { RootProvider } from 'fumadocs-ui/provider/next';
+import { Providers } from './providers';
 import './globals.css';
 
 export const metadata = {
@@ -11,5 +11,5 @@ export const metadata = {
 };
 
 export default function Layout({ children }: { children: ReactNode }) {
-  return <RootProvider>{children}</RootProvider>;
+  return <html lang="zh-CN" suppressHydrationWarning><body><Providers>{children}</Providers></body></html>;
 }
