@@ -161,7 +161,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           tags: pockettally-backend-smoke:${{ matrix.slug }}
           build-args: |
-            APP_VERSION=0.1.0
+            APP_VERSION=0.2.0
             VCS_REF=${{ github.sha }}
           cache-from: type=gha,scope=backend-${{ matrix.slug }}
           cache-to: type=gha,mode=max,scope=backend-${{ matrix.slug }}
@@ -173,7 +173,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           tags: pockettally-frontend-smoke:${{ matrix.slug }}
           build-args: |
-            APP_VERSION=0.1.0
+            APP_VERSION=0.2.0
             VCS_REF=${{ github.sha }}
           cache-from: type=gha,scope=frontend-${{ matrix.slug }}
           cache-to: type=gha,mode=max,scope=frontend-${{ matrix.slug }}

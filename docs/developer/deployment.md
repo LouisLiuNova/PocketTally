@@ -8,7 +8,7 @@ PocketTally 使用 Docker Compose 运行前端、后端与按需备份工具。�
 ## 当前主线源码部署预览
 
 1. 从仓库复制 `.env.example` 为 `.env`，准备 `data/` 与 `backups/` 目录。
-2. 在 `.env` 中设置浏览器实际访问的 `POCKET_TALLY_PUBLIC_ORIGIN=https://<域名>`，将 `POCKET_TALLY_BIND_ADDRESS` 设为 `127.0.0.1`，确认认证启用。将 `POCKET_TALLY_IMAGE_TAG` 改为仅供本机源码构建使用的标签，例如 `dev`，避免与 v0.1.0 正式镜像混淆。
+2. 在 `.env` 中设置浏览器实际访问的 `POCKET_TALLY_PUBLIC_ORIGIN=https://<域名>`，保留 `POCKET_TALLY_BIND_ADDRESS=127.0.0.1` 与 `POCKET_TALLY_AUTH_ENABLED=true`。发布前源码构建可将 `POCKET_TALLY_IMAGE_TAG` 改为 `dev`，避免误认为 `0.2.0` 镜像已经可拉取。
 3. 配置 HTTPS 反向代理，将同源请求转发到宿主机的前端端口；不要直接发布 FastAPI 端口。先确认 TLS、访问控制及防火墙，再执行源码构建。
 
 ```bash
@@ -47,4 +47,9 @@ docker compose up -d
 
 ## v0.2.0 发布门槛
 
-发布时才把本页的预览标识切换为正式版本，并核对实际镜像标签、Compose 默认值、升级与回退步骤、鉴权数据备份、健康检查及发行说明。未完成这些核对前，不将源码构建流程描述成已验证的正式镜像部署。
+发行说明草稿见 [v0.2.0](../releases/v0.2.0.md)。必须先在实际公网入口核对 TLS、代理只指向前端、
+前端端口仅本机可达、FastAPI 无公网端口、实际 Origin 与认证启用。再验证匿名读写失败、
+生产 Cookie、登录限流、重设密码后旧会话失效、鉴权库单独备份，以及健康检查与文档端点边界。
+
+发布时才把本页的预览标识切换为正式版本，并核对固定 `0.2.0` 镜像、Compose 默认值、
+升级与回退步骤、标签流水线和发行说明。未完成这些核对前，不将源码构建流程描述成已验证的正式镜像部署。

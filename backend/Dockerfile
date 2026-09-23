@@ -20,7 +20,7 @@ RUN uv sync --frozen --no-dev --no-editable
 
 FROM ${PYTHON_IMAGE} AS runtime
 
-ARG APP_VERSION=0.1.0
+ARG APP_VERSION=0.2.0
 ARG VCS_REF=local
 LABEL org.opencontainers.image.title="PocketTally Backend" \
       org.opencontainers.image.description="PocketTally FastAPI backend" \
