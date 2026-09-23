@@ -528,6 +528,10 @@ def api_status_markdown(rows: list[tuple[str, Operation]]) -> str:
 
     counts = {status: sum(1 for row_status, _ in rows if row_status == status) for status in ("已实现", "设计中", "仅实现")}
     lines = [
+        "---",
+        'title: "接口实现状态"',
+        "---",
+        "",
         "# 接口实现状态",
         "",
         "本页在构建时对照设计 OpenAPI 与 FastAPI 动态 OpenAPI。匹配依据为规范化后的 HTTP 方法和路径。",
@@ -546,8 +550,9 @@ def api_status_markdown(rows: list[tuple[str, Operation]]) -> str:
     lines.extend(
         [
             "",
-            "> [!NOTE]",
-            "> “设计中”表示契约已经存在，但 FastAPI 尚未注册同方法、同路径的路由；“仅实现”表示运行时代码已有路由，但设计契约尚未收录。",
+            '<Callout type="info" title="接口状态说明">',
+            "“设计中”表示契约已经存在，但 FastAPI 尚未注册同方法、同路径的路由；“仅实现”表示运行时代码已有路由，但设计契约尚未收录。",
+            "</Callout>",
         ]
     )
     return "\n".join(lines)
@@ -604,7 +609,8 @@ def prepare() -> list[tuple[str, Operation]]:
     )
     (BUILD_DOCS / "data-models.md").write_text(dbml_markdown(tables, relations), encoding="utf-8")
     (BUILD_DOCS / "http-models.md").write_text(http_models_markdown(), encoding="utf-8")
-    (BUILD_DOCS / "api-status.md").write_text(api_status_markdown(rows), encoding="utf-8")
+    # This page contains a Fumadocs MDX Callout, so it must keep the `.mdx` extension.
+    (BUILD_DOCS / "api-status.mdx").write_text(api_status_markdown(rows), encoding="utf-8")
     api_reference = BUILD_DOCS / "api-reference.mdx"
     api_reference.write_text(
         "---\n"
@@ -619,6 +625,7 @@ def prepare() -> list[tuple[str, Operation]]:
         encoding="utf-8",
     )
     mark_historical_pages()
+    organize_audience_pages()
     generated = BUILD_DOCS / "generated"
     generated.mkdir()
     sha, generated_at = git_version()
@@ -642,6 +649,8 @@ def rewrite_markdown_links() -> None:
         current_route = markdown_path.relative_to(BUILD_DOCS).with_suffix("").as_posix()
         if current_route == "index":
             current_route = "."
+        elif current_route.endswith("/index"):
+            current_route = current_route.removesuffix("/index")
 
         def rewrite(match: re.Match[str]) -> str:
             raw_url = match.group(2)
@@ -652,6 +661,8 @@ def rewrite_markdown_links() -> None:
                 return match.group(0)
 
             target = (markdown_path.parent / unquote(parsed.path)).resolve()
+            if not target.is_file() and target.suffix == ".md":
+                target = target.with_suffix(".mdx")
             if not target.is_file():
                 raise DocumentationError(
                     f"文档链接目标不存在：{markdown_path.relative_to(BUILD_DOCS)} -> {raw_url}"
@@ -666,7 +677,9 @@ def rewrite_markdown_links() -> None:
             target_route = relative_target.as_posix()
             if target_route == "index":
                 target_route = "."
-            relative_route = posixpath.relpath(target_route, current_route + "/")
+            elif target_route.endswith("/index"):
+                target_route = target_route.removesuffix("/index")
+            relative_route = posixpath.relpath(target_route, current_route)
             rewritten_url = urlunsplit(("", "", relative_route + "/", parsed.query, parsed.fragment))
             return f"]({match.group(1)}{rewritten_url}{match.group(3)}{match.group(4)})"
 
@@ -700,6 +713,31 @@ def mark_historical_pages() -> None:
         )
 
 
+def organize_audience_pages() -> None:
+    """按读者组织页面，同时保留旧地址作为可访问的历史入口。"""
+
+    developer = BUILD_DOCS / "developer"
+    shutil.copytree(BUILD_DOCS / "assets", developer / "assets")
+    for image in BUILD_DOCS.glob("*.jpg"):
+        shutil.copy2(image, developer / image.name)
+    shutil.copytree(BUILD_DOCS / "releases", developer / "releases")
+    for path in BUILD_DOCS.glob("*.md"):
+        if path.name not in {"index.md", "user-guide.md", "deployment.md"}:
+            shutil.copy2(path, developer / path.name)
+    shutil.copy2(BUILD_DOCS / "api-reference.mdx", developer / "api-reference.mdx")
+    shutil.copy2(BUILD_DOCS / "api-status.mdx", developer / "api-status.mdx")
+
+    for path in BUILD_DOCS.glob("*.md"):
+        if path.name == "index.md" or path.read_text(encoding="utf-8").startswith("---\n"):
+            continue
+        content = path.read_text(encoding="utf-8")
+        title = next((line[2:].strip() for line in content.splitlines() if line.startswith("# ")), path.stem)
+        path.write_text(
+            f"---\ntitle: {json.dumps(title, ensure_ascii=False)}\nsearch: false\n---\n\n{content}",
+            encoding="utf-8",
+        )
+
+
 def ensure_frontmatter() -> None:
     """为现有 Markdown 补齐 Fumadocs 所需的标题元数据。"""
 
@@ -723,22 +761,24 @@ def write_navigation() -> None:
     navigation = """{
   "pages": [
     "index",
-    "user-guide",
-    "deployment",
-    "business-rules",
-    "releases/v0.1.0",
-    "developer-guide",
-    "development",
-    "frontend-testing-plan",
-    "frontend-theme",
-    "data-models",
-    "http-models",
-    "api-status",
-    "api-reference"
+    "user",
+    "developer"
   ]
 }
 """
     (BUILD_DOCS / "meta.json").write_text(navigation, encoding="utf-8")
+    (BUILD_DOCS / "user/meta.json").write_text(
+        json.dumps({"title": "用户文档", "root": True, "pages": [
+            "index", "getting-started", "transactions", "insights", "corrections", "faq"
+        ]}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    (BUILD_DOCS / "developer/meta.json").write_text(
+        json.dumps({"title": "开发者文档", "root": True, "pages": [
+            "index", "deployment", "authentication", "developer-guide", "development",
+            "frontend-testing-plan", "frontend-theme", "business-rules", "data-models",
+            "http-models", "api-status", "api-reference"
+        ]}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
 
 
 def run_docs_site(command: str) -> None:

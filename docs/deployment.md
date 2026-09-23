@@ -6,7 +6,7 @@ PocketTally 提供 `frontend`、`backend` 两个业务容器和一个按需备�
 ARM64 与 Linux x86_64。SQLite 数据和备份均保存在宿主机绑定目录中；当前主线的认证使用同一数据
 目录中的独立 `pocket-tally-auth.sqlite3`。
 
-> [!IMPORTANT]
+> **公网安全边界**
 > v0.1.0 镜像没有登录鉴权，即使配置 HTTPS 也不得开放公网访问。默认端口 `54425` 只是
 > 前端监听端口，不是安全措施；FastAPI 端口不得直接暴露公网。
 
@@ -138,7 +138,7 @@ curl --fail http://127.0.0.1:54425/api/v1/health
 账本进程锁、存在活动 journal/WAL 文件或未传入 `--confirm` 时，命令会失败并保留当前
 数据库。
 
-> [!IMPORTANT]
+> **备份建议**
 > 备份只有在另一块磁盘或另一台设备上存在副本时，才能抵御宿主磁盘故障。至少定期把
 > `backups` 中已校验的文件同步到独立存储。
 

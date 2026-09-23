@@ -2,52 +2,32 @@
 
 > 你的钱，清清楚楚。
 
-PocketTally 是一款轻量、私有的个人记账应用。数据保存在你自己的 SQLite 账本中，适合在本机或可信内网使用。
+PocketTally 是一款轻量、私有的个人记账应用，帮助你记录每笔收支、核对账户余额，并看清钱花在了哪里。适合希望自行管理个人账本的单个使用者。
 
-## 主要功能
+![使用演示数据的 PocketTally 总览页面](docs/assets/issue-43/after/overview-ruri.png)
 
-- 管理账户、分类和标签
-- 记录收入、支出、转账、调账与退款
-- 搜索和筛选交易，查看多维度收支统计
-- 创建、校验和恢复账本备份
+## 主要能力
 
-> [!IMPORTANT]
-> 当前主线已启用单所有者登录。生产环境仍必须通过 HTTPS 反向代理发布，并配置
-> `POCKET_TALLY_PUBLIC_ORIGIN`；登录凭据和会话存放在独立的鉴权 SQLite 文件中。
+- 管理账户、收支分类和标签，记录收入、支出、转账及余额调整。
+- 搜索交易，查看收支趋势、分类构成和日历统计。
+- 编辑或作废错误记录，从原支出发起退款。
+- 通过受支持的备份流程保护账本数据。
 
-## 快速开始
+## 开始使用
 
-需要预先安装 [Docker](https://docs.docker.com/get-docker/)。使用当前公开的 v0.1.0 镜像在本机或可信内网启动：
+PocketTally 面向单个账本所有者，需要自行部署。开始保存真实数据前，请先阅读[部署与备份指南](docs/developer/deployment.md)并完成安全配置与备份校验。部署完成后，按[用户文档](docs/user/index.md)创建账户、录入当前余额，再记录第一笔交易。
 
-```bash
-cp .env.example .env
-mkdir -p data backups
-docker compose pull frontend backend
-docker compose up -d --no-build
-```
+> [!NOTE]
+> 本分支展示 **v0.2.0 发布预览**；当前公开发行版仍为 [v0.1.0](https://github.com/LouisLiuNova/PocketTally/releases/tag/v0.1.0)。请勿将预览文档中的流程用于 v0.1.0 镜像。当前发行版的能力与部署限制以[其发行说明](https://louisliunova.github.io/PocketTally/releases/v0.1.0/)为准。
 
-`v0.1.0` 镜像没有登录鉴权，只允许本机或可信内网使用，不能开放公网访问。当前主线源码已加入单所有者登录，但尚未以新版本容器镜像发布；当前主线生产运行还需要 HTTPS 反向代理和 `POCKET_TALLY_PUBLIC_ORIGIN`。认证边界见[认证与会话](docs/authentication.md)，`v0.1.0` 镜像的部署步骤与限制见[部署指南](https://louisliunova.github.io/PocketTally/deployment/)。
+## 文档与参与开发
 
-然后访问 `http://localhost:54425`。
+- [文档站](https://louisliunova.github.io/PocketTally/)：从使用或开发者入口开始。
+- [用户文档](docs/user/index.md)：日常记账、查询、纠错和常见问题。
+- [开发者文档](docs/developer/index.md)：部署运维、开发流程、测试和 API 契约。
+- [参与开发](docs/development.md)：本地环境、质量检查和文档维护。
 
-给第一次使用者的最短路径：
-
-1. 创建账户
-2. 通过“调账”录入当前余额
-3. 在“记一笔”中记录收入、支出或转账
-4. 按需要调整分类、添加标签，并在统计页检查结果
-
-需要修正历史记录时，优先使用“作废交易”保留审计记录；从支出详情发起退款，避免把退款重复记成普通收入。更多页面操作、筛选、备份和恢复说明见[用户指南](https://louisliunova.github.io/PocketTally/user-guide/)。
-
-在保存真实数据前，请先按照[部署指南](https://louisliunova.github.io/PocketTally/deployment/)创建并校验备份。
-
-## 文档
-
-- [完整文档](https://louisliunova.github.io/PocketTally/)：使用边界、业务规则和技术参考
-- [用户指南](https://louisliunova.github.io/PocketTally/user-guide/)：登录、首笔记账、日常查询、退款、作废和备份
-- [部署与备份](https://louisliunova.github.io/PocketTally/deployment/)：内网部署、升级、备份和恢复
-- [发行说明](https://louisliunova.github.io/PocketTally/releases/v0.1.0/)：版本能力与已知限制
-- [参与开发](https://louisliunova.github.io/PocketTally/development/)：本地开发、测试和文档维护
+欢迎通过 [GitHub Issues](https://github.com/LouisLiuNova/PocketTally/issues) 反馈问题或提出建议。
 
 ## 许可
 

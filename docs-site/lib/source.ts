@@ -7,7 +7,10 @@ export const source = loader({
 });
 
 export const searchablePages = () =>
-  source.getPages().filter((page) => page.data.search !== false);
+  source.getPages().filter((page) => page.data.search !== false && (
+    page.url === '/docs' || page.url.startsWith('/docs/user/') || page.url === '/docs/user' ||
+    page.url.startsWith('/docs/developer/') || page.url === '/docs/developer'
+  ));
 
 export const searchableSource = {
   ...source,
