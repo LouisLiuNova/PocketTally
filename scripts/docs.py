@@ -528,6 +528,10 @@ def api_status_markdown(rows: list[tuple[str, Operation]]) -> str:
 
     counts = {status: sum(1 for row_status, _ in rows if row_status == status) for status in ("已实现", "设计中", "仅实现")}
     lines = [
+        "---",
+        'title: "接口实现状态"',
+        "---",
+        "",
         "# 接口实现状态",
         "",
         "本页在构建时对照设计 OpenAPI 与 FastAPI 动态 OpenAPI。匹配依据为规范化后的 HTTP 方法和路径。",
@@ -546,8 +550,9 @@ def api_status_markdown(rows: list[tuple[str, Operation]]) -> str:
     lines.extend(
         [
             "",
-            "> [!NOTE]",
-            "> “设计中”表示契约已经存在，但 FastAPI 尚未注册同方法、同路径的路由；“仅实现”表示运行时代码已有路由，但设计契约尚未收录。",
+            '<Callout type="info" title="接口状态说明">',
+            "“设计中”表示契约已经存在，但 FastAPI 尚未注册同方法、同路径的路由；“仅实现”表示运行时代码已有路由，但设计契约尚未收录。",
+            "</Callout>",
         ]
     )
     return "\n".join(lines)
@@ -604,7 +609,8 @@ def prepare() -> list[tuple[str, Operation]]:
     )
     (BUILD_DOCS / "data-models.md").write_text(dbml_markdown(tables, relations), encoding="utf-8")
     (BUILD_DOCS / "http-models.md").write_text(http_models_markdown(), encoding="utf-8")
-    (BUILD_DOCS / "api-status.md").write_text(api_status_markdown(rows), encoding="utf-8")
+    # This page contains a Fumadocs MDX Callout, so it must keep the `.mdx` extension.
+    (BUILD_DOCS / "api-status.mdx").write_text(api_status_markdown(rows), encoding="utf-8")
     api_reference = BUILD_DOCS / "api-reference.mdx"
     api_reference.write_text(
         "---\n"
@@ -655,6 +661,8 @@ def rewrite_markdown_links() -> None:
                 return match.group(0)
 
             target = (markdown_path.parent / unquote(parsed.path)).resolve()
+            if not target.is_file() and target.suffix == ".md":
+                target = target.with_suffix(".mdx")
             if not target.is_file():
                 raise DocumentationError(
                     f"文档链接目标不存在：{markdown_path.relative_to(BUILD_DOCS)} -> {raw_url}"
@@ -717,6 +725,7 @@ def organize_audience_pages() -> None:
         if path.name not in {"index.md", "user-guide.md", "deployment.md"}:
             shutil.copy2(path, developer / path.name)
     shutil.copy2(BUILD_DOCS / "api-reference.mdx", developer / "api-reference.mdx")
+    shutil.copy2(BUILD_DOCS / "api-status.mdx", developer / "api-status.mdx")
 
     for path in BUILD_DOCS.glob("*.md"):
         if path.name == "index.md" or path.read_text(encoding="utf-8").startswith("---\n"):
