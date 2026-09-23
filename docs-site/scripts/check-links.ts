@@ -24,8 +24,19 @@ for (const file of htmlFiles) {
   const html = readFileSync(file, 'utf8');
   for (const match of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
     const value = match[1];
-    if (!value.startsWith('/PocketTally/') || value.startsWith('/PocketTally/_next/')) continue;
-    const route = value.split('#', 1)[0].split('?', 1)[0];
+    if (/^[a-z][a-z0-9+.-]*:/i.test(value) || value.startsWith('//')) continue;
+    if (value.startsWith('/PocketTally/_next/')) continue;
+
+    let route: string;
+    if (value.startsWith('/PocketTally/')) {
+      route = value;
+    } else if (match[0].startsWith('href=') && !value.startsWith('/') && !value.startsWith('#')) {
+      const pagePath = relative(root, file).replace(/index\.html$/, '');
+      route = new URL(value, `https://docs.invalid/PocketTally/${pagePath}`).pathname;
+    } else {
+      continue;
+    }
+    route = route.split('#', 1)[0].split('?', 1)[0];
     if (!routeExists(route)) failures.push(`${relative(root, file)} -> ${route}`);
   }
 }

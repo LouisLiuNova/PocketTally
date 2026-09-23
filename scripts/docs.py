@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import posixpath
 import re
 import shutil
 import subprocess
@@ -11,7 +12,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote
+from urllib.parse import unquote, urlsplit, urlunsplit
 
 import yaml
 from jsonschema.validators import validator_for
@@ -627,7 +628,51 @@ def prepare() -> list[tuple[str, Operation]]:
     )
     ensure_frontmatter()
     write_navigation()
+    rewrite_markdown_links()
     return rows
+
+
+def rewrite_markdown_links() -> None:
+    """将文档内的相对 Markdown 链接映射为文档站页面路由。"""
+
+    link_pattern = re.compile(r"(?<!!)\]\((<?)([^\s)>]+)(>?)([^)]*)\)")
+
+    for markdown_path in BUILD_DOCS.rglob("*.md"):
+        content = markdown_path.read_text(encoding="utf-8")
+        current_route = markdown_path.relative_to(BUILD_DOCS).with_suffix("").as_posix()
+        if current_route == "index":
+            current_route = "."
+
+        def rewrite(match: re.Match[str]) -> str:
+            raw_url = match.group(2)
+            parsed = urlsplit(raw_url)
+            if not parsed.path.lower().endswith(".md") or parsed.scheme or parsed.netloc:
+                return match.group(0)
+            if parsed.path.startswith("/"):
+                return match.group(0)
+
+            target = (markdown_path.parent / unquote(parsed.path)).resolve()
+            if not target.is_file():
+                raise DocumentationError(
+                    f"文档链接目标不存在：{markdown_path.relative_to(BUILD_DOCS)} -> {raw_url}"
+                )
+            try:
+                relative_target = target.relative_to(BUILD_DOCS).with_suffix("")
+            except ValueError as exc:
+                raise DocumentationError(
+                    f"文档链接超出文档目录：{markdown_path.relative_to(BUILD_DOCS)} -> {raw_url}"
+                ) from exc
+
+            target_route = relative_target.as_posix()
+            if target_route == "index":
+                target_route = "."
+            relative_route = posixpath.relpath(target_route, current_route + "/")
+            rewritten_url = urlunsplit(("", "", relative_route + "/", parsed.query, parsed.fragment))
+            return f"]({match.group(1)}{rewritten_url}{match.group(3)}{match.group(4)})"
+
+        rewritten = link_pattern.sub(rewrite, content)
+        if rewritten != content:
+            markdown_path.write_text(rewritten, encoding="utf-8")
 
 
 def mark_historical_pages() -> None:
