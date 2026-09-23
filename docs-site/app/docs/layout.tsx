@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { DocsLayout } from 'fumadocs-ui/layouts/docs';
 import { source } from '@/lib/source';
+import { PalettePicker } from '@/components/palette-picker';
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
@@ -14,6 +15,8 @@ export default function Layout({ children }: { children: ReactNode }) {
           </span>
         ),
       }}
+      themeSwitch={{ mode: 'light-dark-system' }}
+      sidebar={{ footer: <PalettePicker key="docs-palette-picker" /> }}
       githubUrl="https://github.com/LouisLiuNova/PocketTally"
     >
       {children}

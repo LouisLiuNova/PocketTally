@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { ThemeSwitch } from 'fumadocs-ui/layouts/shared/slots/theme-switch';
+import { PalettePicker } from '@/components/palette-picker';
 
 const routes = {
   user: '/docs/user/',
@@ -14,7 +16,11 @@ export default function HomePage() {
             <span aria-hidden="true" className="flex size-9 items-center justify-center rounded-xl bg-fd-primary text-sm font-bold text-fd-primary-foreground shadow-sm">P</span>
             PocketTally <span className="font-normal text-fd-muted-foreground">/ 文档</span>
           </Link>
-          <a className="rounded-md px-3 py-2 text-sm font-medium text-fd-muted-foreground transition hover:bg-fd-accent hover:text-fd-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fd-primary" href="https://github.com/LouisLiuNova/PocketTally">GitHub <span aria-hidden="true">↗</span></a>
+          <div className="flex items-center gap-3">
+            <PalettePicker />
+            <ThemeSwitch mode="light-dark-system" aria-label="切换颜色模式" />
+            <a className="rounded-md px-3 py-2 text-sm font-medium text-fd-muted-foreground transition hover:bg-fd-accent hover:text-fd-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fd-primary" href="https://github.com/LouisLiuNova/PocketTally">GitHub <span aria-hidden="true">↗</span></a>
+          </div>
         </header>
 
         <section className="docs-home-hero grid items-center gap-12 py-14 sm:py-18 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-16 lg:py-24">
