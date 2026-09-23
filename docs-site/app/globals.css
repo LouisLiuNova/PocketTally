@@ -247,14 +247,14 @@ body {
   text-decoration: none;
 }
 
-.docs-index :where(li a::after):not(:where([class~='not-prose'] *)) {
+.docs-index li a::after {
   position: absolute;
   inset: 0;
   border-radius: inherit;
   content: '';
 }
 
-.docs-index :where(li a:focus-visible::after):not(:where([class~='not-prose'] *)) {
+.docs-index li a:focus-visible::after {
   outline: 2px solid var(--color-fd-ring);
   outline-offset: 3px;
 }
