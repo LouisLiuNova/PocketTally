@@ -17,29 +17,38 @@ FastAPI 端口发布到公网，也不要把 `pocket-tally-auth.sqlite3` 放进�
 
 ## 初始化与恢复
 
-初次部署由宿主机管理员在后端容器执行：
+鉴权 CLI 与运行中的后端共用数据库进程锁。初次部署由宿主机管理员先停下前后端，
+再执行初始化，最后重新启动服务：
 
 ```bash
+docker compose stop frontend backend
 docker compose run --rm backend pocket-tally-auth init --username owner
+docker compose up -d --no-build frontend backend
 ```
 
 CLI 不输出密码，也不会在日志中记录密码。忘记密码时，先确认只有管理员可访问主机，
-再执行：
+停下前后端后执行，并在完成后重新启动：
 
 ```bash
+docker compose stop frontend backend
 docker compose run --rm backend pocket-tally-auth reset-password
+docker compose up -d --no-build frontend backend
 ```
 
 该命令重设 Argon2id 哈希并撤销全部浏览器会话。疑似泄露时可只撤销会话：
 
 ```bash
+docker compose stop frontend backend
 docker compose run --rm backend pocket-tally-auth revoke-sessions
+docker compose up -d --no-build frontend backend
 ```
 
-`status` 只输出是否已初始化和当前会话数量：
+`status` 只输出是否已初始化和当前会话数量，同样需要先释放进程锁：
 
 ```bash
+docker compose stop frontend backend
 docker compose run --rm backend pocket-tally-auth status
+docker compose up -d --no-build frontend backend
 ```
 
 ## 数据与备份

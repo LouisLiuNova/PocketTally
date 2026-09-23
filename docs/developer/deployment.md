@@ -18,10 +18,12 @@ mkdir -p data backups
 docker compose up -d --build
 ```
 
-首次启动且鉴权库为空时，在后端容器初始化唯一所有者：
+首次启动且鉴权库为空时，先停下前后端，释放鉴权库进程锁，再初始化唯一所有者：
 
 ```bash
+docker compose stop frontend backend
 docker compose run --rm backend pocket-tally-auth init --username owner
+docker compose up -d --no-build frontend backend
 ```
 
 命令会交互提示设置密码。随后通过配置的 HTTPS 地址访问应用并登录。检查 `docker compose ps`、前端访问及 `/api/v1/health`；健康检查不能替代登录与备份验证。认证、会话与恢复命令见[认证与会话](authentication.md)。
