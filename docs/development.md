@@ -36,6 +36,15 @@ bun run dev
 后端默认将数据保存到 `backend/data/pocket-tally.sqlite3`。需要使用其他开发账本时，
 设置 `POCKET_TALLY_DATABASE_PATH`。请勿使用个人正式账本进行开发或测试。
 
+当前主线默认启用本地鉴权。首次使用开发账本时，在 `backend/` 目录初始化唯一所有者：
+
+```bash
+uv run pocket-tally-auth init --username owner
+```
+
+CLI 会交互式读取密码；只有鉴权库尚未初始化时才能创建所有者。测试环境默认关闭鉴权，
+但本地开发服务器不是测试环境，需要使用该命令完成初始化。
+
 ## 构建前端
 
 后端服务保持运行时，执行：

@@ -17,7 +17,7 @@ PocketTally 是一款轻量、私有的个人记账应用。数据保存在你�
 
 ## 快速开始
 
-需要预先安装 [Docker](https://docs.docker.com/get-docker/)。在项目目录运行：
+需要预先安装 [Docker](https://docs.docker.com/get-docker/)。使用当前公开的 v0.1.0 镜像在本机或可信内网启动：
 
 ```bash
 cp .env.example .env
@@ -26,13 +26,7 @@ docker compose pull frontend backend
 docker compose up -d --no-build
 ```
 
-首次启动后，在后端容器中初始化唯一所有者（命令只会在鉴权库为空时成功）：
-
-```bash
-docker compose run --rm backend pocket-tally-auth init --username owner
-```
-
-认证边界、恢复命令和生产反向代理要求见[认证与会话](docs/authentication.md)及[部署指南](https://louisliunova.github.io/PocketTally/deployment/)。完整的用户操作流程见[用户指南](https://louisliunova.github.io/PocketTally/user-guide/)。
+`v0.1.0` 镜像没有登录鉴权，只允许本机或可信内网使用，不能开放公网访问。当前主线源码已加入单所有者登录，但尚未以新版本容器镜像发布；当前主线生产运行还需要 HTTPS 反向代理和 `POCKET_TALLY_PUBLIC_ORIGIN`。认证边界见[认证与会话](docs/authentication.md)，`v0.1.0` 镜像的部署步骤与限制见[部署指南](https://louisliunova.github.io/PocketTally/deployment/)。
 
 然后访问 `http://localhost:54425`。
 

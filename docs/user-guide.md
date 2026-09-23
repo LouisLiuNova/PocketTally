@@ -1,6 +1,6 @@
 # 用户指南
 
-PocketTally 是一款轻量、私有的个人记账应用。账本数据保存在你自己的 SQLite 数据库中，当前主线采用单所有者登录，适合在本机或可信内网使用。
+PocketTally 是一款轻量、私有的个人记账应用。账本数据保存在你自己的 SQLite 数据库中。本文按当前主线的单所有者登录流程编写；当前公开的 `v0.1.0` 镜像尚不包含登录功能，版本部署差异见[部署与备份](deployment.md)。
 
 > [!IMPORTANT]
 > 这是单所有者账本，不提供公开注册、团队协作或多用户隔离。生产环境必须通过 HTTPS 反向代理发布，并配置 `POCKET_TALLY_PUBLIC_ORIGIN`；不要直接把 FastAPI 服务暴露到公网。
@@ -9,13 +9,13 @@ PocketTally 是一款轻量、私有的个人记账应用。账本数据保存�
 
 ### 1. 启动服务
 
-按[部署与备份](deployment.md)准备 `.env`、`data/` 和 `backups/` 目录，然后启动服务：
+从当前主线源码构建并部署时，先配置好 HTTPS 反向代理，在 `.env` 中设置浏览器实际访问的精确 HTTPS Origin，然后准备 `data/` 和 `backups/` 目录并启动：
 
 ```bash
-docker compose up -d --no-build
+docker compose up -d --build
 ```
 
-本机默认访问地址是 <http://localhost:54425>。生产环境请使用反向代理配置的 HTTPS 地址。
+通过反向代理提供的 HTTPS 地址打开应用。生产配置必须设置 `POCKET_TALLY_PUBLIC_ORIGIN=https://<实际域名>`，FastAPI 只允许在 Compose 网络内访问。`v0.1.0` 镜像不支持本文的登录流程，也不能通过 HTTPS 反向代理开放公网；其本机或可信内网使用方式见[部署指南](deployment.md)。
 
 ### 2. 初始化唯一所有者并登录
 
