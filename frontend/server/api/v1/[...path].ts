@@ -13,6 +13,8 @@ export default defineEventHandler(async (event) => {
   for (const name of ['forwarded', 'x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-real-ip', 'x-pockettally-client-ip']) {
     delete headers[name]
   }
-  headers['x-pockettally-client-ip'] = getRequestIP(event) || 'unknown'
+  // Caddy is the only public entrypoint and Nuxt listens on loopback. Caddy
+  // replaces incoming X-Forwarded-For, so this is the real client address.
+  headers['x-pockettally-client-ip'] = getRequestIP(event, { xForwardedFor: true }) || 'unknown'
   return proxyRequest(event, target.toString(), { headers })
 })

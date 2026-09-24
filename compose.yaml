@@ -44,11 +44,11 @@ services:
 
   backend:
     <<: *service-defaults
-    image: ${POCKET_TALLY_BACKEND_IMAGE:-ghcr.io/louisliunova/pockettally-backend}:${POCKET_TALLY_IMAGE_TAG:-0.1.0}
+    image: ${POCKET_TALLY_BACKEND_IMAGE:-ghcr.io/louisliunova/pockettally-backend}:${POCKET_TALLY_IMAGE_TAG:-0.2.0}
     build:
       context: ./backend
       args:
-        APP_VERSION: ${POCKET_TALLY_APP_VERSION:-0.1.0}
+        APP_VERSION: ${POCKET_TALLY_APP_VERSION:-0.2.0}
         VCS_REF: ${POCKET_TALLY_VCS_REF:-local}
     user: ${POCKET_TALLY_UID:-10001}:${POCKET_TALLY_GID:-10001}
     read_only: true
@@ -81,11 +81,11 @@ services:
 
   frontend:
     <<: *service-defaults
-    image: ${POCKET_TALLY_FRONTEND_IMAGE:-ghcr.io/louisliunova/pockettally-frontend}:${POCKET_TALLY_IMAGE_TAG:-0.1.0}
+    image: ${POCKET_TALLY_FRONTEND_IMAGE:-ghcr.io/louisliunova/pockettally-frontend}:${POCKET_TALLY_IMAGE_TAG:-0.2.0}
     build:
       context: ./frontend
       args:
-        APP_VERSION: ${POCKET_TALLY_APP_VERSION:-0.1.0}
+        APP_VERSION: ${POCKET_TALLY_APP_VERSION:-0.2.0}
         VCS_REF: ${POCKET_TALLY_VCS_REF:-local}
     read_only: true
     tmpfs:
@@ -96,7 +96,7 @@ services:
       NODE_ENV: production
       NUXT_API_BASE: http://backend:8000
     ports:
-      - "${POCKET_TALLY_BIND_ADDRESS:-0.0.0.0}:${POCKET_TALLY_HTTP_PORT:-54425}:3000"
+      - "${POCKET_TALLY_BIND_ADDRESS:-127.0.0.1}:${POCKET_TALLY_HTTP_PORT:-54425}:3000"
     depends_on:
       backend:
         condition: service_healthy
@@ -105,11 +105,11 @@ services:
     <<: *service-defaults
     profiles:
       - tools
-    image: ${POCKET_TALLY_BACKEND_IMAGE:-ghcr.io/louisliunova/pockettally-backend}:${POCKET_TALLY_IMAGE_TAG:-0.1.0}
+    image: ${POCKET_TALLY_BACKEND_IMAGE:-ghcr.io/louisliunova/pockettally-backend}:${POCKET_TALLY_IMAGE_TAG:-0.2.0}
     build:
       context: ./backend
       args:
-        APP_VERSION: ${POCKET_TALLY_APP_VERSION:-0.1.0}
+        APP_VERSION: ${POCKET_TALLY_APP_VERSION:-0.2.0}
         VCS_REF: ${POCKET_TALLY_VCS_REF:-local}
     entrypoint:
       - pocket-tally-backup

@@ -195,7 +195,13 @@ def set_session_cookie(response: Response, token: str, settings: Settings) -> No
 def clear_session_cookie(response: Response, settings: Settings) -> None:
     """清除当前会话 Cookie。"""
 
-    response.delete_cookie(cookie_name(settings), path="/")
+    response.delete_cookie(
+        cookie_name(settings),
+        path="/",
+        secure=settings.environment == "production",
+        httponly=True,
+        samesite="strict",
+    )
 
 
 def authenticate_request(session: Session, request: Request, settings: Settings) -> AuthenticatedSession:
@@ -246,6 +252,8 @@ def login(session: Session, request: Request, settings: Settings, username: str,
         valid, updated_hash = False, None
     if not owner or not valid:
         _record_failure(session, ip, now)
+        # 失败会抛出 ApiError；请求依赖的事务管理器随之回滚，因此先持久化退避状态。
+        session.commit()
         raise ApiError(401, "invalid_credentials", "用户名或密码错误")
     if updated_hash:
         owner.password_hash = updated_hash

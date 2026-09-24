@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.auth import PASSWORD_HASH, SESSION_IDLE, utc_now
-from app.auth_models import AuthSession, Owner
+from app.auth_models import AuthSession, LoginThrottle, Owner
 from app.config import Settings
 from app.main import create_app
 
@@ -138,3 +138,82 @@ def test_production_requires_https_public_origin(tmp_path: Path) -> None:
     )
     with pytest.raises(RuntimeError, match="HTTPS"), TestClient(app):
         pass
+
+
+def test_failed_logins_throttle_across_restart(tmp_path: Path) -> None:
+    client, app = make_client(tmp_path)
+    try:
+        for _ in range(5):
+            response = client.post(
+                "/api/v1/auth/login",
+                json={"username": "owner", "password": "incorrect password"},
+                headers=HEADERS,
+            )
+            assert response.status_code == 401
+        with Session(app.state.resources.auth_engine) as session:
+            assert session.query(LoginThrottle).one().failures == 5
+    finally:
+        client.__exit__(None, None, None)
+
+    restarted = create_app(
+        Settings(
+            environment="test",
+            auth_enabled=True,
+            database_path=tmp_path / "ledger.sqlite3",
+            auth_database_path=tmp_path / "auth.sqlite3",
+        )
+    )
+    with TestClient(restarted) as client:
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "owner", "password": PASSWORD},
+            headers=HEADERS,
+        )
+        assert response.status_code == 429
+        assert int(response.headers["Retry-After"]) > 0
+
+
+def test_production_cookie_attributes_and_documentation_boundary(tmp_path: Path) -> None:
+    settings = Settings(
+        environment="production",
+        auth_enabled=True,
+        database_path=tmp_path / "ledger.sqlite3",
+        auth_database_path=tmp_path / "auth.sqlite3",
+        public_origin="https://ledger.example.test",
+    )
+    app = create_app(settings)
+    with TestClient(app, base_url="https://ledger.example.test") as client:
+        now = utc_now()
+        with Session(app.state.resources.auth_engine) as session, session.begin():
+            session.add(Owner(
+                id=1,
+                username="owner",
+                password_hash=PASSWORD_HASH.hash(PASSWORD),
+                created_at=now,
+                password_changed_at=now,
+            ))
+        assert client.get("/openapi.json").status_code == 404
+        assert client.get("/docs").status_code == 404
+        assert client.get("/redoc").status_code == 404
+        assert client.get("/api/v1/accounts").status_code == 401
+        headers = {**HEADERS, "Origin": "https://ledger.example.test"}
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "owner", "password": PASSWORD},
+            headers=headers,
+        )
+        assert response.status_code == 200
+        cookie = response.headers["set-cookie"]
+        assert cookie.startswith("__Host-pockettally_session=")
+        assert "Secure" in cookie
+        assert "HttpOnly" in cookie
+        assert "SameSite=strict" in cookie
+        assert "Path=/" in cookie
+        assert "Domain=" not in cookie
+        response = client.post("/api/v1/auth/logout", headers=headers)
+        assert response.status_code == 204
+        cleared = response.headers["set-cookie"]
+        assert "__Host-pockettally_session=" in cleared
+        assert "Max-Age=0" in cleared
+        assert "Secure" in cleared
+        assert "Path=/" in cleared

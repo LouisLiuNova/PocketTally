@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: PocketTally API
-  version: 0.1.0
+  version: 0.2.0
   description: PocketTally 资源、交易查询、退款摘要与六类统计 API。
 paths:
   /health:

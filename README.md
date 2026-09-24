@@ -18,7 +18,7 @@ PocketTally 是一款轻量、私有的个人记账应用，帮助你记录每�
 PocketTally 面向单个账本所有者，需要自行部署。开始保存真实数据前，请先阅读[部署与备份指南](docs/developer/deployment.md)并完成安全配置与备份校验。部署完成后，按[用户文档](docs/user/index.md)创建账户、录入当前余额，再记录第一笔交易。
 
 > [!NOTE]
-> 本分支展示 **v0.2.0 发布预览**；当前公开发行版仍为 [v0.1.0](https://github.com/LouisLiuNova/PocketTally/releases/tag/v0.1.0)。请勿将预览文档中的流程用于 v0.1.0 镜像。当前发行版的能力与部署限制以[其发行说明](https://louisliunova.github.io/PocketTally/releases/v0.1.0/)为准。
+> 本分支展示 **v0.2.0 发布预览**，可阅读[发行说明草稿](docs/releases/v0.2.0.md)；当前公开发行版仍为 [v0.1.0](https://github.com/LouisLiuNova/PocketTally/releases/tag/v0.1.0)。请勿将预览文档中的流程用于 v0.1.0 镜像。当前发行版的能力与部署限制以[其发行说明](https://louisliunova.github.io/PocketTally/releases/v0.1.0/)为准。
 
 ## 文档与参与开发
 

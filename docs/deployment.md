@@ -142,9 +142,9 @@ curl --fail http://127.0.0.1:54425/api/v1/health
 > 备份只有在另一块磁盘或另一台设备上存在副本时，才能抵御宿主磁盘故障。至少定期把
 > `backups` 中已校验的文件同步到独立存储。
 
-鉴权库不由 `backup` 工具恢复。若需要恢复密码或全部会话，请使用
-`docker compose run --rm backend pocket-tally-auth reset-password` 或
-`revoke-sessions`，不要用账本备份覆盖鉴权库。
+鉴权库不由 `backup` 工具恢复。当前主线若需要恢复密码或撤销全部会话，须先停下前后端以
+释放鉴权库进程锁，再使用 `docker compose run --rm backend pocket-tally-auth reset-password`
+或 `revoke-sessions`，完成后重启服务；不要用账本备份覆盖鉴权库。
 
 ## 正式镜像地址、升级与回退
 

@@ -22,4 +22,5 @@
 - [接口契约](api-status.md)：设计契约与当前后端实现状态。
 - [API 参考](api-reference/)：浏览 PocketTally OpenAPI 3.1 接口定义。
 
-当前文档为 v0.2.0 发布预览，历史发布边界见 [v0.1.0 发行说明](../releases/v0.1.0.md)。
+当前文档为 v0.2.0 发布预览，参见 [v0.2.0 发行说明草稿](../releases/v0.2.0.md)；
+历史发布边界见 [v0.1.0 发行说明](../releases/v0.1.0.md)。

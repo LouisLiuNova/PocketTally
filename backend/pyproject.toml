@@ -1,6 +1,6 @@
 [project]
 name = "pocket-tally-backend"
-version = "0.1.0"
+version = "0.2.0"
 description = "PocketTally FastAPI backend"
 authors = [
     { name = "louisliunova", email = "louisliunova@outlook.com" }

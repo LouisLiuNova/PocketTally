@@ -59,7 +59,14 @@ def register_middleware(app: FastAPI) -> None:
             if request.url.path.startswith("/api/"):
                 response.headers["Cache-Control"] = "no-store"
             if response.status_code == 401 and request.url.path.startswith("/api/"):
-                response.delete_cookie(cookie_name(request.app.state.settings), path="/")
+                settings = request.app.state.settings
+                response.delete_cookie(
+                    cookie_name(settings),
+                    path="/",
+                    secure=settings.environment == "production",
+                    httponly=True,
+                    samesite="strict",
+                )
             logger.info(
                 "{} {} -> {} ({:.2f} ms)",
                 request.method,

@@ -31,6 +31,7 @@ export default function HomePage() {
             </p>
             <h1 className="max-w-xl text-4xl font-semibold leading-[1.12] tracking-tight sm:text-5xl lg:text-[3.65rem]">你的钱，<br /><span className="text-fd-primary">清清楚楚。</span></h1>
             <p className="mt-6 max-w-xl text-lg leading-8 text-fd-muted-foreground">轻量、私有的个人记账应用。记录每笔收支，核对账户余额，清晰了解钱花在了哪里。</p>
+            <p className="mt-3 text-sm text-fd-muted-foreground"><Link className="underline underline-offset-4 hover:text-fd-foreground" href="/docs/developer/releases/v0.2.0/">阅读 v0.2.0 发行说明草稿</Link></p>
             <div className="mt-9 flex flex-wrap gap-3">
               <Link className="rounded-xl bg-fd-primary px-5 py-3 font-semibold text-fd-primary-foreground shadow-md shadow-fd-primary/15 transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fd-primary" href={routes.user}>开始使用 <span aria-hidden="true">→</span></Link>
               <Link className="rounded-xl border border-fd-border bg-fd-card/85 px-5 py-3 font-semibold transition hover:border-fd-primary/40 hover:bg-fd-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fd-primary" href={routes.developer}>开发者文档</Link>
