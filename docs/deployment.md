@@ -1,6 +1,6 @@
-# Docker Compose 部署
+# v0.1.0 历史 Docker Compose 部署
 
-本文说明当前公开的 v0.1.0 容器镜像的部署。该历史版本没有登录鉴权，仅适合本机或可信内网；不要将其部署到公网。当前主线源码已加入单所有者登录，但尚未以新版本镜像发布。若要试用当前主线，请从源码构建，并遵循[认证与会话](authentication.md)中的 HTTPS 与 Origin 要求。
+本文保留 v0.1.0 容器镜像的历史部署步骤。该版本没有登录鉴权，仅适合本机或可信内网；不要将其部署到公网。当前公开版 v0.2.0 的部署步骤见[部署与备份](developer/deployment.md)。
 
 PocketTally 提供 `frontend`、`backend` 两个业务容器和一个按需备份工具，支持 macOS
 ARM64 与 Linux x86_64。SQLite 数据和备份均保存在宿主机绑定目录中；当前主线的认证使用同一数据
@@ -31,7 +31,7 @@ lsof -nP -iTCP:54425 -sTCP:LISTEN
 ## 使用 v0.1.0 正式镜像首次启动
 
 正式部署必须固定 `POCKET_TALLY_IMAGE_TAG=0.1.0`，不得依赖可变的 `latest`。
-`.env.example` 已提供该固定值。该镜像没有登录鉴权，只能在本机或可信内网使用：
+当前 `.env.example` 默认固定为 v0.2.0。若要部署历史版，先在 `.env` 中改为 `POCKET_TALLY_IMAGE_TAG=0.1.0`；该镜像没有登录鉴权，只能在本机或可信内网使用：
 
 ```bash
 cp .env.example .env
@@ -40,7 +40,7 @@ docker compose pull frontend backend
 docker compose up -d --no-build
 ```
 
-v0.1.0 镜像不包含所有者初始化命令，也不使用 `POCKET_TALLY_PUBLIC_ORIGIN` 执行身份验证。需要当前主线的登录能力时，请从源码构建，不要对该历史镜像运行 `pocket-tally-auth`；密码重设、会话撤销和 HTTPS/CSRF 边界见[认证与会话](authentication.md)。
+v0.1.0 镜像不包含所有者初始化命令，也不使用 `POCKET_TALLY_PUBLIC_ORIGIN` 执行身份验证。需要登录能力时，请使用 v0.2.0 镜像；不要对该历史镜像运行 `pocket-tally-auth`。密码重设、会话撤销和 HTTPS/CSRF 边界见[认证与会话](authentication.md)。
 
 Linux 用户建议把 `.env` 中的 UID/GID 改为当前用户，便于在宿主机管理文件：
 
@@ -72,14 +72,14 @@ docker compose run --rm backup verify <上一步输出的备份文件名>
 FastAPI 的 `8000` 端口只在 Compose 网络内可见。若其他设备无法访问，应先检查宿主防火墙，
 不要通过公网端口转发解决。v0.1.0 没有登录鉴权，不能以 HTTPS 反向代理代替应用认证。
 
-需要检查当前源码而不是部署发行版本时，可以使用 `docker compose up -d --build`。源码
-构建不等于正式镜像部署，也不得用于绕过固定版本、备份或可信内网边界。
+需要检查当前源码时，可以使用 `docker compose up -d --build`。源码构建不等于正式镜像部署。
 
 ## 配置
 
-根目录 `.env` 只供 Compose 使用且不会提交到 Git。主要配置如下：
+根目录 `.env` 只供 Compose 使用且不会提交到 Git。下表保留 v0.1.0 的历史部署取值，
+并非当前 `.env.example` 的默认值；v0.2.0 配置以[当前部署指南](developer/deployment.md)为准。
 
-| 配置 | 默认值 | 用途 |
+| 配置 | v0.1.0 历史部署取值 | 用途 |
 | --- | --- | --- |
 | `POCKET_TALLY_BIND_ADDRESS` | `0.0.0.0` | 前端在宿主机的监听地址。 |
 | `POCKET_TALLY_HTTP_PORT` | `54425` | 前端在宿主机的端口。 |
@@ -88,7 +88,7 @@ FastAPI 的 `8000` 端口只在 Compose 网络内可见。若其他设备无法�
 | `POCKET_TALLY_PUBLIC_ORIGIN` | 空 | 当前主线源码构建并启用鉴权时，设置为浏览器访问的 HTTPS Origin，用于同源和 CSRF 校验；v0.1.0 镜像不支持登录鉴权。 |
 | `POCKET_TALLY_AUTH_ENABLED` | `true` | 当前主线源码构建时是否启用鉴权；正式使用不要关闭。v0.1.0 镜像不支持此功能。 |
 | `POCKET_TALLY_UID` / `POCKET_TALLY_GID` | `10001` | Linux 宿主机上的文件所有者；必须大于 0。 |
-| `POCKET_TALLY_IMAGE_TAG` | `0.1.0` | 正式部署固定版本；不得改用可变的 `latest`。 |
+| `POCKET_TALLY_IMAGE_TAG` | `0.1.0` | 历史版部署需在 `.env` 中显式覆盖当前默认版本；不得改用可变的 `latest`。 |
 
 数据库固定保存为数据目录中的 `pocket-tally.sqlite3`；鉴权库为同目录的
 `pocket-tally-auth.sqlite3`。不要手工编辑这两个数据库，也不要让其他程序写入；账本备份

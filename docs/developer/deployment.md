@@ -1,21 +1,22 @@
 # 部署与备份
 
 > **部署边界**
-> 本页是 **v0.2.0 发布前预览**，说明当前主线源码构建的单所有者部署边界。v0.2.0 镜像尚未发布，不能从本页推断固定版本镜像已经可用。现行 v0.1.0 镜像无登录功能，只能在本机或可信内网使用；其完整操作见[历史部署指南](../deployment.md)。
+> 本页适用于 **v0.2.0 正式镜像**。v0.1.0 镜像无登录功能，只能在本机或可信内网使用；其操作见[历史部署指南](../deployment.md)。
 
 PocketTally 使用 Docker Compose 运行前端、后端与按需备份工具。生产环境必须由 HTTPS 反向代理提供唯一公开入口，后端只在 Compose 网络中访问。部署前准备 Docker Compose、持久化的数据与备份目录、受保护的域名和独立备份存储。
 
-## 当前主线源码部署预览
+## 固定版本镜像部署
 
 1. 从仓库复制 `.env.example` 为 `.env`，准备 `data/` 与 `backups/` 目录。
-2. 在 `.env` 中设置浏览器实际访问的 `POCKET_TALLY_PUBLIC_ORIGIN=https://<域名>`，保留 `POCKET_TALLY_BIND_ADDRESS=127.0.0.1` 与 `POCKET_TALLY_AUTH_ENABLED=true`。发布前源码构建可将 `POCKET_TALLY_IMAGE_TAG` 改为 `dev`，避免误认为 `0.2.0` 镜像已经可拉取。
-3. 配置 HTTPS 反向代理，将同源请求转发到宿主机的前端端口；不要直接发布 FastAPI 端口。先确认 TLS、访问控制及防火墙，再执行源码构建。
+2. 在 `.env` 中设置浏览器实际访问的 `POCKET_TALLY_PUBLIC_ORIGIN=https://<域名>`，保留 `POCKET_TALLY_BIND_ADDRESS=127.0.0.1`、`POCKET_TALLY_AUTH_ENABLED=true` 和 `POCKET_TALLY_IMAGE_TAG=0.2.0`。
+3. 配置 HTTPS 反向代理，将同源请求转发到宿主机的前端端口；不要直接发布 FastAPI 端口。先确认 TLS、访问控制及防火墙，再拉取固定版本镜像。
 
 ```bash
 cp .env.example .env
 mkdir -p data backups
 # 按上文编辑 .env，并完成 HTTPS 反向代理配置
-docker compose up -d --build
+docker compose pull frontend backend
+docker compose up -d --no-build
 ```
 
 首次启动且鉴权库为空时，先停下前后端，释放鉴权库进程锁，再初始化唯一所有者：
@@ -47,11 +48,11 @@ docker compose up -d
 
 恢复会替换当前账本，执行前应确认备份来源及影响范围。密码重置与会话撤销使用[认证与会话](authentication.md)中的受支持命令，不要手工修改数据库。
 
-## v0.2.0 发布门槛
+## v0.2.0 部署核对
 
-发行说明草稿见 [v0.2.0](../releases/v0.2.0.md)。必须先在实际公网入口核对 TLS、代理只指向前端、
+发行说明见 [v0.2.0](../releases/v0.2.0.md)。使用时在实际公网入口核对 TLS、代理只指向前端、
 前端端口仅本机可达、FastAPI 无公网端口、实际 Origin 与认证启用。再验证匿名读写失败、
 生产 Cookie、登录限流、重设密码后旧会话失效、鉴权库单独备份，以及健康检查与文档端点边界。
 
-发布时才把本页的预览标识切换为正式版本，并核对固定 `0.2.0` 镜像、Compose 默认值、
-升级与回退步骤、标签流水线和发行说明。未完成这些核对前，不将源码构建流程描述成已验证的正式镜像部署。
+升级前创建并校验账本备份，把副本保存到独立存储；回退时还需单独处理鉴权库，
+详见[发行说明](../releases/v0.2.0.md)。

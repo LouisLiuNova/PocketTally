@@ -27,11 +27,11 @@ export default function HomePage() {
           <div className="relative">
             <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-fd-primary/20 bg-fd-card/80 px-3.5 py-1.5 text-xs font-semibold tracking-wide text-fd-primary shadow-sm">
               <span aria-hidden="true" className="size-1.5 rounded-full bg-fd-primary" />
-              v0.2.0 发布预览 <span className="text-fd-border">/</span> 当前公开版 v0.1.0
+              当前公开版 v0.2.0
             </p>
             <h1 className="max-w-xl text-4xl font-semibold leading-[1.12] tracking-tight sm:text-5xl lg:text-[3.65rem]">你的钱，<br /><span className="text-fd-primary">清清楚楚。</span></h1>
             <p className="mt-6 max-w-xl text-lg leading-8 text-fd-muted-foreground">轻量、私有的个人记账应用。记录每笔收支，核对账户余额，清晰了解钱花在了哪里。</p>
-            <p className="mt-3 text-sm text-fd-muted-foreground"><Link className="underline underline-offset-4 hover:text-fd-foreground" href="/docs/developer/releases/v0.2.0/">阅读 v0.2.0 发行说明草稿</Link></p>
+            <p className="mt-3 text-sm text-fd-muted-foreground"><Link className="underline underline-offset-4 hover:text-fd-foreground" href="/docs/developer/releases/v0.2.0/">阅读 v0.2.0 发行说明</Link></p>
             <div className="mt-9 flex flex-wrap gap-3">
               <Link className="rounded-xl bg-fd-primary px-5 py-3 font-semibold text-fd-primary-foreground shadow-md shadow-fd-primary/15 transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fd-primary" href={routes.user}>开始使用 <span aria-hidden="true">→</span></Link>
               <Link className="rounded-xl border border-fd-border bg-fd-card/85 px-5 py-3 font-semibold transition hover:border-fd-primary/40 hover:bg-fd-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fd-primary" href={routes.developer}>开发者文档</Link>
@@ -79,7 +79,7 @@ export default function HomePage() {
         </section>
         <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-fd-border py-8 text-sm text-fd-muted-foreground">
           <span>© PocketTally · MIT License</span>
-          <Link className="underline-offset-4 hover:underline" href="/releases/v0.1.0/">查看当前公开版 v0.1.0 的发行说明 →</Link>
+          <Link className="underline-offset-4 hover:underline" href="/docs/developer/releases/v0.2.0/">查看 v0.2.0 发行说明 →</Link>
         </footer>
       </div>
     </main>
