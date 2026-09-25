@@ -66,7 +66,8 @@ test('快捷记账：多层分类、金额计算、失败保留及连续保存',
   expect(posts).toHaveLength(3)
   expect(posts[1]).toMatchObject({ type: 'expense', amount: 12.94, sourceAccountId: account.id, categoryId: grandchild.id, tagIds: [tag.id], description: `第一笔${suffix}` })
   expect(posts[2]).toMatchObject({ type: 'expense', amount: 2, sourceAccountId: account.id, categoryId: grandchild.id, tagIds: [tag.id], description: null })
-  await expect(page.getByText(`第一笔${suffix}`)).toBeVisible()
+  await page.getByLabel('搜索交易', { exact: true }).fill(`第一笔${suffix}`)
+  await expect(page.getByText(`第一笔${suffix}`, { exact: true })).toBeVisible()
 })
 
 test('分类父级可直接选择，返回与类型切换清理旧选择', async ({ page }) => {
