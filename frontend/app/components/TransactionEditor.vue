@@ -2,6 +2,8 @@
 import { kindLabels, type Account, type Category, type Tag, type Transaction, type Kind, type RefundSummary } from '~/types/ledger'
 import { minor, money, localInput, shanghaiIso } from '~/utils/money'
 import { errorMessage } from '~/composables/useLedger'
+import { appendAmount, calculateAmount, deleteAmount, emptyAmountDraft, type AmountOperator } from '~/utils/amountKeypad'
+import { buildCategoryTree, type CategoryTreeNode } from '~/utils/categoryTree'
 
 const props = defineProps<{
   accounts: Account[]
@@ -12,14 +14,15 @@ const props = defineProps<{
   refund?: Transaction
   accountId?: string
 }>()
-const emit = defineEmits<{ close: []; saved: []; busy: [value: boolean] }>()
+const emit = defineEmits<{ close: []; saved: [keepOpen: boolean]; busy: [value: boolean] }>()
 
 const busy = ref(false)
 const error = ref('')
 const fieldErrors = reactive<Record<string, string>>({})
+const amountDraft = ref(emptyAmountDraft(String(props.editing?.amount || '')))
 const form = reactive({
   type: (props.refund ? 'expense_refund' : props.editing?.type || (props.accountId ? 'balance_adjustment' : 'expense')) as Kind,
-  amount: String(props.editing?.amount || ''),
+  amount: amountDraft.value.value,
   description: props.editing?.description || '',
   occurredAt: localInput(props.editing?.occurredAt),
   sourceAccountId: props.editing?.sourceAccount?.id || props.accountId || props.accounts[0]?.id || '',
@@ -30,8 +33,14 @@ const form = reactive({
 })
 const hasRefunds = computed(() => props.editing?.type === 'expense' && (props.refundSummary?.activeRefundCount || 0) > 0)
 const locked = computed(() => !!hasRefunds.value || props.editing?.type === 'expense_refund')
-const categoryOptions = computed(() => props.categories.filter(category => category.purpose === form.type))
 const remaining = computed(() => props.refund ? (props.refundSummary?.remainingRefundableAmountMinor || 0) : 0)
+const selectableCategoryIds = computed(() => {
+  if (form.type !== 'income' && form.type !== 'expense') return new Set<string>()
+  const ids = new Set<string>()
+  const visit = (nodes: CategoryTreeNode[]) => nodes.forEach(node => { ids.add(node.category.id); visit(node.children) })
+  visit(buildCategoryTree(props.categories, form.type).roots)
+  return ids
+})
 const kindItems = [
   { label: kindLabels.expense, value: 'expense', icon: 'i-lucide-receipt-text' },
   { label: kindLabels.income, value: 'income', icon: 'i-lucide-circle-arrow-down-left' },
@@ -40,13 +49,31 @@ const kindItems = [
 ]
 const accountItems = computed(() => props.accounts.map(account => ({ label: `${account.name} · ${money(minor(account.amount))}`, value: account.id })))
 const destinationItems = computed(() => props.accounts.map(account => ({ label: account.name, value: account.id })))
-const categoryItems = computed(() => categoryOptions.value.map(category => ({
-  label: `${category.parentCategory ? `${category.parentCategory.name} / ` : ''}${category.name}`,
-  value: category.id,
-})))
 const tagItems = computed(() => props.tags.map(tag => ({ label: tag.name, value: tag.id })))
 
 watch(() => form.type, () => { form.categoryId = '' })
+watch(() => form.amount, value => {
+  if (value !== amountDraft.value.value) amountDraft.value = { ...amountDraft.value, value, replaceNext: false }
+}, { flush: 'sync' })
+
+function pressAmount(key: string) {
+  if (busy.value || locked.value) return
+  try {
+    if (key === '⌫') amountDraft.value = deleteAmount(amountDraft.value)
+    else if (key === '+' || key === '-' || key === '=') amountDraft.value = calculateAmount(amountDraft.value, key === '=' ? null : key as AmountOperator)
+    else amountDraft.value = appendAmount(amountDraft.value, key)
+    form.amount = amountDraft.value.value
+    clearErrors()
+  } catch (cause) { fail((cause as Error).message, 'amount') }
+}
+
+function onAmountKeydown(event: KeyboardEvent) {
+  if (['+', '-', '='].includes(event.key)) { event.preventDefault(); pressAmount(event.key); return }
+  if (amountDraft.value.replaceNext && /^[\d.]$/.test(event.key)) {
+    event.preventDefault()
+    pressAmount(event.key)
+  }
+}
 
 function clearErrors() {
   error.value = ''
@@ -59,11 +86,13 @@ function fail(message: string, field?: string) {
   return false
 }
 
-async function save() {
+async function save(keepOpen = false) {
   if (busy.value) return
   clearErrors()
   let amount: number
   try {
+    if (amountDraft.value.operator) amountDraft.value = calculateAmount(amountDraft.value, null)
+    form.amount = amountDraft.value.value
     amount = minor(form.amount)
   } catch (cause) {
     fail((cause as Error).message, 'amount')
@@ -80,7 +109,7 @@ async function save() {
     return
   }
   if (!locked.value && !props.refund) {
-    if (['income', 'expense'].includes(form.type) && !form.categoryId) { fail('请先创建并选择相应用途的分类', 'categoryId'); return }
+    if (['income', 'expense'].includes(form.type) && !selectableCategoryIds.value.has(form.categoryId)) { fail('请选择有效的相应用途分类', 'categoryId'); return }
     if (form.type === 'transfer' && form.sourceAccountId === form.destinationAccountId) { fail('转账必须选择两个不同账户', 'destinationAccountId'); return }
     if (!(form.type === 'income' ? form.destinationAccountId : form.sourceAccountId)) { fail('请先创建并选择账户', form.type === 'income' ? 'destinationAccountId' : 'sourceAccountId'); return }
   }
@@ -108,7 +137,12 @@ async function save() {
       body,
       retry: 0,
     })
-    emit('saved')
+    if (keepOpen && !props.editing && !props.refund) {
+      form.amount = ''
+      form.description = ''
+      amountDraft.value = emptyAmountDraft()
+      emit('saved', true)
+    } else emit('saved', false)
   } catch (cause) {
     error.value = errorMessage(cause)
   } finally {
@@ -119,7 +153,7 @@ async function save() {
 </script>
 
 <template>
-  <UForm :state="form" class="modal-editor-form" :disabled="busy" :aria-busy="busy" @submit="save">
+  <UForm :state="form" class="modal-editor-form" :disabled="busy" :aria-busy="busy" @submit="save(false)">
     <header class="modal-editor-header">
       <div>
         <p class="eyebrow">交易信息</p>
@@ -148,7 +182,10 @@ async function save() {
       </UFormField>
 
       <UFormField name="amount" label="金额（元）" :error="fieldErrors.amount" required>
-        <UInput v-model="form.amount" inputmode="decimal" placeholder="0.00" :disabled="locked" class="w-full" />
+        <UInput v-model="form.amount" inputmode="decimal" placeholder="0.00" :disabled="locked" class="w-full" @keydown="onAmountKeydown" />
+        <div v-if="!editing && !refund" class="transaction-amount-keypad" role="group" aria-label="金额键盘">
+          <UButton v-for="key in ['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', '⌫', '+', '-', '=']" :key="key" type="button" color="neutral" variant="soft" :label="key" :aria-label="key === '⌫' ? '删除一位' : key === '=' ? '计算结果' : key" :disabled="busy" @click="pressAmount(key)" />
+        </div>
       </UFormField>
 
       <template v-if="!refund && !locked">
@@ -162,9 +199,8 @@ async function save() {
           <USelect v-model="form.balanceAdjustmentDirection" :items="[{ label: '增加余额', value: 'increase' }, { label: '减少余额', value: 'decrease' }]" class="w-full" />
         </UFormField>
         <UFormField v-if="['income', 'expense'].includes(form.type)" name="categoryId" label="分类" :error="fieldErrors.categoryId" required>
-          <USelect v-model="form.categoryId" :items="categoryItems" placeholder="请选择分类" class="w-full" />
+          <TransactionCategoryPicker v-model="form.categoryId" :categories="categories" :purpose="form.type as 'income' | 'expense'" :disabled="busy" />
         </UFormField>
-        <p v-if="['income', 'expense'].includes(form.type) && !categoryItems.length" class="hint">请关闭表单，先在「分类与标签」中新建{{ kindLabels[form.type] }}分类。</p>
       </template>
 
       <UFormField name="occurredAt" label="发生时间" :error="fieldErrors.occurredAt" required>
@@ -181,7 +217,8 @@ async function save() {
       <UAlert v-if="error" color="error" variant="soft" icon="i-lucide-circle-alert" title="保存失败" :description="error" role="alert" aria-live="polite" />
     </div>
     <div class="modal-editor-actions transaction-editor-actions">
-      <UButton type="submit" label="保存交易" :loading="busy" :aria-busy="busy" :disabled="busy" />
+      <UButton type="submit" :label="editing || refund ? '保存交易' : '完成'" :loading="busy" :aria-busy="busy" :disabled="busy" />
+      <UButton v-if="!editing && !refund" type="button" label="保存再记" color="neutral" variant="outline" :disabled="busy" @click="save(true)" />
     </div>
   </UForm>
 </template>
@@ -204,6 +241,9 @@ async function save() {
 .transaction-type-radio-group :deep([data-slot="label"]) {
   overflow-wrap: anywhere;
 }
+
+.transaction-amount-keypad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+.transaction-amount-keypad :deep(button) { min-height: 40px; }
 
 @media (max-width: 560px) {
   .transaction-type-radio-group :deep([data-slot="fieldset"]) {

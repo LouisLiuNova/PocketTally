@@ -6,6 +6,7 @@ test.describe('Chromium 桌面兼容性矩阵', () => {
   test('窄窗口中的交易与资源表单保留间距、滚动区和操作栏', async ({ page }) => {
     await page.setViewportSize({ width: 729, height: 480 })
     await page.goto('/')
+    await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as HTMLElement & { __vue_app__?: unknown } | null)?.__vue_app__))
     await expect(page.getByRole('button', { name: '记一笔', exact: true })).toBeEnabled()
 
     const assertEditorFrame = async (saveLabel: string) => {
@@ -35,7 +36,7 @@ test.describe('Chromium 桌面兼容性矩阵', () => {
     }
 
     await page.getByRole('button', { name: '记一笔', exact: true }).click()
-    await assertEditorFrame('保存交易')
+    await assertEditorFrame('完成')
     await page.getByRole('button', { name: '关闭', exact: true }).click()
 
     await page.goto('/accounts')

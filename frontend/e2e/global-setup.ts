@@ -9,6 +9,7 @@ export default async function globalSetup(config: FullConfig) {
   const context = await browser.newContext({ baseURL })
   const page = await context.newPage()
   await page.goto('/login')
+  await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as HTMLElement & { __vue_app__?: unknown } | null)?.__vue_app__))
   await page.getByLabel('用户名').fill('e2e-owner')
   await page.getByRole('textbox', { name: '密码' }).fill('PocketTally-E2E-Password-2026!')
   await page.getByRole('button', { name: '登录' }).click()

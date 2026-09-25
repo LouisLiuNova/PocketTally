@@ -289,7 +289,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
           :refund-summary="workspace.refundSummary.value"
           @close="workspace.transactionEditor.value = null"
           @busy="workspace.editorBusy.value = $event"
-          @saved="workspace.saved"
+          @saved="keepOpen => workspace.saved(keepOpen)"
         />
       </template>
     </UModal>

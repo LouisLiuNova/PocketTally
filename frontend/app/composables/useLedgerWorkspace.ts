@@ -56,9 +56,9 @@ export function createLedgerWorkspace() {
     return refreshed
   }
 
-  async function saved() {
+  async function saved(keepOpen = false) {
     const selectedId = selected.value?.id
-    transactionEditor.value = null
+    if (!keepOpen) transactionEditor.value = null
     resourceEditor.value = null
     messages.push({ id: 'operation-saved', level: 'success', title: '保存成功', description: '已保存到本地账本。' })
     await refreshWorkspace()
