@@ -33,6 +33,11 @@ function chooseCurrent() {
   void nextTick(() => picker.value?.querySelector<HTMLElement>('[data-category-tile]')?.focus())
 }
 
+function cancelPanel() {
+  path.value = []
+  void nextTick(() => picker.value?.querySelector<HTMLElement>('[data-category-tile]')?.focus())
+}
+
 function onEscape(event: KeyboardEvent) {
   if (!panel.value) return
   event.stopPropagation()
@@ -48,6 +53,7 @@ function onEscape(event: KeyboardEvent) {
       <div class="transaction-category-panel-heading">
         <UButton data-category-back type="button" color="neutral" variant="ghost" icon="i-lucide-arrow-left" label="返回上级" :disabled="disabled" @click="back" />
         <span>{{ panel.path }}</span>
+        <UButton type="button" color="neutral" variant="ghost" label="取消" :disabled="disabled" @click="cancelPanel" />
       </div>
       <UButton type="button" class="w-full" color="primary" variant="soft" icon="i-lucide-check" :label="`选择当前分类：${panel.category.name}`" :disabled="disabled" @click="chooseCurrent" />
     </div>

@@ -84,6 +84,8 @@ test('分类父级可直接选择，返回与类型切换清理旧选择', async
   const root = dialog.getByRole('button', { name: `${rootName}，查看子分类` })
   await root.click()
   await expect(dialog.getByRole('button', { name: `选择当前分类：${rootName}` })).toBeVisible()
+  await dialog.getByRole('button', { name: '取消', exact: true }).click()
+  await root.click()
   await dialog.getByRole('button', { name: '返回上级' }).click()
   await root.click()
   await dialog.getByRole('button', { name: `选择当前分类：${rootName}` }).click()
