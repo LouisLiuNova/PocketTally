@@ -1,7 +1,16 @@
 import { describe, expect, test } from 'bun:test'
-import { amountExpression, appendAmount, calculateAmount, deleteAmount, emptyAmountDraft, setAmountOperator, updateAmount } from '../app/utils/amountKeypad'
+import { amountExpression, appendAmount, calculateAmount, deleteAmount, emptyAmountDraft, parseAmountInput, setAmountOperator, updateAmount } from '../app/utils/amountKeypad'
 
 describe('快捷金额输入', () => {
+  test('金额框完整算式可编辑，结算前保留数字及运算符', () => {
+    const draft = parseAmountInput('12.34 + 0.60 - 0.04')
+    expect(amountExpression(draft)).toBe('12.34 + 0.60 - 0.04')
+    expect(calculateAmount(draft).value).toBe('12.90')
+    expect(amountExpression(parseAmountInput('12.34 +'))).toBe('12.34 +')
+    expect(() => calculateAmount(parseAmountInput('12.34 +'))).toThrow('请输入运算金额')
+    expect(calculateAmount(parseAmountInput('-2.00 + 3')).value).toBe('1.00')
+    expect(calculateAmount(parseAmountInput('12.34 + 1.60 - 0.04')).value).toBe('13.90')
+  })
   test('输入完整加减算式，只有等号结算且不显示中间结果', () => {
     let draft = emptyAmountDraft()
     for (const key of ['1', '2', '.', '3', '4', '5']) draft = appendAmount(draft, key)

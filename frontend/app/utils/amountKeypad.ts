@@ -19,6 +19,19 @@ export function updateAmount(draft: AmountDraft, value: string): AmountDraft {
   return { ...draft, value, calculated: false }
 }
 
+/** 将金额框内的完整加减算式还原为草稿；精度与操作数在结算时校验。 */
+export function parseAmountInput(value: string): AmountDraft {
+  const parts = value.trim().split(/\s*([+-])\s*/)
+  if (parts[0] === '' && parts[1] === '-') {
+    parts.splice(0, 3, `-${parts[2] || ''}`)
+  }
+  const terms: AmountTerm[] = []
+  for (let index = 1; index < parts.length; index += 2) {
+    terms.push({ value: parts[index - 1]!, operator: parts[index] as AmountOperator })
+  }
+  return { value: parts.at(-1) || '', terms, calculated: false }
+}
+
 export function appendAmount(draft: AmountDraft, key: string): AmountDraft {
   const value = draft.calculated ? '' : draft.value
   if (key === '.') {

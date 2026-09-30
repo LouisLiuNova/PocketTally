@@ -2,7 +2,7 @@
 import { kindLabels, type Account, type Category, type Tag, type Transaction, type Kind, type RefundSummary } from '~/types/ledger'
 import { minor, money, localInput, shanghaiIso } from '~/utils/money'
 import { errorMessage } from '~/composables/useLedger'
-import { amountExpression, appendAmount, calculateAmount, deleteAmount, emptyAmountDraft, setAmountOperator, updateAmount } from '~/utils/amountKeypad'
+import { amountExpression, appendAmount, calculateAmount, deleteAmount, emptyAmountDraft, parseAmountInput, setAmountOperator, updateAmount } from '~/utils/amountKeypad'
 import { buildCategoryTree, type CategoryTreeNode } from '~/utils/categoryTree'
 
 const props = defineProps<{
@@ -64,13 +64,14 @@ const selectedCategoryPath = computed(() => {
   return find(buildCategoryTree(props.categories, selectedCategory.value.purpose).roots) || selectedCategory.value.name
 })
 const expression = computed(() => amountExpression(amountDraft.value))
+const amountDisplay = computed(() => expression.value || form.amount)
 const amountKeys = ['7', '8', '9', '⌫', '4', '5', '6', '+', '1', '2', '3', '-', 'clear', '0', '.', '='] as const
 
 watch(() => form.type, () => { form.categoryId = '' })
 
 function updateAmountInput(value: string) {
-  amountDraft.value = updateAmount(amountDraft.value, value)
-  form.amount = value
+  amountDraft.value = props.editing || props.refund ? updateAmount(amountDraft.value, value) : parseAmountInput(value)
+  form.amount = amountDraft.value.value
   clearErrors()
 }
 
@@ -213,10 +214,10 @@ async function save(keepOpen = false) {
       </UFormField>
 
       <UFormField name="amount" label="金额（元）" :error="fieldErrors.amount" :class="{ 'transaction-amount-field': !refund }" required>
-        <p v-if="expression" class="transaction-amount-expression"><span>待计算</span><output aria-label="待计算算式">{{ expression }}</output></p>
+        <p v-if="expression" class="transaction-amount-expression">按 = 查看结果，也可直接保存结算</p>
         <UInput
-          :model-value="form.amount" inputmode="decimal" placeholder="0.00" :disabled="locked"
-          class="w-full" :class="{ 'transaction-amount-input': !refund }"
+          :model-value="amountDisplay" inputmode="decimal" placeholder="0.00" :disabled="locked"
+          class="w-full" :class="{ 'transaction-amount-input': !refund, 'transaction-amount-input--expression': !!expression }"
           :ui="!refund ? { base: 'text-right ps-10 pe-4 rounded-[var(--ui-radius)]' } : undefined"
           @update:model-value="updateAmountInput" @keydown="onAmountKeydown"
         >
@@ -304,6 +305,7 @@ async function save(keepOpen = false) {
   background: var(--ui-bg-muted);
 }
 .transaction-amount-currency { color: var(--ui-text-muted); font-size: 1.25rem; }
+.transaction-amount-input--expression :deep(input) { font-size: clamp(1.25rem, 3vw, 2rem); letter-spacing: 0; }
 .transaction-amount-expression { display: flex; gap: 8px; min-width: 0; margin: 0 0 6px; font-size: .8125rem; color: var(--ui-text-muted); }
 .transaction-amount-expression span { flex-shrink: 0; }
 .transaction-amount-expression output { min-width: 0; overflow-x: auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
