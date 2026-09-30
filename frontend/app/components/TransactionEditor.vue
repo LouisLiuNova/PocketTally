@@ -51,6 +51,18 @@ const accountItems = computed(() => props.accounts.map(account => ({ label: `${a
 const destinationItems = computed(() => props.accounts.map(account => ({ label: account.name, value: account.id })))
 const tagItems = computed(() => props.tags.map(tag => ({ label: tag.name, value: tag.id })))
 const selectedCategory = computed(() => props.categories.find(category => category.id === form.categoryId))
+const selectedCategoryPath = computed(() => {
+  if (!selectedCategory.value) return ''
+  const find = (nodes: CategoryTreeNode[]): string => {
+    for (const node of nodes) {
+      if (node.category.id === form.categoryId) return node.path
+      const match = find(node.children)
+      if (match) return match
+    }
+    return ''
+  }
+  return find(buildCategoryTree(props.categories, selectedCategory.value.purpose).roots) || selectedCategory.value.name
+})
 const expression = computed(() => amountExpression(amountDraft.value))
 const amountKeys = ['7', '8', '9', '⌫', '4', '5', '6', '+', '1', '2', '3', '-', 'clear', '0', '.', '='] as const
 
@@ -196,7 +208,7 @@ async function save(keepOpen = false) {
       </UFormField>
 
       <UFormField v-if="!refund && !locked && ['income', 'expense'].includes(form.type)" name="categoryId" label="分类" :error="fieldErrors.categoryId" :ui="{ hint: 'min-w-0 max-w-[70%]' }" required>
-        <template #hint><span v-if="selectedCategory" class="transaction-category-selection" :title="selectedCategory.name"><UIcon class="shrink-0" name="i-lucide-circle-check" aria-hidden="true" /><span class="truncate">已选择：{{ selectedCategory.name }}</span></span></template>
+        <p v-if="selectedCategory" class="transaction-category-selection mb-2"><UIcon class="shrink-0" name="i-lucide-circle-check" aria-hidden="true" /><span>已选择：{{ selectedCategoryPath }}</span></p>
         <TransactionCategoryPicker v-model="form.categoryId" :categories="categories" :purpose="form.type as 'income' | 'expense'" :disabled="busy" />
       </UFormField>
 

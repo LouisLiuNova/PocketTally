@@ -10,6 +10,13 @@ const path = ref<CategoryTreeNode[]>([])
 const panel = computed(() => path.value.at(-1) || null)
 const visible = computed(() => panel.value?.children || tree.value.roots)
 const picker = ref<HTMLElement | null>(null)
+const breadcrumbs = computed(() => [{ label: '全部分类', depth: 0 }, ...path.value.map((node, index) => ({ label: node.category.name, depth: index + 1 }))])
+
+function navigate(depth: number) {
+  if (props.disabled) return
+  path.value = path.value.slice(0, depth)
+  void nextTick(() => picker.value?.querySelector<HTMLElement>(panel.value ? '[data-category-back]' : '[data-category-tile]')?.focus())
+}
 
 watch(() => props.purpose, () => { path.value = [] })
 
@@ -50,9 +57,14 @@ function onEscape(event: KeyboardEvent) {
     <div v-if="panel" class="transaction-category-panel" role="group" :aria-label="`${panel.category.name}的子分类`">
       <div class="transaction-category-panel-heading">
         <UButton data-category-back type="button" color="neutral" variant="ghost" icon="i-lucide-arrow-left" label="返回上级" :disabled="disabled" @click="back" />
-        <span>{{ panel.path }}</span>
         <UButton type="button" color="neutral" variant="ghost" label="取消" :disabled="disabled" @click="cancelPanel" />
       </div>
+      <UBreadcrumb :items="breadcrumbs" aria-label="分类层级" :ui="{ list: 'flex-wrap gap-y-1' }">
+        <template #item="{ item }">
+          <UButton v-if="item.depth < path.length" type="button" color="neutral" variant="link" :label="item.label" :disabled="disabled" class="min-h-11 p-1" @click="navigate(item.depth)" />
+          <span v-else class="font-medium text-default" aria-current="page">{{ item.label }}</span>
+        </template>
+      </UBreadcrumb>
       <UButton type="button" class="w-full" color="primary" variant="soft" icon="i-lucide-check" :label="`选择当前分类：${panel.category.name}`" :disabled="disabled" @click="chooseCurrent" />
     </div>
     <div v-if="visible.length" class="transaction-category-grid" :aria-label="panel ? '子分类' : '分类'">
@@ -66,7 +78,7 @@ function onEscape(event: KeyboardEvent) {
         @click="open(node)"
       >
         <span class="transaction-category-icon" :style="{ color: node.category.iconColor, backgroundColor: `${node.category.iconColor}22` }"><UIcon :name="node.category.iconName || DEFAULT_CATEGORY_ICON" aria-hidden="true" /></span>
-        <span class="transaction-category-name">{{ node.category.name }}</span>
+        <span class="transaction-category-copy"><span class="transaction-category-name">{{ node.category.name }}</span><span v-if="node.children.length" class="transaction-category-count">{{ node.children.length }} 个子分类</span></span>
         <UIcon v-if="node.children.length" class="transaction-category-state" name="i-lucide-chevron-right" aria-hidden="true" />
         <UIcon v-else-if="modelValue === node.category.id" class="transaction-category-state" name="i-lucide-check" aria-hidden="true" />
       </UButton>
@@ -79,7 +91,7 @@ function onEscape(event: KeyboardEvent) {
 <style scoped>
 .transaction-category-picker { display: grid; gap: 10px; min-width: 0; }
 .transaction-category-panel { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--ui-border); border-radius: var(--ui-radius); background: var(--ui-bg-elevated); }
-.transaction-category-panel-heading { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.transaction-category-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
 .transaction-category-panel-heading span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .875rem; }
 .transaction-category-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .transaction-category-tile { position: relative; min-width: 0; min-height: 48px; display: flex; align-items: center; justify-content: flex-start; gap: 8px; padding: 8px 24px 8px 10px; white-space: normal; }
@@ -89,6 +101,8 @@ function onEscape(event: KeyboardEvent) {
 .transaction-category-icon { display: grid; place-items: center; flex-shrink: 0; width: 28px; height: 28px; border-radius: 6px; }
 .transaction-category-icon :deep(.iconify) { width: 18px; height: 18px; }
 .transaction-category-name { min-width: 0; text-align: left; overflow-wrap: anywhere; font-size: .875rem; line-height: 1.4; }
+.transaction-category-copy { display: grid; gap: 2px; min-width: 0; text-align: left; }
+.transaction-category-count { color: var(--ui-text-muted); font-size: .75rem; line-height: 1.3; }
 @media (max-width: 560px) {
   .transaction-category-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
