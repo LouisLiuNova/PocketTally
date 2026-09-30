@@ -70,9 +70,32 @@ const amountKeys = ['7', '8', '9', '⌫', '4', '5', '6', '+', '1', '2', '3', '-'
 watch(() => form.type, () => { form.categoryId = '' })
 
 function updateAmountInput(value: string) {
+  if (!validAmountCharacters(value)) return
   amountDraft.value = props.editing || props.refund ? updateAmount(amountDraft.value, value) : parseAmountInput(value)
   form.amount = amountDraft.value.value
   clearErrors()
+}
+
+function validAmountCharacters(value: string) {
+  return (props.editing || props.refund ? /^[0-9.]*$/ : /^[0-9. +\-]*$/).test(value)
+}
+
+function onAmountBeforeInput(event: InputEvent) {
+  if (event.data && !validAmountCharacters(event.data)) event.preventDefault()
+}
+
+function onAmountPaste(event: ClipboardEvent) {
+  if (!validAmountCharacters(event.clipboardData?.getData('text/plain') || '')) event.preventDefault()
+}
+
+function onAmountDrop(event: DragEvent) {
+  if (!validAmountCharacters(event.dataTransfer?.getData('text/plain') || '')) event.preventDefault()
+}
+
+function onAmountInput(event: Event) {
+  // 不可取消的输入法事件等路径仍可能修改 DOM，恢复上一次有效显示。
+  const input = event.target as HTMLInputElement
+  if (!validAmountCharacters(input.value)) input.value = amountDisplay.value
 }
 
 function pressAmount(key: string) {
@@ -89,7 +112,12 @@ function pressAmount(key: string) {
 }
 
 function onAmountKeydown(event: KeyboardEvent) {
-  if (props.editing || props.refund || event.ctrlKey || event.metaKey || event.altKey) return
+  if (event.ctrlKey || event.metaKey || event.altKey) return
+  if (event.key.length === 1 && !validAmountCharacters(event.key) && !(event.key === '=' && !props.editing && !props.refund)) {
+    event.preventDefault()
+    return
+  }
+  if (props.editing || props.refund) return
   if (['+', '-', '='].includes(event.key)) { event.preventDefault(); pressAmount(event.key); return }
   if (event.key === 'Backspace' && !form.amount && amountDraft.value.terms.length) {
     event.preventDefault()
@@ -220,6 +248,7 @@ async function save(keepOpen = false) {
           class="w-full" :class="{ 'transaction-amount-input': !refund, 'transaction-amount-input--expression': !!expression }"
           :ui="!refund ? { base: 'text-right ps-10 pe-4 rounded-[var(--ui-radius)]' } : undefined"
           @update:model-value="updateAmountInput" @keydown="onAmountKeydown"
+          @beforeinput="onAmountBeforeInput" @paste="onAmountPaste" @drop="onAmountDrop" @input="onAmountInput"
         >
           <template v-if="!refund" #leading><span class="transaction-amount-currency" aria-hidden="true">¥</span></template>
         </UInput>

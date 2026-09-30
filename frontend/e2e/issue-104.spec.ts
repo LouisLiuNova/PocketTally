@@ -129,6 +129,19 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 375, height: 667 
     await dialog.getByLabel('账户', { exact: true }).click()
     await page.getByRole('option', { name: `${accountName} · ¥1,000.00`, exact: true }).click()
     await input.fill('12.34')
+    await input.pressSequentially('abc*/中文!')
+    await expect(input).toHaveValue('12.34')
+    await input.evaluate(element => {
+      const clipboard = new DataTransfer()
+      clipboard.setData('text/plain', '225*330')
+      const event = new ClipboardEvent('paste', { clipboardData: clipboard, bubbles: true, cancelable: true })
+      element.dispatchEvent(event)
+      if (!event.defaultPrevented) throw new Error('非法粘贴未被拦截')
+      const input = element as HTMLInputElement
+      input.value = '12.34中文'
+      input.dispatchEvent(new InputEvent('input', { bubbles: true, data: '中文', inputType: 'insertCompositionText' }))
+    })
+    await expect(input).toHaveValue('12.34')
     await input.press('+')
     await input.pressSequentially('0.60')
     await input.press('-')
