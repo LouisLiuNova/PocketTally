@@ -81,10 +81,15 @@ function onEscape(event: KeyboardEvent) {
 .transaction-category-panel { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--ui-border); border-radius: var(--ui-radius); background: var(--ui-bg-elevated); }
 .transaction-category-panel-heading { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .transaction-category-panel-heading span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .875rem; }
-.transaction-category-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-.transaction-category-tile { position: relative; min-width: 0; min-height: 56px; display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 6px; white-space: normal; }
-.transaction-category-tile--selected { outline: 2px solid var(--ui-primary); outline-offset: -2px; }
-.transaction-category-state { position: absolute; top: 4px; right: 4px; width: 12px; height: 12px; }
-.transaction-category-icon { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; }
-.transaction-category-name { max-width: 100%; overflow-wrap: anywhere; font-size: .8rem; line-height: 1.2; }
+.transaction-category-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.transaction-category-tile { position: relative; min-width: 0; min-height: 48px; display: flex; align-items: center; justify-content: flex-start; gap: 8px; padding: 8px 24px 8px 10px; white-space: normal; }
+.transaction-category-tile--selected { outline: 2px solid var(--ui-primary); outline-offset: -2px; background: var(--pt-primary-container); }
+.transaction-category-state { position: absolute; top: 50%; right: 7px; transform: translateY(-50%); width: 14px; height: 14px; color: var(--ui-text-muted); }
+.transaction-category-tile--selected .transaction-category-state { color: var(--ui-primary); }
+.transaction-category-icon { display: grid; place-items: center; flex-shrink: 0; width: 28px; height: 28px; border-radius: 6px; }
+.transaction-category-icon :deep(.iconify) { width: 18px; height: 18px; }
+.transaction-category-name { min-width: 0; text-align: left; overflow-wrap: anywhere; font-size: .875rem; line-height: 1.4; }
+@media (max-width: 560px) {
+  .transaction-category-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 </style>

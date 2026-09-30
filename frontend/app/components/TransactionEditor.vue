@@ -191,7 +191,7 @@ async function save(keepOpen = false) {
           aria-label="交易类型"
           orientation="horizontal"
           variant="card"
-          :ui="{ item: 'min-w-0 min-h-11 flex-1 p-2', label: 'text-center' }"
+          :ui="{ item: 'min-w-0 min-h-11 flex-1 p-2 grid grid-cols-[1rem_1fr_1rem] items-center gap-2', container: 'm-0', wrapper: 'min-w-0', label: 'text-center leading-5' }"
         />
       </UFormField>
 
@@ -296,7 +296,7 @@ async function save(keepOpen = false) {
 .transaction-amount-expression span { flex-shrink: 0; }
 .transaction-amount-expression output { min-width: 0; overflow-x: auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .transaction-amount-keypad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
-.transaction-amount-key { min-width: 0; min-height: 44px; justify-content: center; font-size: 1.125rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.transaction-amount-key { min-width: 0; min-height: 44px; align-items: center; justify-content: center; font-size: 1.125rem; line-height: 1; font-weight: 500; font-variant-numeric: tabular-nums; }
 .transaction-amount-key--clear { font-size: .875rem; }
 .transaction-amount-key:not(:disabled):active { background: var(--ui-bg-accented); }
 .transaction-amount-key--operator:not(:disabled):active { background: var(--pt-primary-container); }
