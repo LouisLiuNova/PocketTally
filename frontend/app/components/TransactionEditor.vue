@@ -305,7 +305,7 @@ async function save(keepOpen = false) {
   background: var(--ui-bg-muted);
 }
 .transaction-amount-currency { color: var(--ui-text-muted); font-size: 1.25rem; }
-.transaction-amount-input--expression :deep(input) { font-size: clamp(1.25rem, 3vw, 2rem); letter-spacing: 0; }
+.transaction-amount-input--expression :deep(input) { min-height: 48px; padding-block: 8px; font-size: clamp(1.25rem, 3vw, 2rem); letter-spacing: 0; }
 .transaction-amount-expression { display: flex; gap: 8px; min-width: 0; margin: 0 0 6px; font-size: .8125rem; color: var(--ui-text-muted); }
 .transaction-amount-expression span { flex-shrink: 0; }
 .transaction-amount-expression output { min-width: 0; overflow-x: auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
