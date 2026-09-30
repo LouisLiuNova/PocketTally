@@ -2,7 +2,7 @@
 import { kindLabels, type Account, type Category, type Tag, type Transaction, type Kind, type RefundSummary } from '~/types/ledger'
 import { minor, money, localInput, shanghaiIso } from '~/utils/money'
 import { errorMessage } from '~/composables/useLedger'
-import { appendAmount, calculateAmount, deleteAmount, emptyAmountDraft, type AmountOperator } from '~/utils/amountKeypad'
+import { amountExpression, appendAmount, calculateAmount, deleteAmount, emptyAmountDraft, setAmountOperator, updateAmount } from '~/utils/amountKeypad'
 import { buildCategoryTree, type CategoryTreeNode } from '~/utils/categoryTree'
 
 const props = defineProps<{
@@ -50,17 +50,25 @@ const kindItems = [
 const accountItems = computed(() => props.accounts.map(account => ({ label: `${account.name} · ${money(minor(account.amount))}`, value: account.id })))
 const destinationItems = computed(() => props.accounts.map(account => ({ label: account.name, value: account.id })))
 const tagItems = computed(() => props.tags.map(tag => ({ label: tag.name, value: tag.id })))
+const selectedCategory = computed(() => props.categories.find(category => category.id === form.categoryId))
+const expression = computed(() => amountExpression(amountDraft.value))
+const amountKeys = ['7', '8', '9', '⌫', '4', '5', '6', '+', '1', '2', '3', '-', 'clear', '0', '.', '='] as const
 
 watch(() => form.type, () => { form.categoryId = '' })
-watch(() => form.amount, value => {
-  if (value !== amountDraft.value.value) amountDraft.value = { ...amountDraft.value, value, replaceNext: false }
-}, { flush: 'sync' })
+
+function updateAmountInput(value: string) {
+  amountDraft.value = updateAmount(amountDraft.value, value)
+  form.amount = value
+  clearErrors()
+}
 
 function pressAmount(key: string) {
   if (busy.value || locked.value) return
   try {
-    if (key === '⌫') amountDraft.value = deleteAmount(amountDraft.value)
-    else if (key === '+' || key === '-' || key === '=') amountDraft.value = calculateAmount(amountDraft.value, key === '=' ? null : key as AmountOperator)
+    if (key === 'clear') amountDraft.value = emptyAmountDraft()
+    else if (key === '⌫') amountDraft.value = deleteAmount(amountDraft.value)
+    else if (key === '+' || key === '-') amountDraft.value = setAmountOperator(amountDraft.value, key)
+    else if (key === '=') amountDraft.value = calculateAmount(amountDraft.value)
     else amountDraft.value = appendAmount(amountDraft.value, key)
     form.amount = amountDraft.value.value
     clearErrors()
@@ -68,8 +76,14 @@ function pressAmount(key: string) {
 }
 
 function onAmountKeydown(event: KeyboardEvent) {
+  if (props.editing || props.refund || event.ctrlKey || event.metaKey || event.altKey) return
   if (['+', '-', '='].includes(event.key)) { event.preventDefault(); pressAmount(event.key); return }
-  if (amountDraft.value.replaceNext && /^[\d.]$/.test(event.key)) {
+  if (event.key === 'Backspace' && !form.amount && amountDraft.value.terms.length) {
+    event.preventDefault()
+    pressAmount('⌫')
+    return
+  }
+  if (amountDraft.value.calculated && /^[\d.]$/.test(event.key)) {
     event.preventDefault()
     pressAmount(event.key)
   }
@@ -91,9 +105,9 @@ async function save(keepOpen = false) {
   clearErrors()
   let amount: number
   try {
-    if (amountDraft.value.operator) amountDraft.value = calculateAmount(amountDraft.value, null)
-    form.amount = amountDraft.value.value
-    amount = minor(form.amount)
+    // 保存可以结算完整算式，但失败时保留用户看到的操作数与算式。
+    const submittedAmount = amountDraft.value.terms.length ? calculateAmount(amountDraft.value).value : form.amount
+    amount = minor(submittedAmount)
   } catch (cause) {
     fail((cause as Error).message, 'amount')
     return
@@ -153,7 +167,7 @@ async function save(keepOpen = false) {
 </script>
 
 <template>
-  <UForm :state="form" class="modal-editor-form" :disabled="busy" :aria-busy="busy" @submit="save(false)">
+  <UForm :state="form" class="modal-editor-form" :class="{ 'transaction-editor-form--compact': !refund }" :disabled="busy" :aria-busy="busy" @submit="save(false)">
     <header class="modal-editor-header">
       <div>
         <p class="eyebrow">交易信息</p>
@@ -177,17 +191,41 @@ async function save(keepOpen = false) {
           aria-label="交易类型"
           orientation="horizontal"
           variant="card"
-          :ui="{ item: 'min-w-0 flex-1 p-3', label: 'text-center' }"
+          :ui="{ item: 'min-w-0 min-h-11 flex-1 p-2', label: 'text-center' }"
         />
       </UFormField>
 
-      <UFormField name="amount" label="金额（元）" :error="fieldErrors.amount" required>
-        <UInput v-model="form.amount" inputmode="decimal" placeholder="0.00" :disabled="locked" class="w-full" @keydown="onAmountKeydown" />
+      <UFormField v-if="!refund && !locked && ['income', 'expense'].includes(form.type)" name="categoryId" label="分类" :error="fieldErrors.categoryId" :ui="{ hint: 'min-w-0 max-w-[70%]' }" required>
+        <template #hint><span v-if="selectedCategory" class="transaction-category-selection" :title="selectedCategory.name"><UIcon class="shrink-0" name="i-lucide-circle-check" aria-hidden="true" /><span class="truncate">已选择：{{ selectedCategory.name }}</span></span></template>
+        <TransactionCategoryPicker v-model="form.categoryId" :categories="categories" :purpose="form.type as 'income' | 'expense'" :disabled="busy" />
+      </UFormField>
+
+      <UFormField name="amount" label="金额（元）" :error="fieldErrors.amount" :class="{ 'transaction-amount-field': !refund }" required>
+        <p v-if="expression" class="transaction-amount-expression"><span>待计算</span><output aria-label="待计算算式">{{ expression }}</output></p>
+        <UInput
+          :model-value="form.amount" inputmode="decimal" placeholder="0.00" :disabled="locked"
+          class="w-full" :class="{ 'transaction-amount-input': !refund }"
+          :ui="!refund ? { base: 'text-right ps-10 pe-4 rounded-[var(--ui-radius)]' } : undefined"
+          @update:model-value="updateAmountInput" @keydown="onAmountKeydown"
+        >
+          <template v-if="!refund" #leading><span class="transaction-amount-currency" aria-hidden="true">¥</span></template>
+        </UInput>
         <div v-if="!editing && !refund" class="transaction-amount-keypad" role="group" aria-label="金额键盘">
-          <UButton v-for="key in ['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', '⌫', '+', '-', '=']" :key="key" type="button" color="neutral" variant="soft" :label="key" :aria-label="key === '⌫' ? '删除一位' : key === '=' ? '计算结果' : key" :disabled="busy" @click="pressAmount(key)" />
+          <UButton
+            v-for="key in amountKeys" :key="key" type="button" class="transaction-amount-key"
+            :ui="{ base: 'rounded-[var(--ui-radius)]' }"
+            :class="{ 'transaction-amount-key--operator': key === '+' || key === '-', 'transaction-amount-key--equal': key === '=', 'transaction-amount-key--clear': key === 'clear' }"
+            :color="['+', '-', '='].includes(key) ? 'primary' : 'neutral'"
+            :variant="key === '=' ? 'solid' : ['+', '-'].includes(key) ? 'soft' : 'outline'"
+            :icon="key === '⌫' ? 'i-lucide-delete' : undefined"
+            :label="key === '⌫' ? undefined : key === 'clear' ? '清空' : key"
+            :aria-label="key === '⌫' ? '删除一位' : key === '=' ? '计算结果' : key === 'clear' ? '清空金额' : key"
+            :disabled="busy" @click="pressAmount(key)"
+          />
         </div>
       </UFormField>
 
+      <div class="transaction-editor-details" :class="{ 'transaction-editor-details--refund': refund }">
       <template v-if="!refund && !locked">
         <UFormField v-if="form.type !== 'income'" name="sourceAccountId" :label="form.type === 'transfer' ? '转出账户' : '账户'" required>
           <USelect v-model="form.sourceAccountId" :items="accountItems" placeholder="请选择账户" class="w-full" />
@@ -198,20 +236,18 @@ async function save(keepOpen = false) {
         <UFormField v-if="form.type === 'balance_adjustment'" name="balanceAdjustmentDirection" label="调整方向" required>
           <USelect v-model="form.balanceAdjustmentDirection" :items="[{ label: '增加余额', value: 'increase' }, { label: '减少余额', value: 'decrease' }]" class="w-full" />
         </UFormField>
-        <UFormField v-if="['income', 'expense'].includes(form.type)" name="categoryId" label="分类" :error="fieldErrors.categoryId" required>
-          <TransactionCategoryPicker v-model="form.categoryId" :categories="categories" :purpose="form.type as 'income' | 'expense'" :disabled="busy" />
-        </UFormField>
       </template>
 
       <UFormField name="occurredAt" label="发生时间" :error="fieldErrors.occurredAt" required>
         <UInput v-model="form.occurredAt" type="datetime-local" class="w-full" />
       </UFormField>
-      <UFormField name="description" label="说明">
+      <UFormField name="description" label="说明" class="transaction-editor-detail-wide">
         <UInput v-model="form.description" placeholder="记下这笔交易的用途" class="w-full" />
       </UFormField>
-      <UFormField v-if="!refund && tags.length" name="tagIds" label="标签">
+      <UFormField v-if="!refund && tags.length" name="tagIds" label="标签" class="transaction-editor-detail-wide">
         <UCheckboxGroup v-model="form.tagIds" :items="tagItems" orientation="horizontal" class="transaction-tag-group" />
       </UFormField>
+      </div>
       </div>
 
       <UAlert v-if="error" color="error" variant="soft" icon="i-lucide-circle-alert" title="保存失败" :description="error" role="alert" aria-live="polite" />
@@ -242,8 +278,36 @@ async function save(keepOpen = false) {
   overflow-wrap: anywhere;
 }
 
-.transaction-amount-keypad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
-.transaction-amount-keypad :deep(button) { min-height: 40px; }
+.transaction-editor-form--compact .modal-editor-body { padding-block: 14px; }
+.transaction-editor-form--compact .transaction-editor-fields { gap: 12px; }
+.transaction-category-selection { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; color: var(--ui-primary); font-size: .8125rem; }
+.transaction-amount-input :deep(input) {
+  min-height: 64px;
+  font-family: var(--font-sans);
+  font-size: clamp(2rem, 4vw, 2.5rem);
+  font-weight: 600;
+  font-variant-numeric: lining-nums tabular-nums;
+  line-height: 1.2;
+  letter-spacing: -.025em;
+  background: var(--ui-bg-muted);
+}
+.transaction-amount-currency { color: var(--ui-text-muted); font-size: 1.25rem; }
+.transaction-amount-expression { display: flex; gap: 8px; min-width: 0; margin: 0 0 6px; font-size: .8125rem; color: var(--ui-text-muted); }
+.transaction-amount-expression span { flex-shrink: 0; }
+.transaction-amount-expression output { min-width: 0; overflow-x: auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.transaction-amount-keypad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+.transaction-amount-key { min-width: 0; min-height: 44px; justify-content: center; font-size: 1.125rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.transaction-amount-key--clear { font-size: .875rem; }
+.transaction-amount-key:not(:disabled):active { background: var(--ui-bg-accented); }
+.transaction-amount-key--operator:not(:disabled):active { background: var(--pt-primary-container); }
+.transaction-amount-key--equal:not(:disabled):active { background: color-mix(in srgb, var(--ui-primary) 80%, var(--ui-bg-inverted)); }
+.transaction-editor-details { display: grid; min-width: 0; gap: 12px; }
+.transaction-editor-details--refund { gap: 14px; }
+
+@media (min-width: 640px) {
+  .transaction-editor-details:not(.transaction-editor-details--refund) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .transaction-editor-detail-wide { grid-column: 1 / -1; }
+}
 
 @media (max-width: 560px) {
   .transaction-type-radio-group :deep([data-slot="fieldset"]) {

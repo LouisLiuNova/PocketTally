@@ -9,7 +9,6 @@ const tree = computed(() => buildCategoryTree(props.categories, props.purpose))
 const path = ref<CategoryTreeNode[]>([])
 const panel = computed(() => path.value.at(-1) || null)
 const visible = computed(() => panel.value?.children || tree.value.roots)
-const selected = computed(() => props.categories.find(category => category.id === props.modelValue))
 const picker = ref<HTMLElement | null>(null)
 
 watch(() => props.purpose, () => { path.value = [] })
@@ -48,7 +47,6 @@ function onEscape(event: KeyboardEvent) {
 
 <template>
   <div ref="picker" class="transaction-category-picker" @keydown.esc="onEscape">
-    <p v-if="selected" class="transaction-category-selection"><UIcon name="i-lucide-circle-check" aria-hidden="true" />已选择：{{ selected.name }}</p>
     <div v-if="panel" class="transaction-category-panel" role="group" :aria-label="`${panel.category.name}的子分类`">
       <div class="transaction-category-panel-heading">
         <UButton data-category-back type="button" color="neutral" variant="ghost" icon="i-lucide-arrow-left" label="返回上级" :disabled="disabled" @click="back" />
@@ -61,6 +59,7 @@ function onEscape(event: KeyboardEvent) {
       <UButton
         v-for="node in visible" :key="node.category.id" data-category-tile
         type="button" color="neutral" variant="outline" class="transaction-category-tile"
+        :ui="{ base: 'rounded-[var(--ui-radius)]' }"
         :class="{ 'transaction-category-tile--selected': modelValue === node.category.id }"
         :aria-label="`${node.category.name}${node.children.length ? '，查看子分类' : '，选择分类'}`"
         :aria-pressed="modelValue === node.category.id" :disabled="disabled"
@@ -68,8 +67,8 @@ function onEscape(event: KeyboardEvent) {
       >
         <span class="transaction-category-icon" :style="{ color: node.category.iconColor, backgroundColor: `${node.category.iconColor}22` }"><UIcon :name="node.category.iconName || DEFAULT_CATEGORY_ICON" aria-hidden="true" /></span>
         <span class="transaction-category-name">{{ node.category.name }}</span>
-        <UIcon v-if="node.children.length" name="i-lucide-chevron-right" aria-hidden="true" />
-        <UIcon v-else-if="modelValue === node.category.id" name="i-lucide-check" aria-hidden="true" />
+        <UIcon v-if="node.children.length" class="transaction-category-state" name="i-lucide-chevron-right" aria-hidden="true" />
+        <UIcon v-else-if="modelValue === node.category.id" class="transaction-category-state" name="i-lucide-check" aria-hidden="true" />
       </UButton>
     </div>
     <p v-else class="hint">{{ panel ? '当前分类没有子分类，可选择当前分类。' : '没有可选分类，请先在「分类与标签」中创建分类。' }}</p>
@@ -79,13 +78,13 @@ function onEscape(event: KeyboardEvent) {
 
 <style scoped>
 .transaction-category-picker { display: grid; gap: 10px; min-width: 0; }
-.transaction-category-selection { display: flex; align-items: center; gap: 6px; color: var(--ui-primary); font-size: .875rem; }
 .transaction-category-panel { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--ui-border); border-radius: var(--ui-radius); background: var(--ui-bg-elevated); }
 .transaction-category-panel-heading { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .transaction-category-panel-heading span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .875rem; }
-.transaction-category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; }
-.transaction-category-tile { min-width: 0; min-height: 74px; display: flex; flex-direction: column; gap: 3px; padding: 8px; white-space: normal; }
+.transaction-category-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.transaction-category-tile { position: relative; min-width: 0; min-height: 56px; display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 6px; white-space: normal; }
 .transaction-category-tile--selected { outline: 2px solid var(--ui-primary); outline-offset: -2px; }
-.transaction-category-icon { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; }
+.transaction-category-state { position: absolute; top: 4px; right: 4px; width: 12px; height: 12px; }
+.transaction-category-icon { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; }
 .transaction-category-name { max-width: 100%; overflow-wrap: anywhere; font-size: .8rem; line-height: 1.2; }
 </style>
