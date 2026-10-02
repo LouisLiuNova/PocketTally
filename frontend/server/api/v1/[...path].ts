@@ -1,3 +1,4 @@
+import nodeFetch from 'node-fetch-native/node'
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig(event)
   const path = getRouterParam(event, 'path') || ''
@@ -5,9 +6,7 @@ export default defineEventHandler(async (event) => {
   const target = new URL(`/api/v1/${path}`, config.apiBase)
   target.search = getRequestURL(event).search
   const headers = getProxyRequestHeaders(event)
-  // Keep the browser-facing host for local same-origin validation. The target
-  // URL points at the backend, so proxyRequest otherwise replaces Host with
-  // 127.0.0.1:8000 and the backend rejects Origin http://127.0.0.1:3000.
+  // 保留浏览器访问的 Host，供后端执行同源校验。
   const requestHost = getRequestHeader(event, 'host')
   if (requestHost) headers.host = requestHost
   for (const name of ['forwarded', 'x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-real-ip', 'x-pockettally-client-ip']) {
@@ -16,5 +15,6 @@ export default defineEventHandler(async (event) => {
   // Caddy is the only public entrypoint and Nuxt listens on loopback. Caddy
   // replaces incoming X-Forwarded-For, so this is the real client address.
   headers['x-pockettally-client-ip'] = getRequestIP(event, { xForwardedFor: true }) || 'unknown'
-  return proxyRequest(event, target.toString(), { headers })
+  // Node 原生 fetch 会覆盖 Host；使用现有 UnJS HTTP 实现保证转发值不变。
+  return proxyRequest(event, target.toString(), { headers, fetch: nodeFetch })
 })

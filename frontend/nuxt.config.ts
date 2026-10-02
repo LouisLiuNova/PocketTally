@@ -1,10 +1,15 @@
+import { fileURLToPath } from 'node:url'
 import { appearanceBootScript, COLOR_MODE_STORAGE_KEY } from './app/constants/appearance'
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-09-07',
   devtools: { enabled: true },
   runtimeConfig: { apiBase: 'http://127.0.0.1:8000' },
-  nitro: { preset: 'bun' },
+  nitro: {
+    preset: 'bun',
+    // Nitro 的原生 fetch 别名同时匹配子路径，需要显式保留 HTTP 实现。
+    alias: { 'node-fetch-native/node': fileURLToPath(import.meta.resolve('node-fetch-native/node')) },
+  },
   modules: ['@nuxt/ui'],
   css: ['~/assets/css/main.css', '~/assets/css/mvp.css', '~/assets/css/theme.css', '~/assets/css/layout.css', '~/assets/css/resource-editor.css'],
   colorMode: {
