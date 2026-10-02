@@ -13,7 +13,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 375, height: 812 
     const child = await create('categories', { name: `午餐示例-${suffix}`, purpose: 'expense', parentCategoryId: root.id, iconName: 'i-lucide-utensils', iconColor: '#C73E3A' })
     const leaf = await create('categories', { name: `工作餐-${suffix}`, purpose: 'expense', parentCategoryId: child.id, iconName: 'i-lucide-coffee', iconColor: '#005CAF' })
     const sibling = await create('categories', { name: `晚餐-${suffix}`, purpose: 'expense', parentCategoryId: root.id, iconName: 'i-lucide-utensils', iconColor: '#C73E3A' })
-    for (let index = 0; index < 12; index++) await create('categories', { name: `长名称示例-${suffix}-${index}-${'分类名称'.repeat(3)}`, purpose: 'expense', parentCategoryId: root.id, iconName: 'i-lucide-utensils', iconColor: '#C73E3A' })
+    for (let index = 0; index < 24; index++) await create('categories', { name: `长名称示例-${suffix}-${index}-${'分类名称'.repeat(3)}`, purpose: 'expense', parentCategoryId: root.id, iconName: 'i-lucide-utensils', iconColor: '#C73E3A' })
     await page.goto('/transactions')
     await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as HTMLElement & { __vue_app__?: unknown } | null)?.__vue_app__))
     await page.getByRole('button', { name: '记一笔', exact: true }).first().click()

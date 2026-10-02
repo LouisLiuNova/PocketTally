@@ -65,7 +65,7 @@ const selectedCategoryPath = computed(() => {
 })
 const expression = computed(() => amountExpression(amountDraft.value))
 const amountDisplay = computed(() => expression.value || form.amount)
-const amountKeys = ['7', '8', '9', '⌫', '4', '5', '6', '+', '1', '2', '3', '-', 'clear', '0', '.', '='] as const
+const amountKeys = ['1', '2', '3', '⌫', '4', '5', '6', '+', '7', '8', '9', '-', 'clear', '0', '.', '='] as const
 
 watch(() => form.type, () => { form.categoryId = '' })
 
@@ -211,7 +211,7 @@ async function save(keepOpen = false) {
   <UForm :state="form" class="modal-editor-form" :class="{ 'transaction-editor-form--compact': !refund }" :disabled="busy" :aria-busy="busy" @submit="save(false)">
     <header class="modal-editor-header">
       <div>
-        <p class="eyebrow">交易信息</p>
+        <p v-if="refund" class="eyebrow">交易信息</p>
         <h2>{{ refund ? '支出退款' : editing ? '编辑交易' : '记一笔' }}</h2>
       </div>
       <UButton color="neutral" variant="ghost" icon="i-lucide-x" aria-label="关闭" :disabled="busy" @click="emit('close')" />
@@ -222,7 +222,7 @@ async function save(keepOpen = false) {
       <UAlert v-if="locked" color="warning" variant="soft" icon="i-lucide-lock-keyhole" title="部分字段已锁定" description="此交易仅可修改说明、发生时间和标签。" />
 
       <div class="transaction-editor-fields">
-      <UFormField v-if="!refund" name="type" label="交易类型" required>
+      <UFormField v-if="!refund" name="type" label="交易类型" :ui="{ label: 'sr-only' }" required>
         <URadioGroup
           v-model="form.type"
           class="transaction-type-radio-group"
@@ -232,21 +232,22 @@ async function save(keepOpen = false) {
           aria-label="交易类型"
           orientation="horizontal"
           variant="card"
-          :ui="{ item: 'min-w-0 min-h-11 flex-1 p-2 grid grid-cols-[1rem_1fr_1rem] items-center gap-2', container: 'm-0', wrapper: 'min-w-0', label: 'text-center leading-5' }"
+          indicator="hidden"
+          :ui="{ item: 'relative min-w-0 min-h-11 flex-1 p-2 justify-center items-center', base: 'not-sr-only absolute inset-0 size-full opacity-0 z-10 cursor-pointer', wrapper: 'min-w-0 justify-center', label: 'text-center leading-5', icon: 'hidden' }"
         />
       </UFormField>
 
-      <UFormField v-if="!refund && !locked && ['income', 'expense'].includes(form.type)" name="categoryId" label="分类" :error="fieldErrors.categoryId" :ui="{ hint: 'min-w-0 max-w-[70%]' }" required>
+      <UFormField v-if="!refund && !locked && ['income', 'expense'].includes(form.type)" name="categoryId" label="分类" :error="fieldErrors.categoryId" :ui="{ label: 'sr-only', hint: 'min-w-0 max-w-[70%]' }" required>
         <p v-if="selectedCategory" class="transaction-category-selection mb-2"><UIcon class="shrink-0" name="i-lucide-circle-check" aria-hidden="true" /><span>已选择：{{ selectedCategoryPath }}</span></p>
         <TransactionCategoryPicker v-model="form.categoryId" :categories="categories" :purpose="form.type as 'income' | 'expense'" :disabled="busy" />
       </UFormField>
 
-      <UFormField name="amount" label="金额（元）" :error="fieldErrors.amount" :class="{ 'transaction-amount-field': !refund }" required>
+      <UFormField name="amount" label="金额（元）" :error="fieldErrors.amount" :class="{ 'transaction-amount-field': !refund }" :ui="{ label: refund ? undefined : 'sr-only' }" required>
         <p v-if="expression" class="transaction-amount-expression">按 = 查看结果，也可直接保存结算</p>
         <UInput
           :model-value="amountDisplay" inputmode="decimal" placeholder="0.00" :disabled="locked"
           class="w-full" :class="{ 'transaction-amount-input': !refund, 'transaction-amount-input--expression': !!expression }"
-          :ui="!refund ? { base: 'text-right ps-10 pe-4 rounded-[var(--ui-radius)]' } : undefined"
+          :ui="!refund ? { base: 'text-left ps-10 pe-4 rounded-[var(--ui-radius)] ring-0 focus-visible:ring-2 focus-visible:ring-primary' } : undefined"
           @update:model-value="updateAmountInput" @keydown="onAmountKeydown"
           @beforeinput="onAmountBeforeInput" @paste="onAmountPaste" @drop="onAmountDrop" @input="onAmountInput"
         >
@@ -258,7 +259,7 @@ async function save(keepOpen = false) {
             :ui="{ base: 'rounded-[var(--ui-radius)]' }"
             :class="{ 'transaction-amount-key--operator': key === '+' || key === '-', 'transaction-amount-key--equal': key === '=', 'transaction-amount-key--clear': key === 'clear' }"
             :color="['+', '-', '='].includes(key) ? 'primary' : 'neutral'"
-            :variant="key === '=' ? 'solid' : ['+', '-'].includes(key) ? 'soft' : 'outline'"
+            :variant="key === '=' ? 'solid' : 'soft'"
             :icon="key === '⌫' ? 'i-lucide-delete' : undefined"
             :label="key === '⌫' ? undefined : key === 'clear' ? '清空' : key"
             :aria-label="key === '⌫' ? '删除一位' : key === '=' ? '计算结果' : key === 'clear' ? '清空金额' : key"
@@ -295,67 +296,44 @@ async function save(keepOpen = false) {
       <UAlert v-if="error" color="error" variant="soft" icon="i-lucide-circle-alert" title="保存失败" :description="error" role="alert" aria-live="polite" />
     </div>
     <div class="modal-editor-actions transaction-editor-actions">
-      <UButton type="submit" :label="editing || refund ? '保存交易' : '完成'" :loading="busy" :aria-busy="busy" :disabled="busy" />
-      <UButton v-if="!editing && !refund" type="button" label="保存再记" color="neutral" variant="outline" :disabled="busy" @click="save(true)" />
+      <UButton v-if="!editing && !refund" type="button" label="保存再记" color="neutral" variant="soft" size="lg" :disabled="busy" @click="save(true)" />
+      <UButton type="submit" :label="editing || refund ? '保存交易' : '完成'" size="lg" :loading="busy" :aria-busy="busy" :disabled="busy" />
     </div>
   </UForm>
 </template>
 
 <style scoped>
-.transaction-type-radio-group :deep([data-slot="fieldset"]) {
-  gap: 8px;
-}
-
-.transaction-type-radio-group :deep([data-slot="item"]) {
-  min-width: 0;
-}
-
-.transaction-type-radio-group :deep([data-slot="item"]:has([data-state="checked"])) {
-  border-color: var(--pt-focus-ring);
-  background: var(--pt-primary-container);
-  box-shadow: inset 0 0 0 1px var(--pt-focus-ring);
-}
-
-.transaction-type-radio-group :deep([data-slot="label"]) {
-  overflow-wrap: anywhere;
-}
-
-.transaction-editor-form--compact .modal-editor-body { padding-block: 14px; }
+.transaction-type-radio-group :deep([data-slot="fieldset"]) { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: var(--ui-radius); background: var(--ui-bg-muted); }
+.transaction-type-radio-group :deep([data-slot="item"]) { min-width: 0; border: 0; border-radius: calc(var(--ui-radius) - 4px); background: transparent; }
+.transaction-type-radio-group :deep([data-slot="item"]:has([data-state="checked"])) { background: var(--ui-bg); box-shadow: 0 1px 4px color-mix(in srgb, var(--ui-text) 12%, transparent); }
+.transaction-type-radio-group :deep([data-slot="item"]:has(:focus-visible)) { outline: 2px solid var(--ui-primary); outline-offset: 1px; }
+.transaction-type-radio-group :deep([data-slot="label"]) { overflow-wrap: anywhere; }
+.transaction-editor-form--compact .modal-editor-header { align-items: center; padding-top: 12px; }
+.transaction-editor-form--compact .modal-editor-header h2 { font-size: 1.125rem; }
+.transaction-editor-form--compact .modal-editor-body { padding-block: 12px; }
 .transaction-editor-form--compact .transaction-editor-fields { gap: 12px; }
 .transaction-category-selection { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; color: var(--ui-primary); font-size: .8125rem; }
-.transaction-amount-input :deep(input) {
-  min-height: 64px;
-  font-family: var(--font-sans);
-  font-size: clamp(2rem, 4vw, 2.5rem);
-  font-weight: 600;
-  font-variant-numeric: lining-nums tabular-nums;
-  line-height: 1.2;
-  letter-spacing: -.025em;
-  background: var(--ui-bg-muted);
-}
-.transaction-amount-currency { color: var(--ui-text-muted); font-size: 1.25rem; }
+.transaction-amount-input :deep(input) { min-height: 72px; font-family: var(--font-sans); font-size: clamp(2rem, 4vw, 2.75rem); font-weight: 600; font-variant-numeric: lining-nums tabular-nums; line-height: 1.2; letter-spacing: -.025em; background: var(--ui-bg-muted); color: var(--ui-primary); }
+.transaction-amount-currency { color: var(--ui-primary); font-size: 1.5rem; }
 .transaction-amount-input--expression :deep(input) { min-height: 48px; padding-block: 8px; font-size: clamp(1.25rem, 3vw, 2rem); letter-spacing: 0; }
 .transaction-amount-expression { display: flex; gap: 8px; min-width: 0; margin: 0 0 6px; font-size: .8125rem; color: var(--ui-text-muted); }
-.transaction-amount-expression span { flex-shrink: 0; }
-.transaction-amount-expression output { min-width: 0; overflow-x: auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .transaction-amount-keypad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
-.transaction-amount-key { min-width: 0; min-height: 44px; align-items: center; justify-content: center; font-size: 1.125rem; line-height: 1; font-weight: 500; font-variant-numeric: tabular-nums; }
+.transaction-amount-key { min-width: 0; min-height: 48px; align-items: center; justify-content: center; font-size: 1.375rem; line-height: 1; font-weight: 500; font-variant-numeric: tabular-nums; }
+.transaction-amount-key:not(.transaction-amount-key--operator):not(.transaction-amount-key--equal) { background: var(--ui-bg-muted); }
 .transaction-amount-key--clear { font-size: .875rem; }
 .transaction-amount-key:not(:disabled):active { background: var(--ui-bg-accented); }
 .transaction-amount-key--operator:not(:disabled):active { background: var(--pt-primary-container); }
 .transaction-amount-key--equal:not(:disabled):active { background: color-mix(in srgb, var(--ui-primary) 80%, var(--ui-bg-inverted)); }
 .transaction-editor-details { display: grid; min-width: 0; gap: 12px; }
 .transaction-editor-details--refund { gap: 14px; }
-
+.transaction-editor-actions { justify-content: flex-end; }
+.transaction-editor-actions :deep(button) { min-width: 104px; justify-content: center; }
 @media (min-width: 640px) {
   .transaction-editor-details:not(.transaction-editor-details--refund) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .transaction-editor-detail-wide { grid-column: 1 / -1; }
 }
-
 @media (max-width: 560px) {
-  .transaction-type-radio-group :deep([data-slot="fieldset"]) {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  .transaction-editor-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .transaction-editor-actions :deep(button:only-child) { grid-column: 1 / -1; }
 }
 </style>
