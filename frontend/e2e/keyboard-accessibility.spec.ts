@@ -20,6 +20,10 @@ async function saveDialog(page: Page, label: string) {
 }
 
 async function selectNuxtUiOption(page: Page, label: string, option: string) {
+  if (label === '分类') {
+    await activate(page.getByRole('dialog').last().getByRole('button', { name: `${option}，选择分类` }))
+    return
+  }
   await page.getByRole('dialog').last().getByLabel(label, { exact: true }).click()
   await page.getByRole('option', { name: option, exact: true }).click()
 }
@@ -39,6 +43,7 @@ test('纯键盘完成核心记账、退款作废、筛选和统计下钻', async
   const refund = '键盘退款' + suffix
 
   await page.goto('/')
+  await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as HTMLElement & { __vue_app__?: unknown } | null)?.__vue_app__))
   await expect(page.getByRole('button', { name: '记一笔', exact: true })).toBeEnabled()
 
   await activate(page.getByRole('link', { name: '账户', exact: true }))
@@ -60,8 +65,8 @@ test('纯键盘完成核心记账、退款作废、筛选和统计下钻', async
   await selectNuxtUiOption(page, '账户', wallet + ' · ¥0.00')
   await typeText(page.getByLabel('金额（元）', { exact: true }), '1000')
   await typeText(page.getByLabel('说明', { exact: true }), adjustment)
-  await saveDialog(page, '保存交易')
-  await expect(page.getByRole('button', { name: '保存交易', exact: true })).toBeHidden()
+  await saveDialog(page, '完成')
+  await expect(page.getByRole('button', { name: '完成', exact: true })).toBeHidden()
   await expect(page.getByRole('button', { name: '记一笔', exact: true })).toBeEnabled()
 
   await activate(page.getByRole('button', { name: '记一笔', exact: true }))
@@ -69,8 +74,8 @@ test('纯键盘完成核心记账、退款作废、筛选和统计下钻', async
   await selectNuxtUiOption(page, '账户', wallet + ' · ¥1,000.00')
   await selectNuxtUiOption(page, '分类', category)
   await typeText(page.getByLabel('说明', { exact: true }), expense)
-  await saveDialog(page, '保存交易')
-  await expect(page.getByRole('button', { name: '保存交易', exact: true })).toBeHidden()
+  await saveDialog(page, '完成')
+  await expect(page.getByRole('button', { name: '完成', exact: true })).toBeHidden()
 
   await activate(page.getByRole('link', { name: '交易', exact: true }))
   await typeText(page.getByLabel('搜索交易'), expense)
@@ -115,6 +120,7 @@ test('弹窗焦点约束与恢复、方向键 Tab 和失败重复提交反馈', 
   const accountName = '焦点账户' + suffix
 
   await page.goto('/')
+  await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as HTMLElement & { __vue_app__?: unknown } | null)?.__vue_app__))
   await expect(page.getByRole('button', { name: '记一笔', exact: true })).toBeEnabled()
   await activate(page.getByRole('link', { name: '账户', exact: true }))
 
@@ -182,9 +188,10 @@ test('弹窗焦点约束与恢复、方向键 Tab 和失败重复提交反馈', 
 
 test('关键页面和弹窗没有严重或高优先级自动化无障碍问题', async ({ page }) => {
   await page.goto('/')
+  await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as HTMLElement & { __vue_app__?: unknown } | null)?.__vue_app__))
   await expect(page.getByRole('button', { name: '记一笔', exact: true })).toBeEnabled()
 
-  const pageScan = await new AxeBuilder({ page }).analyze()
+  const pageScan = await new AxeBuilder({ page }).exclude('nuxt-devtools-frame').analyze()
   expect(pageScan.violations.filter(item => item.impact === 'critical' || item.impact === 'serious')).toEqual([])
 
   await activate(page.getByRole('button', { name: '记一笔', exact: true }))

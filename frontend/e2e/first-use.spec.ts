@@ -3,6 +3,10 @@ import { seedDesktopLedger } from './helpers/ledger-fixtures'
 import { localInput } from '../app/utils/money'
 
 async function selectOption(page: Page, label: string, option: string) {
+  if (label === '分类') {
+    await page.getByRole('dialog').last().getByRole('button', { name: `${option}，选择分类` }).click()
+    return
+  }
   await page.getByRole('dialog').last().getByLabel(label, { exact: true }).click()
   await page.getByRole('option', { name: option, exact: true }).click()
 }
@@ -16,11 +20,13 @@ test('共享流水超过 20 笔且同一分钟时首次记账仍可查询', asyn
   const occurredAt = localInput(fixture.occurredAt)
 
   await page.goto('/categories')
+  await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as HTMLElement & { __vue_app__?: unknown } | null)?.__vue_app__))
   await expect(page.getByText('餐饮', { exact: true })).toBeVisible()
   await page.getByRole('tab', { name: /收入分类/ }).click()
   await expect(page.getByText('工资', { exact: true })).toBeVisible()
 
   await page.goto('/accounts')
+  await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as HTMLElement & { __vue_app__?: unknown } | null)?.__vue_app__))
   await page.getByRole('button', { name: '新建账户', exact: true }).click()
   await page.getByLabel('名称', { exact: true }).fill(account)
   await page.getByRole('button', { name: '保存', exact: true }).click()
@@ -33,8 +39,8 @@ test('共享流水超过 20 笔且同一分钟时首次记账仍可查询', asyn
   await page.getByLabel('发生时间', { exact: true }).fill(occurredAt)
   await selectOption(page, '收款账户', account)
   await selectOption(page, '分类', '工资')
-  await page.getByRole('button', { name: '保存交易', exact: true }).click()
-  await expect(page.getByRole('button', { name: '保存交易', exact: true })).toBeHidden()
+  await page.getByRole('button', { name: '完成', exact: true }).click()
+  await expect(page.getByRole('button', { name: '完成', exact: true })).toBeHidden()
 
   await page.getByRole('button', { name: '记一笔', exact: true }).click()
   await page.getByLabel('金额（元）', { exact: true }).fill('20')
@@ -47,10 +53,11 @@ test('共享流水超过 20 笔且同一分钟时首次记账仍可查询', asyn
     exact: true,
   }).click()
   await selectOption(page, '分类', '餐饮')
-  await page.getByRole('button', { name: '保存交易', exact: true }).click()
-  await expect(page.getByRole('button', { name: '保存交易', exact: true })).toBeHidden()
+  await page.getByRole('button', { name: '完成', exact: true }).click()
+  await expect(page.getByRole('button', { name: '完成', exact: true })).toBeHidden()
 
   await page.goto('/transactions')
+  await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as HTMLElement & { __vue_app__?: unknown } | null)?.__vue_app__))
   const search = page.getByLabel('搜索交易', { exact: true })
   await search.fill(incomeDescription)
   await expect(page.getByText(incomeDescription, { exact: true })).toBeVisible()

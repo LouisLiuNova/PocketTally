@@ -2,6 +2,8 @@
 import { kindLabels, type Account, type Category, type Tag, type Transaction, type Kind, type RefundSummary } from '~/types/ledger'
 import { minor, money, localInput, shanghaiIso } from '~/utils/money'
 import { errorMessage } from '~/composables/useLedger'
+import { amountExpression, appendAmount, calculateAmount, deleteAmount, emptyAmountDraft, parseAmountInput, setAmountOperator, updateAmount } from '~/utils/amountKeypad'
+import { buildCategoryTree, type CategoryTreeNode } from '~/utils/categoryTree'
 
 const props = defineProps<{
   accounts: Account[]
@@ -12,14 +14,15 @@ const props = defineProps<{
   refund?: Transaction
   accountId?: string
 }>()
-const emit = defineEmits<{ close: []; saved: []; busy: [value: boolean] }>()
+const emit = defineEmits<{ close: []; saved: [keepOpen: boolean]; busy: [value: boolean] }>()
 
 const busy = ref(false)
 const error = ref('')
 const fieldErrors = reactive<Record<string, string>>({})
+const amountDraft = ref(emptyAmountDraft(String(props.editing?.amount || '')))
 const form = reactive({
   type: (props.refund ? 'expense_refund' : props.editing?.type || (props.accountId ? 'balance_adjustment' : 'expense')) as Kind,
-  amount: String(props.editing?.amount || ''),
+  amount: amountDraft.value.value,
   description: props.editing?.description || '',
   occurredAt: localInput(props.editing?.occurredAt),
   sourceAccountId: props.editing?.sourceAccount?.id || props.accountId || props.accounts[0]?.id || '',
@@ -30,8 +33,14 @@ const form = reactive({
 })
 const hasRefunds = computed(() => props.editing?.type === 'expense' && (props.refundSummary?.activeRefundCount || 0) > 0)
 const locked = computed(() => !!hasRefunds.value || props.editing?.type === 'expense_refund')
-const categoryOptions = computed(() => props.categories.filter(category => category.purpose === form.type))
 const remaining = computed(() => props.refund ? (props.refundSummary?.remainingRefundableAmountMinor || 0) : 0)
+const selectableCategoryIds = computed(() => {
+  if (form.type !== 'income' && form.type !== 'expense') return new Set<string>()
+  const ids = new Set<string>()
+  const visit = (nodes: CategoryTreeNode[]) => nodes.forEach(node => { ids.add(node.category.id); visit(node.children) })
+  visit(buildCategoryTree(props.categories, form.type).roots)
+  return ids
+})
 const kindItems = [
   { label: kindLabels.expense, value: 'expense', icon: 'i-lucide-receipt-text' },
   { label: kindLabels.income, value: 'income', icon: 'i-lucide-circle-arrow-down-left' },
@@ -40,13 +49,86 @@ const kindItems = [
 ]
 const accountItems = computed(() => props.accounts.map(account => ({ label: `${account.name} · ${money(minor(account.amount))}`, value: account.id })))
 const destinationItems = computed(() => props.accounts.map(account => ({ label: account.name, value: account.id })))
-const categoryItems = computed(() => categoryOptions.value.map(category => ({
-  label: `${category.parentCategory ? `${category.parentCategory.name} / ` : ''}${category.name}`,
-  value: category.id,
-})))
 const tagItems = computed(() => props.tags.map(tag => ({ label: tag.name, value: tag.id })))
+const selectedCategory = computed(() => props.categories.find(category => category.id === form.categoryId))
+const selectedCategoryPath = computed(() => {
+  if (!selectedCategory.value) return ''
+  const find = (nodes: CategoryTreeNode[]): string => {
+    for (const node of nodes) {
+      if (node.category.id === form.categoryId) return node.path
+      const match = find(node.children)
+      if (match) return match
+    }
+    return ''
+  }
+  return find(buildCategoryTree(props.categories, selectedCategory.value.purpose).roots) || selectedCategory.value.name
+})
+const expression = computed(() => amountExpression(amountDraft.value))
+const amountDisplay = computed(() => expression.value || form.amount)
+const amountKeys = ['1', '2', '3', '⌫', '4', '5', '6', '+', '7', '8', '9', '-', 'clear', '0', '.', '='] as const
 
 watch(() => form.type, () => { form.categoryId = '' })
+
+function updateAmountInput(value: string) {
+  if (!validAmountCharacters(value)) return
+  amountDraft.value = props.editing || props.refund ? updateAmount(amountDraft.value, value) : parseAmountInput(value)
+  form.amount = amountDraft.value.value
+  clearErrors()
+}
+
+function validAmountCharacters(value: string) {
+  return (props.editing || props.refund ? /^[0-9.]*$/ : /^[0-9. +\-]*$/).test(value)
+}
+
+function onAmountBeforeInput(event: InputEvent) {
+  if (event.data && !validAmountCharacters(event.data)) event.preventDefault()
+}
+
+function onAmountPaste(event: ClipboardEvent) {
+  if (!validAmountCharacters(event.clipboardData?.getData('text/plain') || '')) event.preventDefault()
+}
+
+function onAmountDrop(event: DragEvent) {
+  if (!validAmountCharacters(event.dataTransfer?.getData('text/plain') || '')) event.preventDefault()
+}
+
+function onAmountInput(event: Event) {
+  // 不可取消的输入法事件等路径仍可能修改 DOM，恢复上一次有效显示。
+  const input = event.target as HTMLInputElement
+  if (!validAmountCharacters(input.value)) input.value = amountDisplay.value
+}
+
+function pressAmount(key: string) {
+  if (busy.value || locked.value) return
+  try {
+    if (key === 'clear') amountDraft.value = emptyAmountDraft()
+    else if (key === '⌫') amountDraft.value = deleteAmount(amountDraft.value)
+    else if (key === '+' || key === '-') amountDraft.value = setAmountOperator(amountDraft.value, key)
+    else if (key === '=') amountDraft.value = calculateAmount(amountDraft.value)
+    else amountDraft.value = appendAmount(amountDraft.value, key)
+    form.amount = amountDraft.value.value
+    clearErrors()
+  } catch (cause) { fail((cause as Error).message, 'amount') }
+}
+
+function onAmountKeydown(event: KeyboardEvent) {
+  if (event.ctrlKey || event.metaKey || event.altKey) return
+  if (event.key.length === 1 && !validAmountCharacters(event.key) && !(event.key === '=' && !props.editing && !props.refund)) {
+    event.preventDefault()
+    return
+  }
+  if (props.editing || props.refund) return
+  if (['+', '-', '='].includes(event.key)) { event.preventDefault(); pressAmount(event.key); return }
+  if (event.key === 'Backspace' && !form.amount && amountDraft.value.terms.length) {
+    event.preventDefault()
+    pressAmount('⌫')
+    return
+  }
+  if (amountDraft.value.calculated && /^[\d.]$/.test(event.key)) {
+    event.preventDefault()
+    pressAmount(event.key)
+  }
+}
 
 function clearErrors() {
   error.value = ''
@@ -59,12 +141,14 @@ function fail(message: string, field?: string) {
   return false
 }
 
-async function save() {
+async function save(keepOpen = false) {
   if (busy.value) return
   clearErrors()
   let amount: number
   try {
-    amount = minor(form.amount)
+    // 保存可以结算完整算式，但失败时保留用户看到的操作数与算式。
+    const submittedAmount = amountDraft.value.terms.length ? calculateAmount(amountDraft.value).value : form.amount
+    amount = minor(submittedAmount)
   } catch (cause) {
     fail((cause as Error).message, 'amount')
     return
@@ -80,7 +164,7 @@ async function save() {
     return
   }
   if (!locked.value && !props.refund) {
-    if (['income', 'expense'].includes(form.type) && !form.categoryId) { fail('请先创建并选择相应用途的分类', 'categoryId'); return }
+    if (['income', 'expense'].includes(form.type) && !selectableCategoryIds.value.has(form.categoryId)) { fail('请选择有效的相应用途分类', 'categoryId'); return }
     if (form.type === 'transfer' && form.sourceAccountId === form.destinationAccountId) { fail('转账必须选择两个不同账户', 'destinationAccountId'); return }
     if (!(form.type === 'income' ? form.destinationAccountId : form.sourceAccountId)) { fail('请先创建并选择账户', form.type === 'income' ? 'destinationAccountId' : 'sourceAccountId'); return }
   }
@@ -108,7 +192,12 @@ async function save() {
       body,
       retry: 0,
     })
-    emit('saved')
+    if (keepOpen && !props.editing && !props.refund) {
+      form.amount = ''
+      form.description = ''
+      amountDraft.value = emptyAmountDraft()
+      emit('saved', true)
+    } else emit('saved', false)
   } catch (cause) {
     error.value = errorMessage(cause)
   } finally {
@@ -119,10 +208,10 @@ async function save() {
 </script>
 
 <template>
-  <UForm :state="form" class="modal-editor-form" :disabled="busy" :aria-busy="busy" @submit="save">
+  <UForm :state="form" class="modal-editor-form" :class="{ 'transaction-editor-form--compact': !refund }" :disabled="busy" :aria-busy="busy" @submit="save(false)">
     <header class="modal-editor-header">
       <div>
-        <p class="eyebrow">交易信息</p>
+        <p v-if="refund" class="eyebrow">交易信息</p>
         <h2>{{ refund ? '支出退款' : editing ? '编辑交易' : '记一笔' }}</h2>
       </div>
       <UButton color="neutral" variant="ghost" icon="i-lucide-x" aria-label="关闭" :disabled="busy" @click="emit('close')" />
@@ -133,7 +222,7 @@ async function save() {
       <UAlert v-if="locked" color="warning" variant="soft" icon="i-lucide-lock-keyhole" title="部分字段已锁定" description="此交易仅可修改说明、发生时间和标签。" />
 
       <div class="transaction-editor-fields">
-      <UFormField v-if="!refund" name="type" label="交易类型" required>
+      <UFormField v-if="!refund" name="type" label="交易类型" :ui="{ label: 'sr-only' }" required>
         <URadioGroup
           v-model="form.type"
           class="transaction-type-radio-group"
@@ -143,14 +232,43 @@ async function save() {
           aria-label="交易类型"
           orientation="horizontal"
           variant="card"
-          :ui="{ item: 'min-w-0 flex-1 p-3', label: 'text-center' }"
+          indicator="hidden"
+          :ui="{ item: 'relative min-w-0 min-h-11 flex-1 p-2 justify-center items-center', base: 'not-sr-only absolute inset-0 size-full opacity-0 z-10 cursor-pointer', wrapper: 'min-w-0 justify-center', label: 'text-center leading-5', icon: 'hidden' }"
         />
       </UFormField>
 
-      <UFormField name="amount" label="金额（元）" :error="fieldErrors.amount" required>
-        <UInput v-model="form.amount" inputmode="decimal" placeholder="0.00" :disabled="locked" class="w-full" />
+      <UFormField v-if="!refund && !locked && ['income', 'expense'].includes(form.type)" name="categoryId" label="分类" :error="fieldErrors.categoryId" :ui="{ label: 'sr-only', hint: 'min-w-0 max-w-[70%]' }" required>
+        <p v-if="selectedCategory" class="transaction-category-selection mb-2"><UIcon class="shrink-0" name="i-lucide-circle-check" aria-hidden="true" /><span>已选择：{{ selectedCategoryPath }}</span></p>
+        <TransactionCategoryPicker v-model="form.categoryId" :categories="categories" :purpose="form.type as 'income' | 'expense'" :disabled="busy" />
       </UFormField>
 
+      <UFormField name="amount" label="金额（元）" :error="fieldErrors.amount" :class="{ 'transaction-amount-field': !refund }" :ui="{ label: refund ? undefined : 'sr-only' }" required>
+        <p v-if="expression" class="transaction-amount-expression">按 = 查看结果，也可直接保存结算</p>
+        <UInput
+          :model-value="amountDisplay" inputmode="decimal" placeholder="0.00" :disabled="locked"
+          class="w-full" :class="{ 'transaction-amount-input': !refund, 'transaction-amount-input--expression': !!expression }"
+          :ui="!refund ? { base: 'text-left ps-10 pe-4 rounded-[var(--ui-radius)] ring-0 focus-visible:ring-2 focus-visible:ring-primary' } : undefined"
+          @update:model-value="updateAmountInput" @keydown="onAmountKeydown"
+          @beforeinput="onAmountBeforeInput" @paste="onAmountPaste" @drop="onAmountDrop" @input="onAmountInput"
+        >
+          <template v-if="!refund" #leading><span class="transaction-amount-currency" aria-hidden="true">¥</span></template>
+        </UInput>
+        <div v-if="!editing && !refund" class="transaction-amount-keypad" role="group" aria-label="金额键盘">
+          <UButton
+            v-for="key in amountKeys" :key="key" type="button" class="transaction-amount-key"
+            :ui="{ base: 'rounded-[var(--ui-radius)]' }"
+            :class="{ 'transaction-amount-key--operator': key === '+' || key === '-', 'transaction-amount-key--equal': key === '=', 'transaction-amount-key--clear': key === 'clear' }"
+            :color="['+', '-', '='].includes(key) ? 'primary' : 'neutral'"
+            :variant="key === '=' ? 'solid' : 'soft'"
+            :icon="key === '⌫' ? 'i-lucide-delete' : undefined"
+            :label="key === '⌫' ? undefined : key === 'clear' ? '清空' : key"
+            :aria-label="key === '⌫' ? '删除一位' : key === '=' ? '计算结果' : key === 'clear' ? '清空金额' : key"
+            :disabled="busy" @click="pressAmount(key)"
+          />
+        </div>
+      </UFormField>
+
+      <div class="transaction-editor-details" :class="{ 'transaction-editor-details--refund': refund }">
       <template v-if="!refund && !locked">
         <UFormField v-if="form.type !== 'income'" name="sourceAccountId" :label="form.type === 'transfer' ? '转出账户' : '账户'" required>
           <USelect v-model="form.sourceAccountId" :items="accountItems" placeholder="请选择账户" class="w-full" />
@@ -161,54 +279,61 @@ async function save() {
         <UFormField v-if="form.type === 'balance_adjustment'" name="balanceAdjustmentDirection" label="调整方向" required>
           <USelect v-model="form.balanceAdjustmentDirection" :items="[{ label: '增加余额', value: 'increase' }, { label: '减少余额', value: 'decrease' }]" class="w-full" />
         </UFormField>
-        <UFormField v-if="['income', 'expense'].includes(form.type)" name="categoryId" label="分类" :error="fieldErrors.categoryId" required>
-          <USelect v-model="form.categoryId" :items="categoryItems" placeholder="请选择分类" class="w-full" />
-        </UFormField>
-        <p v-if="['income', 'expense'].includes(form.type) && !categoryItems.length" class="hint">请关闭表单，先在「分类与标签」中新建{{ kindLabels[form.type] }}分类。</p>
       </template>
 
       <UFormField name="occurredAt" label="发生时间" :error="fieldErrors.occurredAt" required>
         <UInput v-model="form.occurredAt" type="datetime-local" class="w-full" />
       </UFormField>
-      <UFormField name="description" label="说明">
+      <UFormField name="description" label="说明" class="transaction-editor-detail-wide">
         <UInput v-model="form.description" placeholder="记下这笔交易的用途" class="w-full" />
       </UFormField>
-      <UFormField v-if="!refund && tags.length" name="tagIds" label="标签">
+      <UFormField v-if="!refund && tags.length" name="tagIds" label="标签" class="transaction-editor-detail-wide">
         <UCheckboxGroup v-model="form.tagIds" :items="tagItems" orientation="horizontal" class="transaction-tag-group" />
       </UFormField>
+      </div>
       </div>
 
       <UAlert v-if="error" color="error" variant="soft" icon="i-lucide-circle-alert" title="保存失败" :description="error" role="alert" aria-live="polite" />
     </div>
     <div class="modal-editor-actions transaction-editor-actions">
-      <UButton type="submit" label="保存交易" :loading="busy" :aria-busy="busy" :disabled="busy" />
+      <UButton v-if="!editing && !refund" type="button" label="保存再记" color="neutral" variant="soft" size="lg" :disabled="busy" @click="save(true)" />
+      <UButton type="submit" :label="editing || refund ? '保存交易' : '完成'" size="lg" :loading="busy" :aria-busy="busy" :disabled="busy" />
     </div>
   </UForm>
 </template>
 
 <style scoped>
-.transaction-type-radio-group :deep([data-slot="fieldset"]) {
-  gap: 8px;
+.transaction-type-radio-group :deep([data-slot="fieldset"]) { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: var(--ui-radius); background: var(--ui-bg-muted); }
+.transaction-type-radio-group :deep([data-slot="item"]) { min-width: 0; border: 0; border-radius: calc(var(--ui-radius) - 4px); background: transparent; }
+.transaction-type-radio-group :deep([data-slot="item"]:has([data-state="checked"])) { background: var(--ui-bg); box-shadow: 0 1px 4px color-mix(in srgb, var(--ui-text) 12%, transparent); }
+.transaction-type-radio-group :deep([data-slot="item"]:has(:focus-visible)) { outline: 2px solid var(--ui-primary); outline-offset: 1px; }
+.transaction-type-radio-group :deep([data-slot="label"]) { overflow-wrap: anywhere; }
+.transaction-editor-form--compact .modal-editor-header { align-items: center; padding-top: 12px; }
+.transaction-editor-form--compact .modal-editor-header h2 { font-size: 1.125rem; }
+.transaction-editor-form--compact .modal-editor-body { padding-block: 12px; }
+.transaction-editor-form--compact .transaction-editor-fields { gap: 12px; }
+.transaction-category-selection { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; color: var(--ui-primary); font-size: .8125rem; }
+.transaction-amount-input :deep(input) { min-height: 72px; font-family: var(--font-sans); font-size: clamp(2rem, 4vw, 2.75rem); font-weight: 600; font-variant-numeric: lining-nums tabular-nums; line-height: 1.2; letter-spacing: -.025em; background: var(--ui-bg-muted); color: var(--ui-primary); }
+.transaction-amount-currency { color: var(--ui-primary); font-size: 1.5rem; }
+.transaction-amount-input--expression :deep(input) { min-height: 48px; padding-block: 8px; font-size: clamp(1.25rem, 3vw, 2rem); letter-spacing: 0; }
+.transaction-amount-expression { display: flex; gap: 8px; min-width: 0; margin: 0 0 6px; font-size: .8125rem; color: var(--ui-text-muted); }
+.transaction-amount-keypad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+.transaction-amount-key { min-width: 0; min-height: 48px; align-items: center; justify-content: center; font-size: 1.375rem; line-height: 1; font-weight: 500; font-variant-numeric: tabular-nums; }
+.transaction-amount-key:not(.transaction-amount-key--operator):not(.transaction-amount-key--equal) { background: var(--ui-bg-muted); }
+.transaction-amount-key--clear { font-size: .875rem; }
+.transaction-amount-key:not(:disabled):active { background: var(--ui-bg-accented); }
+.transaction-amount-key--operator:not(:disabled):active { background: var(--pt-primary-container); }
+.transaction-amount-key--equal:not(:disabled):active { background: color-mix(in srgb, var(--ui-primary) 80%, var(--ui-bg-inverted)); }
+.transaction-editor-details { display: grid; min-width: 0; gap: 12px; }
+.transaction-editor-details--refund { gap: 14px; }
+.transaction-editor-actions { justify-content: flex-end; }
+.transaction-editor-actions :deep(button) { min-width: 104px; justify-content: center; }
+@media (min-width: 640px) {
+  .transaction-editor-details:not(.transaction-editor-details--refund) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .transaction-editor-detail-wide { grid-column: 1 / -1; }
 }
-
-.transaction-type-radio-group :deep([data-slot="item"]) {
-  min-width: 0;
-}
-
-.transaction-type-radio-group :deep([data-slot="item"]:has([data-state="checked"])) {
-  border-color: var(--pt-focus-ring);
-  background: var(--pt-primary-container);
-  box-shadow: inset 0 0 0 1px var(--pt-focus-ring);
-}
-
-.transaction-type-radio-group :deep([data-slot="label"]) {
-  overflow-wrap: anywhere;
-}
-
 @media (max-width: 560px) {
-  .transaction-type-radio-group :deep([data-slot="fieldset"]) {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  .transaction-editor-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .transaction-editor-actions :deep(button:only-child) { grid-column: 1 / -1; }
 }
 </style>

@@ -278,7 +278,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
       @open-original="workspace.openTransaction"
     />
 
-    <UModal :open="!!workspace.transactionEditor.value" :dismissible="!workspace.editorBusy.value" title="交易表单" :ui="{ content: 'motion-reduce:animate-none motion-reduce:transition-none' }" @update:open="value => { if (!value && !workspace.editorBusy.value) workspace.transactionEditor.value = null }">
+    <UModal :open="!!workspace.transactionEditor.value" :dismissible="!workspace.editorBusy.value" title="交易表单" :ui="{ content: `motion-reduce:animate-none motion-reduce:transition-none ${workspace.transactionEditor.value?.refund ? '' : 'sm:max-w-xl'}` }" @update:open="value => { if (!value && !workspace.editorBusy.value) workspace.transactionEditor.value = null }">
       <template #content>
         <LazyTransactionEditor
           v-if="workspace.transactionEditor.value"
@@ -289,7 +289,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
           :refund-summary="workspace.refundSummary.value"
           @close="workspace.transactionEditor.value = null"
           @busy="workspace.editorBusy.value = $event"
-          @saved="workspace.saved"
+          @saved="keepOpen => workspace.saved(keepOpen)"
         />
       </template>
     </UModal>

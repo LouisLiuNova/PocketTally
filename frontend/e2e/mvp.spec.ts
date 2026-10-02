@@ -1,6 +1,10 @@
 import { test, expect, type Page } from '@playwright/test'
 
 async function selectNuxtUiOption(page: Page, label: string, option: string) {
+  if (label === '分类') {
+    await page.getByRole('dialog').last().getByRole('button', { name: `${option}，选择分类` }).click()
+    return
+  }
   await page.getByRole('dialog').last().getByLabel(label, { exact: true }).click()
   await page.getByRole('option', { name: option, exact: true }).click()
 }
@@ -78,8 +82,8 @@ test('真实账本：资源、收支、转账、调账、退款、作废和持�
       if (kind === 'expense') await selectNuxtUiOption(page, '分类', expense)
     }
     if (kind === 'expense') await page.getByLabel(tag, { exact: true }).check()
-    await page.getByRole('button', { name: '保存交易', exact: true }).click()
-    await expect(page.getByRole('button', { name: '保存交易', exact: true })).toBeHidden()
+    await page.getByRole('button', { name: '完成', exact: true }).click()
+    await expect(page.getByRole('button', { name: '完成', exact: true })).toBeHidden()
   }
   await create('balance_adjustment', '1000', `期初${suffix}`)
   await create('income', '100', `收入${suffix}`)

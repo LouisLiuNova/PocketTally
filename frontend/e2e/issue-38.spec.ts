@@ -21,8 +21,6 @@ test('新账本首次使用：默认分类可见并可用于记账', async ({ pa
 
   await page.getByRole('link', { name: '总览', exact: true }).click()
   await page.getByRole('button', { name: '记一笔', exact: true }).click()
-  await page.getByRole('dialog').last().getByLabel('分类', { exact: true }).click()
-  await expect(page.getByRole('option', { name: '餐饮', exact: true })).toBeVisible()
-  await page.getByRole('option', { name: '餐饮', exact: true }).click()
+  await page.getByRole('dialog').last().getByRole('button', { name: '餐饮，选择分类' }).click()
   await expect(page.getByRole('dialog').last()).toContainText('餐饮')
 })

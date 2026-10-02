@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test'
 test.describe('Issue #62：交易类型一键切换', () => {
   test('单击和键盘操作四种类型，并切换对应字段', async ({ page }) => {
     await page.goto('/')
+    await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as HTMLElement & { __vue_app__?: unknown } | null)?.__vue_app__))
     await page.getByRole('button', { name: '记一笔', exact: true }).click()
     const dialog = page.getByRole('dialog').last()
     const radios = dialog.getByRole('radio')
@@ -21,7 +22,7 @@ test.describe('Issue #62：交易类型一键切换', () => {
     await expect(dialog.getByRole('radio', { name: '转账', exact: true })).toBeChecked()
 
     await dialog.getByRole('radio', { name: '支出', exact: true }).click()
-    await expect(dialog.getByLabel('分类', { exact: true })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: '餐饮，选择分类' })).toBeVisible()
     await expect(dialog.getByLabel('调整方向', { exact: true })).toHaveCount(0)
     await expect(dialog.getByRole('radio', { name: '支出', exact: true })).toBeChecked()
   })
