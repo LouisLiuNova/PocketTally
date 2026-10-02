@@ -42,12 +42,16 @@ export function useLedger() {
     return { accounts, categories, tags }
   }, { lazy: true })
 
-  const accounts = computed(() => data.value?.accounts || [])
-  const categories = computed(() => data.value?.categories || [])
-  const tags = computed(() => data.value?.tags || [])
+  // Nuxt 会在刷新失败时恢复默认值；保留成功快照，错误仍由 error 明确报告。
+  const lastSuccessfulResources = shallowRef(data.value)
+  watch(data, value => { if (value) lastSuccessfulResources.value = value }, { flush: 'sync' })
+  const resources = computed(() => data.value || lastSuccessfulResources.value)
+  const accounts = computed(() => resources.value?.accounts || [])
+  const categories = computed(() => resources.value?.categories || [])
+  const tags = computed(() => resources.value?.tags || [])
   const loading = pending
   const loadError = computed(() => error.value ? errorMessage(error.value) : '')
-  const loaded = computed(() => !!data.value)
+  const loaded = computed(() => !!resources.value)
 
   async function refreshResources() {
     await refresh({ dedupe: 'defer' })

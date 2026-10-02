@@ -4,7 +4,7 @@ import { buildCategoryTree, findCategoryTrail, type CategoryTreeNode } from '~/u
 import { DEFAULT_CATEGORY_ICON } from '~/constants/categoryIcons'
 
 const props = defineProps<{ categories: Category[]; purpose: Category['purpose']; modelValue: string; disabled?: boolean }>()
-const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
+const emit = defineEmits<{ 'update:modelValue': [value: string]; create: [event: MouseEvent] }>()
 const tree = computed(() => buildCategoryTree(props.categories, props.purpose))
 const pathIds = ref<string[]>([])
 const path = computed(() => {
@@ -100,7 +100,10 @@ watch(tree, () => {
         <span v-if="node.children.length || modelValue === node.category.id" class="transaction-category-state" aria-hidden="true"><UIcon :name="modelValue === node.category.id || selectedDescendant(node) ? 'i-lucide-check' : 'i-lucide-ellipsis'" class="size-3.5" /></span>
       </UButton>
     </div>
-    <p v-else class="hint">没有可选分类，请先在「分类与标签」中创建分类。</p>
+    <div v-else class="flex flex-wrap items-center gap-2 rounded-lg bg-elevated p-3">
+      <p role="status" class="text-sm text-muted">暂无可选{{ purpose === 'income' ? '收入' : '支出' }}分类</p>
+      <UButton type="button" color="neutral" variant="outline" icon="i-lucide-plus" :label="`新建${purpose === 'income' ? '收入' : '支出'}分类`" :disabled="disabled" @click="emit('create', $event)" />
+    </div>
     <UAlert v-if="tree.anomalies.length" color="warning" variant="soft" icon="i-lucide-triangle-alert" :title="`${tree.anomalies.length} 个异常分类不可选择`" :description="tree.anomalies.map(item => `${item.category.name}：${item.reason}`).join('；')" />
     <UModal :open="modalOpen" :title="panel?.category.name || '选择分类'" :dismissible="!disabled" :close="{ disabled, 'aria-label': '关闭分类选择' }"
       :ui="{ content: 'w-[calc(100vw-2rem)] max-w-xl max-h-[calc(100dvh-2rem)] motion-reduce:animate-none motion-reduce:transition-none', header: 'shrink-0 border-0 justify-center py-4', title: 'text-center break-words px-8', wrapper: 'min-w-0 flex-1', body: 'min-h-0 overflow-y-auto pt-2', overlay: 'bg-neutral-950/45 backdrop-blur-[2px]' }"
