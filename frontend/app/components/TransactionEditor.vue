@@ -9,6 +9,10 @@ const props = defineProps<{
   accounts: Account[]
   categories: Category[]
   tags: Tag[]
+  resourcesLoading: boolean
+  resourcesLoaded: boolean
+  resourcesError: string
+  refreshResources: () => Promise<boolean>
   refundSummary?: RefundSummary | null
   editing?: Transaction
   refund?: Transaction
@@ -19,6 +23,20 @@ const emit = defineEmits<{ close: []; saved: [keepOpen: boolean]; busy: [value: 
 const busy = ref(false)
 const error = ref('')
 const fieldErrors = reactive<Record<string, string>>({})
+const editorBody = ref<HTMLElement | null>(null)
+const resourceEditor = ref<{ kind: 'accounts' | 'categories' | 'tags'; initialPurpose?: Category['purpose'] } | null>(null)
+const resourceBusy = ref(false)
+const resourceSyncing = ref(false)
+const createdResource = ref<{ kind: 'accounts' | 'categories' | 'tags'; resource: Account | Category | Tag } | null>(null)
+let resourceTrigger: HTMLElement | null = null
+let resourceFocusKind: 'accounts' | 'categories' | 'tags' = 'accounts'
+const resourcesUnavailable = computed(() => !props.resourcesLoaded)
+const showEmptyResources = computed(() => props.resourcesLoaded && !props.resourcesLoading && !props.resourcesError)
+const missingAccounts = computed(() => !props.refund && !locked.value && (!props.accounts.length || (form.type === 'transfer' && props.accounts.length < 2)))
+const accountPlaceholder = computed(() => resourcesUnavailable.value ? (props.resourcesLoading ? '正在读取账户…' : '账户读取失败') : !props.accounts.length ? '暂无账户' : '请选择账户')
+const resourceTitle = computed(() => resourceEditor.value?.kind === 'categories'
+  ? `新建${resourceEditor.value.initialPurpose === 'income' ? '收入' : '支出'}分类`
+  : resourceEditor.value?.kind === 'tags' ? '新建标签' : '新建账户')
 const amountDraft = ref(emptyAmountDraft(String(props.editing?.amount || '')))
 const form = reactive({
   type: (props.refund ? 'expense_refund' : props.editing?.type || (props.accountId ? 'balance_adjustment' : 'expense')) as Kind,
@@ -68,6 +86,53 @@ const amountDisplay = computed(() => expression.value || form.amount)
 const amountKeys = ['1', '2', '3', '⌫', '4', '5', '6', '+', '7', '8', '9', '-', 'clear', '0', '.', '='] as const
 
 watch(() => form.type, () => { form.categoryId = '' })
+
+function createResource(kind: 'accounts' | 'categories' | 'tags', event: MouseEvent) {
+  if (busy.value || props.resourcesLoading || props.resourcesError) return
+  resourceTrigger = event.currentTarget as HTMLElement
+  resourceFocusKind = kind
+  resourceEditor.value = { kind, ...(kind === 'categories' ? { initialPurpose: form.type as Category['purpose'] } : {}) }
+}
+
+// 只在服务器资源同步成功后选中新资源，避免刷新失败时提交列表中不存在的 ID。
+watch(() => [props.accounts, props.categories, props.tags], () => {
+  const created = createdResource.value
+  if (!created) return
+  const { kind, resource } = created
+  if (kind === 'accounts' && props.accounts.some(account => account.id === resource.id)) {
+    if (!form.sourceAccountId) form.sourceAccountId = resource.id
+    if (!form.destinationAccountId || (form.type === 'transfer' && form.destinationAccountId === form.sourceAccountId && form.sourceAccountId !== resource.id)) form.destinationAccountId = resource.id
+  } else if (kind === 'categories' && selectableCategoryIds.value.has(resource.id)) {
+    form.categoryId = resource.id
+  } else if (kind === 'tags' && props.tags.some(tag => tag.id === resource.id)) {
+    if (!form.tagIds.includes(resource.id)) form.tagIds.push(resource.id)
+  } else return
+  createdResource.value = null
+  clearErrors()
+})
+
+async function resourceSaved(resource: Account | Category | Tag) {
+  if (!resourceEditor.value) return
+  createdResource.value = { kind: resourceEditor.value.kind, resource }
+  resourceSyncing.value = true
+  try {
+    await props.refreshResources()
+  } finally {
+    resourceSyncing.value = false
+    resourceEditor.value = null
+  }
+}
+
+function restoreResourceFocus(event: Event) {
+  event.preventDefault()
+  if (resourceTrigger?.isConnected && !resourceTrigger.hasAttribute('disabled')) resourceTrigger.focus({ preventScroll: true })
+  else {
+    const section = editorBody.value?.querySelector(`[data-resource-field="${resourceFocusKind}"]`)
+    const target = section?.querySelector<HTMLElement>('button:not(:disabled), input:not(:disabled)')
+      || editorBody.value?.querySelector<HTMLElement>('[data-resource-retry]')
+    target?.focus({ preventScroll: true })
+  }
+}
 
 function updateAmountInput(value: string) {
   if (!validAmountCharacters(value)) return
@@ -142,8 +207,9 @@ function fail(message: string, field?: string) {
 }
 
 async function save(keepOpen = false) {
-  if (busy.value) return
+  if (busy.value || resourceEditor.value) return
   clearErrors()
+  if (!props.refund && !locked.value && resourcesUnavailable.value) { fail(props.resourcesLoading ? '资源正在读取，请稍后再保存' : '资源读取失败，请重试后再保存'); return }
   let amount: number
   try {
     // 保存可以结算完整算式，但失败时保留用户看到的操作数与算式。
@@ -165,7 +231,7 @@ async function save(keepOpen = false) {
   }
   if (!locked.value && !props.refund) {
     if (['income', 'expense'].includes(form.type) && !selectableCategoryIds.value.has(form.categoryId)) { fail('请选择有效的相应用途分类', 'categoryId'); return }
-    if (form.type === 'transfer' && form.sourceAccountId === form.destinationAccountId) { fail('转账必须选择两个不同账户', 'destinationAccountId'); return }
+    if (form.type === 'transfer' && (!form.destinationAccountId || form.sourceAccountId === form.destinationAccountId)) { fail('转账必须选择两个不同账户', 'destinationAccountId'); return }
     if (!(form.type === 'income' ? form.destinationAccountId : form.sourceAccountId)) { fail('请先创建并选择账户', form.type === 'income' ? 'destinationAccountId' : 'sourceAccountId'); return }
   }
 
@@ -217,9 +283,13 @@ async function save(keepOpen = false) {
       <UButton color="neutral" variant="ghost" icon="i-lucide-x" aria-label="关闭" :disabled="busy" @click="emit('close')" />
     </header>
 
-    <div class="modal-editor-body">
+    <div ref="editorBody" class="modal-editor-body">
       <UAlert v-if="refund" color="info" variant="soft" icon="i-lucide-rotate-ccw" title="退款摘要" :description="`${refund.description || '原支出'} · 剩余可退 ${money(remaining)} · 退回 ${refund.sourceAccount?.name || '原账户'}`" />
       <UAlert v-if="locked" color="warning" variant="soft" icon="i-lucide-lock-keyhole" title="部分字段已锁定" description="此交易仅可修改说明、发生时间和标签。" />
+      <p v-if="resourcesLoading" role="status" class="flex items-center gap-2 text-sm text-muted"><UIcon name="i-lucide-loader-circle" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />{{ resourcesLoaded ? '正在更新账户、分类和标签…' : '正在读取账户、分类和标签…' }}</p>
+      <UAlert v-if="resourcesError" color="error" variant="soft" icon="i-lucide-circle-alert" title="资源读取失败" :description="`${resourcesError}${resourcesLoaded ? ' 当前显示上次成功读取的数据。' : ''}${createdResource ? ` 已创建「${createdResource.resource.name}」，重试同步即可继续，无需重复创建。` : ''}`" role="alert">
+        <template #actions><UButton data-resource-retry type="button" color="error" variant="soft" label="重试读取资源" :loading="resourcesLoading" :disabled="busy || resourcesLoading" @click="refreshResources" /></template>
+      </UAlert>
 
       <div class="transaction-editor-fields">
       <UFormField v-if="!refund" name="type" label="交易类型" :ui="{ label: 'sr-only' }" required>
@@ -237,9 +307,9 @@ async function save(keepOpen = false) {
         />
       </UFormField>
 
-      <UFormField v-if="!refund && !locked && ['income', 'expense'].includes(form.type)" name="categoryId" label="分类" :error="fieldErrors.categoryId" :ui="{ label: 'sr-only', hint: 'min-w-0 max-w-[70%]' }" required>
+      <UFormField v-if="!refund && !locked && ['income', 'expense'].includes(form.type)" data-resource-field="categories" name="categoryId" label="分类" :error="fieldErrors.categoryId" :ui="{ label: 'sr-only', hint: 'min-w-0 max-w-[70%]' }" required>
         <p v-if="selectedCategory" class="transaction-category-selection mb-2"><UIcon class="shrink-0" name="i-lucide-circle-check" aria-hidden="true" /><span>已选择：{{ selectedCategoryPath }}</span></p>
-        <TransactionCategoryPicker v-model="form.categoryId" :categories="categories" :purpose="form.type as 'income' | 'expense'" :disabled="busy" />
+        <TransactionCategoryPicker v-if="selectableCategoryIds.size || showEmptyResources" v-model="form.categoryId" :categories="categories" :purpose="form.type as 'income' | 'expense'" :disabled="busy" @create="createResource('categories', $event)" />
       </UFormField>
 
       <UFormField name="amount" label="金额（元）" :error="fieldErrors.amount" :class="{ 'transaction-amount-field': !refund }" :ui="{ label: refund ? undefined : 'sr-only' }" required>
@@ -270,12 +340,16 @@ async function save(keepOpen = false) {
 
       <div class="transaction-editor-details" :class="{ 'transaction-editor-details--refund': refund }">
       <template v-if="!refund && !locked">
-        <UFormField v-if="form.type !== 'income'" name="sourceAccountId" :label="form.type === 'transfer' ? '转出账户' : '账户'" required>
-          <USelect v-model="form.sourceAccountId" :items="accountItems" placeholder="请选择账户" class="w-full" />
+        <UFormField v-if="form.type !== 'income'" data-resource-field="accounts" name="sourceAccountId" :error="fieldErrors.sourceAccountId" :label="form.type === 'transfer' ? '转出账户' : '账户'" required>
+          <USelect v-model="form.sourceAccountId" :items="accountItems" :placeholder="accountPlaceholder" :disabled="resourcesUnavailable || !accounts.length" :aria-describedby="missingAccounts && showEmptyResources ? 'transaction-account-empty' : undefined" class="w-full" />
         </UFormField>
-        <UFormField v-if="form.type === 'income' || form.type === 'transfer'" name="destinationAccountId" :label="form.type === 'transfer' ? '转入账户' : '收款账户'" required>
-          <USelect v-model="form.destinationAccountId" :items="destinationItems" placeholder="请选择账户" class="w-full" />
+        <UFormField v-if="form.type === 'income' || form.type === 'transfer'" data-resource-field="accounts" name="destinationAccountId" :error="fieldErrors.destinationAccountId" :label="form.type === 'transfer' ? '转入账户' : '收款账户'" required>
+          <USelect v-model="form.destinationAccountId" :items="destinationItems" :placeholder="accountPlaceholder" :disabled="resourcesUnavailable || !accounts.length" :aria-describedby="missingAccounts && showEmptyResources ? 'transaction-account-empty' : undefined" class="w-full" />
         </UFormField>
+        <div v-if="missingAccounts && showEmptyResources" class="transaction-editor-detail-wide flex flex-wrap items-center gap-2 rounded-lg bg-elevated p-3">
+          <p id="transaction-account-empty" role="status" class="text-sm text-muted">{{ accounts.length ? '转账需要两个不同账户，请再创建一个账户。' : '暂无账户，先创建账户后即可记账。' }}</p>
+          <UButton type="button" color="neutral" variant="outline" icon="i-lucide-plus" label="新建账户" :disabled="busy" @click="createResource('accounts', $event)" />
+        </div>
         <UFormField v-if="form.type === 'balance_adjustment'" name="balanceAdjustmentDirection" label="调整方向" required>
           <USelect v-model="form.balanceAdjustmentDirection" :items="[{ label: '增加余额', value: 'increase' }, { label: '减少余额', value: 'decrease' }]" class="w-full" />
         </UFormField>
@@ -287,8 +361,12 @@ async function save(keepOpen = false) {
       <UFormField name="description" label="说明" class="transaction-editor-detail-wide">
         <UInput v-model="form.description" placeholder="记下这笔交易的用途" class="w-full" />
       </UFormField>
-      <UFormField v-if="!refund && tags.length" name="tagIds" label="标签" class="transaction-editor-detail-wide">
-        <UCheckboxGroup v-model="form.tagIds" :items="tagItems" orientation="horizontal" class="transaction-tag-group" />
+      <UFormField v-if="!refund && (tags.length || showEmptyResources)" data-resource-field="tags" name="tagIds" label="标签" class="transaction-editor-detail-wide">
+        <UCheckboxGroup v-if="tags.length" v-model="form.tagIds" :items="tagItems" orientation="horizontal" class="transaction-tag-group" />
+        <div v-else class="flex flex-wrap items-center gap-2">
+          <p role="status" class="text-sm text-muted">暂无标签，可直接保存。</p>
+          <UButton type="button" color="neutral" variant="link" icon="i-lucide-plus" label="新建标签" :disabled="busy" @click="createResource('tags', $event)" />
+        </div>
       </UFormField>
       </div>
       </div>
@@ -300,6 +378,11 @@ async function save(keepOpen = false) {
       <UButton type="submit" :label="editing || refund ? '保存交易' : '完成'" size="lg" :loading="busy" :aria-busy="busy" :disabled="busy" />
     </div>
   </UForm>
+  <UModal :open="!!resourceEditor" :title="resourceTitle" :dismissible="!resourceBusy && !resourceSyncing" :content="{ onCloseAutoFocus: restoreResourceFocus }" :ui="{ content: 'motion-reduce:animate-none motion-reduce:transition-none' }" @update:open="value => { if (!value && !resourceBusy && !resourceSyncing) resourceEditor = null }">
+    <template #content>
+      <ResourceEditor v-if="resourceEditor" v-bind="resourceEditor" :categories="categories" :disabled="resourceSyncing" @busy="resourceBusy = $event" @close="() => { if (!resourceSyncing) resourceEditor = null }" @saved="resourceSaved" />
+    </template>
+  </UModal>
 </template>
 
 <style scoped>

@@ -4,8 +4,8 @@ import { errorMessage } from '~/composables/useLedger'
 import { colorValidationMessage, isValidHexColor } from '~/utils/color'
 import { CATEGORY_ICON_ITEMS, DEFAULT_CATEGORY_ICON } from '~/constants/categoryIcons'
 
-const props = defineProps<{ kind: 'accounts' | 'categories' | 'tags'; item?: Account | Category | Tag; categories: Category[]; initialParentCategoryId?: string; initialPurpose?: Category['purpose'] }>()
-const emit = defineEmits<{ close: []; saved: []; busy: [value: boolean] }>()
+const props = defineProps<{ kind: 'accounts' | 'categories' | 'tags'; item?: Account | Category | Tag; categories: Category[]; initialParentCategoryId?: string; initialPurpose?: Category['purpose']; disabled?: boolean }>()
+const emit = defineEmits<{ close: []; saved: [resource: Account | Category | Tag]; busy: [value: boolean] }>()
 const names = { accounts: '账户', categories: '分类', tags: '标签' }
 const topLevelCategoryValue = '__top_level__'
 const item = props.item
@@ -64,7 +64,7 @@ const selectedParentPath = computed(() => {
 watch(() => form.purpose, () => { form.parentCategoryId = topLevelCategoryValue })
 watch(() => form.parentCategoryId, () => { moveConfirmed.value = false })
 async function save() {
-  if (busy.value) return
+  if (busy.value || props.disabled) return
   if (!form.name.trim()) { error.value = '名称不能为空'; return }
   if (colorError.value) { error.value = ''; return }
   if (moving.value && !moveConfirmed.value) { error.value = '请确认移动分类及其整个子树'; return }
@@ -74,16 +74,16 @@ async function save() {
   if (props.kind === 'categories') body = { ...body, ...(!item ? { purpose: form.purpose } : {}), parentCategoryId: form.parentCategoryId === topLevelCategoryValue ? null : form.parentCategoryId, iconColor: form.color, iconName: form.iconName || DEFAULT_CATEGORY_ICON }
   busy.value = true; error.value = ''; emit('busy', true)
   try {
-    await useApi()(`/api/v1/${props.kind}${item ? `/${item.id}` : ''}`, { method: item ? 'PATCH' : 'POST', body, retry: 0 })
-    emit('saved')
+    const resource = await useApi()<Account | Category | Tag>(`/api/v1/${props.kind}${item ? `/${item.id}` : ''}`, { method: item ? 'PATCH' : 'POST', body, retry: 0 })
+    emit('saved', resource)
   } catch (e) { error.value = errorMessage(e) }
   finally { busy.value = false; emit('busy', false) }
 }
 </script>
 
 <template>
-  <UForm :state="form" class="modal-editor-form" :disabled="busy" :aria-busy="busy" @submit="save">
-    <header class="modal-editor-header"><h2>{{ editorTitle }}</h2><UButton color="neutral" variant="ghost" icon="i-lucide-x" aria-label="关闭" :disabled="busy" @click="emit('close')" /></header>
+  <UForm :state="form" class="modal-editor-form" :disabled="busy || disabled" :aria-busy="busy || disabled" @submit="save">
+    <header class="modal-editor-header"><h2>{{ editorTitle }}</h2><UButton color="neutral" variant="ghost" icon="i-lucide-x" aria-label="关闭" :disabled="busy || disabled" @click="emit('close')" /></header>
     <div class="modal-editor-body resource-editor-body">
     <UFormField name="name" label="名称" required>
       <UInput id="resource-name" v-model="form.name" autofocus class="w-full" />
@@ -131,14 +131,14 @@ async function save() {
       </UFormField>
     </template>
     <UFormField v-if="kind !== 'accounts'" name="color" label="颜色" required :error="colorError || undefined">
-      <ColorInput v-model="form.color" id="resource-color" :error="colorError" :disabled="busy" />
+      <ColorInput v-model="form.color" id="resource-color" :error="colorError" :disabled="busy || disabled" />
     </UFormField>
     <UFormField name="description" label="说明">
       <UTextarea v-model="form.description" :rows="3" class="w-full" />
     </UFormField>
       <UAlert v-if="error" color="error" variant="soft" icon="i-lucide-circle-alert" title="保存失败" :description="error" role="alert" aria-live="assertive" />
     </div>
-    <div class="modal-editor-actions"><span class="text-sm text-dimmed">名称不能重复</span><UButton type="submit" label="保存" :loading="busy" :aria-busy="busy" :disabled="busy" /></div>
+    <div class="modal-editor-actions"><span role="status" class="text-sm text-dimmed">{{ disabled ? '正在同步新资源…' : '名称不能重复' }}</span><UButton type="submit" label="保存" :loading="busy || disabled" :aria-busy="busy || disabled" :disabled="busy || disabled" /></div>
   </UForm>
 </template>
 

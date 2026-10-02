@@ -286,6 +286,10 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
           :accounts="workspace.accounts.value"
           :categories="workspace.categories.value"
           :tags="workspace.tags.value"
+          :resources-loading="workspace.loading.value"
+          :resources-loaded="workspace.loaded.value"
+          :resources-error="workspace.loadError.value"
+          :refresh-resources="workspace.refreshWorkspace"
           :refund-summary="workspace.refundSummary.value"
           @close="workspace.transactionEditor.value = null"
           @busy="workspace.editorBusy.value = $event"
@@ -301,7 +305,7 @@ useHead(() => ({ title: `PocketTally · ${currentRoute.value.title}` }))
           :categories="workspace.categories.value"
           @close="workspace.resourceEditor.value = null"
           @busy="workspace.editorBusy.value = $event"
-          @saved="workspace.saved"
+          @saved="workspace.saved()"
         />
       </template>
     </UModal>

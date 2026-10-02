@@ -12,6 +12,7 @@ test('分类和标签支持 HEX/RGB 双向选色、字段校验与编辑回填',
   const category = `颜色分类${suffix}`
   const tag = `颜色标签${suffix}`
   await page.goto('/')
+  await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as HTMLElement & { __vue_app__?: unknown } | null)?.__vue_app__))
   await expect(page.getByRole('button', { name: '记一笔', exact: true })).toBeEnabled()
   await page.getByRole('link', { name: '分类与标签', exact: true }).click()
 
@@ -68,6 +69,7 @@ test('分类和标签支持 HEX/RGB 双向选色、字段校验与编辑回填',
   dialog = page.getByRole('dialog').last()
   await expect(dialog.getByLabel('颜色值（#RRGGBB）', { exact: true })).toHaveValue('#abcdef')
   await page.reload()
+  await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as HTMLElement & { __vue_app__?: unknown } | null)?.__vue_app__))
   await page.getByRole('link', { name: '分类与标签', exact: true }).click()
   await expect(page.getByRole('treeitem', { name: new RegExp(category) }).locator('.category-icon')).toHaveCSS('color', 'rgb(171, 205, 239)')
   await page.getByRole('tab', { name: /标签/ }).click()
