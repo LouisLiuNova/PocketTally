@@ -106,3 +106,13 @@ export function flattenVisibleCategoryTree(roots: CategoryTreeNode[], expandedId
   roots.forEach(visit)
   return result
 }
+
+/** 返回有效祖先链，用于分类浮层定位。 */
+export function findCategoryTrail(roots: CategoryTreeNode[], id: string): CategoryTreeNode[] {
+  for (const node of roots) {
+    if (node.category.id === id) return [node]
+    const trail = findCategoryTrail(node.children, id)
+    if (trail.length) return [node, ...trail]
+  }
+  return []
+}

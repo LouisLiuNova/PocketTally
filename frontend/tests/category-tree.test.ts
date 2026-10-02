@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { buildCategoryTree, filterCategoryTree, flattenVisibleCategoryTree } from '../app/utils/categoryTree'
+import { buildCategoryTree, filterCategoryTree, flattenVisibleCategoryTree, findCategoryTrail } from '../app/utils/categoryTree'
 import type { Category } from '../app/types/ledger'
 
 function category(id: string, name: string, parentCategory: Category['parentCategory'] = null, purpose: Category['purpose'] = 'expense'): Category {
@@ -39,4 +39,16 @@ describe('分类树', () => {
     expect(flattenVisibleCategoryTree(tree.roots, new Set())).toHaveLength(1)
     expect(flattenVisibleCategoryTree(tree.roots, new Set(['root']))).toHaveLength(2)
   })
+})
+
+test('分类浮层定位返回有效祖先链，刷新后使用新节点并排除失效路径', () => {
+  const root = category('root', '餐饮')
+  const child = category('child', '午餐', { id: root.id, name: root.name })
+  const leaf = category('leaf', '工作餐', { id: child.id, name: child.name })
+  const tree = buildCategoryTree([root, child, leaf], 'expense')
+  expect(findCategoryTrail(tree.roots, leaf.id).map(node => node.category.id)).toEqual(['root', 'child', 'leaf'])
+  expect(findCategoryTrail(tree.roots, 'missing')).toEqual([])
+  const refreshed = buildCategoryTree([root, { ...child, name: '午餐新版' }], 'expense')
+  expect(findCategoryTrail(refreshed.roots, child.id).at(-1)?.category.name).toBe('午餐新版')
+  expect(findCategoryTrail(refreshed.roots, leaf.id)).toEqual([])
 })
