@@ -1,0 +1,16 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "exclusiveMinimum": 0,
+      "title": "Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "version"
+  ],
+  "title": "ImportCommit",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

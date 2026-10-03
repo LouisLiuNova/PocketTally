@@ -40,3 +40,5 @@ Cookie 或令牌。认证库结构见 `docs/contracts/db-auth.dbml`。
 交易创建必须满足类型对应的账户路由，PATCH 会把请求字段与原记录合并后再校验完整候选状态。作废使用 `POST /transactions/{transactionId}/void`，重复请求返回首次作废结果；列表现在返回分页对象 `{items,total,page,pageSize}`，默认只读有效交易，使用 `status=active|voided|all` 查询状态集合。旧的 `includeVoided` 参数已被替换。
 
 所有写入时间及交易查询的 `startAt`/`endAt` 必须带 `Z` 或 UTC 偏移；统计日期边界固定使用 `Asia/Shanghai`。统计金额和消费明细金额使用 `*AmountMinor` 整数分字段，账户和交易 CRUD 的 `amount` 仍是人民币元 JSON number。
+
+账单导入：`import.batch.read.schema.json`、`import.history.schema.json`、`import.patch.schema.json` 和 `import.commit.schema.json` 分别描述预览、历史、草稿修正与整批提交，均与运行时 Pydantic 模型同步。

@@ -1855,6 +1855,366 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /imports:
+    post:
+      tags:
+      - imports
+      summary: Upload Import
+      operationId: createImport
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Body_createImport'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportBatchRead'
+        '404':
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 操作与当前数据或业务规则冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: 文件或请求体超过限制。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+      - imports
+      summary: List Imports
+      operationId: listImports
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 20
+          title: Pagesize
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportHistory'
+        '404':
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 操作与当前数据或业务规则冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: 文件或请求体超过限制。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /imports/{batchId}:
+    get:
+      tags:
+      - imports
+      summary: Get Import
+      operationId: getImport
+      parameters:
+      - name: batchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Batchid
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 50
+          title: Pagesize
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - ready
+            - needs_account
+            - needs_category
+            - duplicate
+            - skipped
+            - unsupported
+            - refund_pending
+            - imported
+            type: string
+          - type: 'null'
+          title: Status
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportBatchRead'
+        '404':
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 操作与当前数据或业务规则冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: 文件或请求体超过限制。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags:
+      - imports
+      summary: Update Import
+      operationId: updateImport
+      parameters:
+      - name: batchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Batchid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportPatch'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportBatchRead'
+        '404':
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 操作与当前数据或业务规则冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: 文件或请求体超过限制。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+      - imports
+      summary: Remove Import
+      operationId: deleteImport
+      parameters:
+      - name: batchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Batchid
+      - name: version
+        in: query
+        required: true
+        schema:
+          type: integer
+          exclusiveMinimum: 0
+          title: Version
+      responses:
+        '204':
+          description: Successful Response
+        '404':
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 操作与当前数据或业务规则冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: 文件或请求体超过限制。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /imports/{batchId}/commit:
+    post:
+      tags:
+      - imports
+      summary: Commit Import
+      operationId: commitImport
+      parameters:
+      - name: batchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Batchid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportCommit'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportBatchRead'
+        '404':
+          description: 资源不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 操作与当前数据或业务规则冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 请求参数校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 未预期的服务器内部错误。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: 文件或请求体超过限制。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
     AccountCreate:
@@ -3188,3 +3548,498 @@ components:
       title: BalanceAdjustmentCreate
       description: Request for recording a balance adjustment as a real transaction.
       type: object
+    Body_createImport:
+      properties:
+        file:
+          type: string
+          contentMediaType: application/octet-stream
+          title: File
+      type: object
+      required:
+      - file
+      title: Body_createImport
+    ImportBatchRead:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        provider:
+          type: string
+          enum:
+          - alipay
+          - wechat
+          title: Provider
+        filename:
+          type: string
+          title: Filename
+        sha256:
+          type: string
+          title: Sha256
+        parserVersion:
+          type: string
+          title: Parserversion
+        status:
+          type: string
+          enum:
+          - draft
+          - committed
+          title: Status
+        version:
+          type: integer
+          title: Version
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+        updatedAt:
+          type: string
+          format: date-time
+          title: Updatedat
+        committedAt:
+          title: Committedat
+        summary:
+          $ref: '#/components/schemas/ImportSummary'
+        paymentKeys:
+          items:
+            type: string
+          type: array
+          title: Paymentkeys
+        items:
+          items:
+            $ref: '#/components/schemas/ImportRowRead'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+        page:
+          type: integer
+          title: Page
+        pageSize:
+          type: integer
+          title: Pagesize
+      additionalProperties: false
+      type: object
+      required:
+      - id
+      - provider
+      - filename
+      - sha256
+      - parserVersion
+      - status
+      - version
+      - createdAt
+      - updatedAt
+      - committedAt
+      - summary
+      - paymentKeys
+      - items
+      - total
+      - page
+      - pageSize
+      title: ImportBatchRead
+    ImportChange:
+      properties:
+        rowIds:
+          items:
+            type: string
+            format: uuid
+          type: array
+          maxItems: 10000
+          title: Rowids
+        paymentKey:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+          title: Paymentkey
+        type:
+          anyOf:
+          - type: string
+            enum:
+            - income
+            - expense
+          - type: 'null'
+          title: Type
+        accountId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Accountid
+        categoryId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Categoryid
+        included:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Included
+        amountMinor:
+          anyOf:
+          - type: integer
+            maximum: 9000000000000000.0
+            exclusiveMinimum: 0.0
+          - type: 'null'
+          title: Amountminor
+        occurredAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Occurredat
+        description:
+          anyOf:
+          - type: string
+            maxLength: 2000
+          - type: 'null'
+          title: Description
+        matchType:
+          anyOf:
+          - type: string
+            enum:
+            - income
+            - expense
+          - type: 'null'
+          title: Matchtype
+        rememberMapping:
+          type: boolean
+          title: Remembermapping
+          default: false
+      additionalProperties: false
+      type: object
+      title: ImportChange
+    ImportCommit:
+      properties:
+        version:
+          type: integer
+          exclusiveMinimum: 0.0
+          title: Version
+      additionalProperties: false
+      type: object
+      required:
+      - version
+      title: ImportCommit
+    ImportHistory:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/ImportHistoryItem'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+        page:
+          type: integer
+          title: Page
+        pageSize:
+          type: integer
+          title: Pagesize
+      additionalProperties: false
+      type: object
+      required:
+      - items
+      - total
+      - page
+      - pageSize
+      title: ImportHistory
+    ImportHistoryItem:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        provider:
+          type: string
+          enum:
+          - alipay
+          - wechat
+          title: Provider
+        filename:
+          type: string
+          title: Filename
+        status:
+          type: string
+          enum:
+          - draft
+          - committed
+          title: Status
+        version:
+          type: integer
+          title: Version
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+        committedAt:
+          title: Committedat
+        inputRows:
+          type: integer
+          title: Inputrows
+      additionalProperties: false
+      type: object
+      required:
+      - id
+      - provider
+      - filename
+      - status
+      - version
+      - createdAt
+      - committedAt
+      - inputRows
+      title: ImportHistoryItem
+    ImportPatch:
+      properties:
+        version:
+          type: integer
+          exclusiveMinimum: 0.0
+          title: Version
+        changes:
+          items:
+            $ref: '#/components/schemas/ImportChange'
+          type: array
+          maxItems: 100
+          minItems: 1
+          title: Changes
+      additionalProperties: false
+      type: object
+      required:
+      - version
+      - changes
+      title: ImportPatch
+    ImportRowRead:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        rowNumber:
+          type: integer
+          title: Rownumber
+        sourceId:
+          type: string
+          title: Sourceid
+        status:
+          type: string
+          enum:
+          - ready
+          - needs_account
+          - needs_category
+          - duplicate
+          - skipped
+          - unsupported
+          - refund_pending
+          - imported
+          title: Status
+        reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Reason
+        included:
+          type: boolean
+          title: Included
+        editable:
+          type: boolean
+          title: Editable
+        type:
+          anyOf:
+          - type: string
+            enum:
+            - income
+            - expense
+          - type: 'null'
+          title: Type
+        amountMinor:
+          type: integer
+          title: Amountminor
+        occurredAt:
+          title: Occurredat
+        description:
+          type: string
+          title: Description
+        paymentKey:
+          type: string
+          title: Paymentkey
+        accountId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Accountid
+        categoryId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Categoryid
+        transactionId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Transactionid
+        duplicateBatchId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Duplicatebatchid
+        original:
+          $ref: '#/components/schemas/SourceFields'
+        similarTransactionIds:
+          items:
+            type: string
+            format: uuid
+          type: array
+          title: Similartransactionids
+      additionalProperties: false
+      type: object
+      required:
+      - id
+      - rowNumber
+      - sourceId
+      - status
+      - reason
+      - included
+      - editable
+      - type
+      - amountMinor
+      - occurredAt
+      - description
+      - paymentKey
+      - accountId
+      - categoryId
+      - transactionId
+      - original
+      title: ImportRowRead
+    ImportSummary:
+      properties:
+        inputRows:
+          type: integer
+          title: Inputrows
+        counts:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Counts
+        selectedCount:
+          type: integer
+          title: Selectedcount
+        unresolvedCount:
+          type: integer
+          title: Unresolvedcount
+        incomeMinor:
+          type: integer
+          title: Incomeminor
+        expenseMinor:
+          type: integer
+          title: Expenseminor
+        excludedMinor:
+          type: integer
+          title: Excludedminor
+        source:
+          $ref: '#/components/schemas/SourceSummary'
+      additionalProperties: false
+      type: object
+      required:
+      - inputRows
+      - counts
+      - selectedCount
+      - unresolvedCount
+      - incomeMinor
+      - expenseMinor
+      - excludedMinor
+      - source
+      title: ImportSummary
+    SourceFields:
+      properties:
+        sourceId:
+          type: string
+          title: Sourceid
+        merchantOrderId:
+          type: string
+          title: Merchantorderid
+        counterparty:
+          type: string
+          title: Counterparty
+        product:
+          type: string
+          title: Product
+        paymentMethod:
+          type: string
+          title: Paymentmethod
+        platformCategory:
+          type: string
+          title: Platformcategory
+        platformStatus:
+          type: string
+          title: Platformstatus
+        direction:
+          type: string
+          title: Direction
+        amount:
+          type: string
+          title: Amount
+        occurredAt:
+          type: string
+          title: Occurredat
+        rowNumbers:
+          items:
+            type: integer
+          type: array
+          title: Rownumbers
+      additionalProperties: false
+      type: object
+      required:
+      - sourceId
+      - merchantOrderId
+      - counterparty
+      - product
+      - paymentMethod
+      - platformCategory
+      - platformStatus
+      - direction
+      - amount
+      - occurredAt
+      - rowNumbers
+      title: SourceFields
+    SourceSummary:
+      properties:
+        inputRows:
+          type: integer
+          title: Inputrows
+        parseCounts:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Parsecounts
+        sourceAmountMinor:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Sourceamountminor
+        startAt:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Startat
+        endAt:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Endat
+      additionalProperties: false
+      type: object
+      required:
+      - inputRows
+      - parseCounts
+      - sourceAmountMinor
+      - startAt
+      - endAt
+      title: SourceSummary

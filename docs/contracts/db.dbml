@@ -95,6 +95,9 @@ Table import_account_mappings {
   provider TEXT [notnull]
   payment_key TEXT [notnull]
   account_id TEXT [notnull]
+  indexes {
+    (provider, payment_key) [unique]
+  }
 }
 Ref: import_account_mappings.account_id > accounts.id
 Table import_rows {
@@ -114,6 +117,9 @@ Table import_rows {
   account_id TEXT
   category_id TEXT
   transaction_id TEXT
+  indexes {
+    (batch_id, row_number) [unique]
+  }
 }
 Ref: import_rows.category_id > categories.id
 Ref: import_rows.batch_id > import_batches.id
@@ -124,8 +130,11 @@ Table import_sources {
   provider TEXT [notnull]
   source_id TEXT [notnull]
   batch_id TEXT [notnull]
-  row_id TEXT [notnull]
-  transaction_id TEXT [notnull]
+  row_id TEXT [notnull, unique]
+  transaction_id TEXT [notnull, unique]
+  indexes {
+    (provider, source_id) [unique]
+  }
 }
 Ref: import_sources.batch_id > import_batches.id
 Ref: import_sources.transaction_id > transactions.id

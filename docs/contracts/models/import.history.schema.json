@@ -1,0 +1,93 @@
+{
+  "$defs": {
+    "ImportHistoryItem": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "provider": {
+          "enum": [
+            "alipay",
+            "wechat"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "filename": {
+          "title": "Filename",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "committed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "committedAt": {
+          "title": "Committedat"
+        },
+        "inputRows": {
+          "title": "Inputrows",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "provider",
+        "filename",
+        "status",
+        "version",
+        "createdAt",
+        "committedAt",
+        "inputRows"
+      ],
+      "title": "ImportHistoryItem",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "items": {
+      "items": {
+        "$ref": "#/$defs/ImportHistoryItem"
+      },
+      "title": "Items",
+      "type": "array"
+    },
+    "total": {
+      "title": "Total",
+      "type": "integer"
+    },
+    "page": {
+      "title": "Page",
+      "type": "integer"
+    },
+    "pageSize": {
+      "title": "Pagesize",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "items",
+    "total",
+    "page",
+    "pageSize"
+  ],
+  "title": "ImportHistory",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

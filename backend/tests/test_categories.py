@@ -29,7 +29,19 @@ def make_engine(database_path: Path):
 
     engine = create_database_engine(database_path)
     # 分类服务测试自行构造最小数据，使用已有空模式避免默认种子干扰。
-    SQLModel.metadata.create_all(engine)
+    SQLModel.metadata.create_all(
+        engine,
+        tables=[
+            SQLModel.metadata.tables[name]
+            for name in (
+                "accounts",
+                "categories",
+                "tags",
+                "transactions",
+                "transaction_tags",
+            )
+        ],
+    )
     initialize_database(engine)
     return engine
 

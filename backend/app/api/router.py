@@ -6,6 +6,7 @@ from app.api.routes.accounts import router as accounts_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.categories import router as categories_router
 from app.api.routes.health import router as health_router
+from app.api.routes.imports import router as imports_router
 from app.api.routes.statistics import router as statistics_router
 from app.api.routes.tags import router as tags_router
 from app.api.routes.transactions import router as transactions_router
@@ -20,3 +21,5 @@ api_router.include_router(categories_router, dependencies=protected_dependencies
 api_router.include_router(tags_router, dependencies=protected_dependencies)
 api_router.include_router(transactions_router, dependencies=protected_dependencies)
 api_router.include_router(statistics_router, dependencies=protected_dependencies)
+
+api_router.include_router(imports_router, dependencies=protected_dependencies)
