@@ -11,7 +11,7 @@ export function useApi() {
     const headers = new Headers(options.headers as HeadersInit | undefined)
     const method = String(options.method || 'GET').toUpperCase()
     if (unsafeMethods.has(method)) headers.set('X-PocketTally-CSRF', '1')
-    if (method !== 'GET' && options.body && !headers.has('content-type')) headers.set('content-type', 'application/json')
+    if (method !== 'GET' && options.body && !(options.body instanceof FormData) && !headers.has('content-type')) headers.set('content-type', 'application/json')
     try {
       return await requestFetch<T>(request, { ...options, headers } as any)
     } catch (error: any) {

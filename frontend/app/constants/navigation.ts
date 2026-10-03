@@ -1,6 +1,7 @@
 export const APP_ROUTES = [
   { path: '/', label: '总览', title: '我的账本', breadcrumb: '总览', icon: 'i-lucide-layout-dashboard' },
   { path: '/transactions', label: '交易', title: '交易', breadcrumb: '交易', icon: 'i-lucide-arrow-left-right' },
+  { path: '/imports', label: '账单导入', title: '账单导入', breadcrumb: '账单导入', icon: 'i-lucide-file-input' },
   { path: '/accounts', label: '账户', title: '账户', breadcrumb: '账户', icon: 'i-lucide-wallet-cards' },
   { path: '/categories', label: '分类与标签', title: '分类与标签', breadcrumb: '分类与标签', icon: 'i-lucide-shapes' },
   { path: '/statistics', label: '统计分析', title: '统计分析', breadcrumb: '统计分析', icon: 'i-lucide-chart-no-axes-combined' },

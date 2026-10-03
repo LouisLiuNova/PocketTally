@@ -247,4 +247,6 @@ test('首次加载与失败：读取完成前不能进入创建型空状态，�
   await expect(page.getByRole('button', { name: '记一笔', exact: true }).first()).toBeEnabled()
   await page.getByRole('button', { name: '记一笔', exact: true }).first().click()
   await expect(page.getByRole('dialog', { name: '交易表单', exact: true }).getByRole('button', { name: '新建账户', exact: true })).toBeVisible()
+  const logout = await page.request.post('/api/v1/auth/logout', { headers: { 'X-PocketTally-CSRF': '1', Origin: 'http://127.0.0.1:3012' } })
+  expect(logout.ok()).toBe(true)
 })
