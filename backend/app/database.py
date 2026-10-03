@@ -11,6 +11,7 @@ from typing import BinaryIO
 from sqlalchemy import URL, Connection, Engine, event, text
 from sqlmodel import SQLModel, create_engine
 
+import app.import_models
 import app.models  # noqa: F401  # 注册 SQLModel 表元数据。
 from app.models import Category, CategoryPurpose, new_id
 
@@ -232,6 +233,7 @@ def create_database_engine(database_path: Path) -> Engine:
     engine = create_engine(
         URL.create("sqlite", database=str(path)),
         connect_args={"check_same_thread": False},
+        hide_parameters=True,
     )
 
     @event.listens_for(engine, "connect")
@@ -311,7 +313,9 @@ def initialize_database(engine: Engine) -> None:
                     f"数据库包含旧余额触发器：{names}；请使用新的开发数据库"
                 )
 
-            SQLModel.metadata.create_all(connection)
+            from app.migration import migrate_database
+
+            migrate_database(connection, table_names)
             for statement in REQUIRED_INDEXES:
                 connection.exec_driver_sql(statement)
             for statement in UPDATED_AT_TRIGGERS:

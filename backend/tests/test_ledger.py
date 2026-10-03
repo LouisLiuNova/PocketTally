@@ -34,7 +34,19 @@ def make_engine(database_path: Path):
 
     engine = create_database_engine(database_path)
     # 账本单元测试自行构造最小分类数据，使用已有空模式避免默认种子干扰。
-    SQLModel.metadata.create_all(engine)
+    SQLModel.metadata.create_all(
+        engine,
+        tables=[
+            SQLModel.metadata.tables[name]
+            for name in (
+                "accounts",
+                "categories",
+                "tags",
+                "transactions",
+                "transaction_tags",
+            )
+        ],
+    )
     initialize_database(engine)
     return engine
 
@@ -125,7 +137,10 @@ def test_balance_adjustment_is_a_real_transaction_and_can_be_voided(
         refreshed_account = session.get(Account, account.id)
         assert refreshed_account is not None
         assert refreshed_account.amount_minor == 2500
-        assert transaction.balance_adjustment_direction is BalanceAdjustmentDirection.INCREASE
+        assert (
+            transaction.balance_adjustment_direction
+            is BalanceAdjustmentDirection.INCREASE
+        )
         assert transaction.category is None
 
         session.rollback()
@@ -387,3 +402,45 @@ def test_transaction_update_revalidates_category_against_complete_state(
 
         session.refresh(transaction)
         assert transaction.type is TransactionType.EXPENSE
+
+
+def test_batch_uses_final_balance_and_rolls_back(tmp_path):
+    """整批结果不依赖文件排序，失败时所有交易与余额一起回滚。"""
+    from app.ledger import post_transactions
+
+    engine = make_engine(tmp_path / "batch.sqlite3")
+    with Session(engine) as session, session.begin():
+        account = Account(type=AccountType.DEBIT, name="批量账户")
+        income = Category(name="批量收入", purpose=CategoryPurpose.INCOME)
+        expense = Category(name="批量支出", purpose=CategoryPurpose.EXPENSE)
+        session.add_all([account, income, expense])
+        session.flush()
+        ids = account.id, income.id, expense.id
+
+    def tx(kind, amount):
+        return Transaction(
+            type=kind,
+            amount_minor=amount,
+            occurred_at=datetime.now(UTC),
+            category=ids[1 if kind == TransactionType.INCOME else 2],
+            src_account_id=ids[0] if kind == TransactionType.EXPENSE else None,
+            dest_account_id=ids[0] if kind == TransactionType.INCOME else None,
+        )
+
+    with Session(engine) as session, session.begin():
+        post_transactions(
+            session, [tx(TransactionType.EXPENSE, 100), tx(TransactionType.INCOME, 200)]
+        )
+    with (
+        pytest.raises(LedgerError, match="余额不足"),
+        Session(engine) as session,
+        session.begin(),
+    ):
+        post_transactions(
+            session,
+            [tx(TransactionType.INCOME, 50), tx(TransactionType.EXPENSE, 200)],
+        )
+    with Session(engine) as session:
+        assert session.get(Account, ids[0]).amount_minor == 100
+        assert session.exec(select(func.count()).select_from(Transaction)).one() == 2
+    engine.dispose()

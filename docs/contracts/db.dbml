@@ -75,3 +75,58 @@ Table transaction_tags{
     FOREIGN KEY (transaction_id) REFERENCES transactions(id)
     FOREIGN KEY (tag_id) REFERENCES tags(id)
 }
+
+// 导入审计模型
+Table import_batches {
+  id TEXT [pk, notnull]
+  provider TEXT [notnull]
+  filename TEXT [notnull]
+  sha256 TEXT [notnull]
+  parser_version TEXT [notnull]
+  status TEXT [notnull]
+  version INTEGER [notnull]
+  summary TEXT [notnull]
+  created_at DATETIME [notnull]
+  updated_at DATETIME [notnull]
+  committed_at DATETIME
+}
+Table import_account_mappings {
+  id TEXT [pk, notnull]
+  provider TEXT [notnull]
+  payment_key TEXT [notnull]
+  account_id TEXT [notnull]
+}
+Ref: import_account_mappings.account_id > accounts.id
+Table import_rows {
+  id TEXT [pk, notnull]
+  batch_id TEXT [notnull]
+  row_number INTEGER [notnull]
+  source_id TEXT [notnull]
+  original TEXT [notnull]
+  state TEXT [notnull]
+  reason TEXT
+  included BOOLEAN [notnull]
+  transaction_type TEXT
+  amount_minor INTEGER [notnull]
+  occurred_at DATETIME
+  description TEXT [notnull]
+  payment_key TEXT [notnull]
+  account_id TEXT
+  category_id TEXT
+  transaction_id TEXT
+}
+Ref: import_rows.category_id > categories.id
+Ref: import_rows.batch_id > import_batches.id
+Ref: import_rows.transaction_id > transactions.id
+Ref: import_rows.account_id > accounts.id
+Table import_sources {
+  id TEXT [pk, notnull]
+  provider TEXT [notnull]
+  source_id TEXT [notnull]
+  batch_id TEXT [notnull]
+  row_id TEXT [notnull]
+  transaction_id TEXT [notnull]
+}
+Ref: import_sources.batch_id > import_batches.id
+Ref: import_sources.transaction_id > transactions.id
+Ref: import_sources.row_id > import_rows.id
