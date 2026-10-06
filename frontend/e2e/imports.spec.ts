@@ -102,6 +102,8 @@ test('导入：读取重试和异步旧批次不能覆盖当前选择', async ({
   await page.locator('input[type=file]').setInputFiles({ name: newName, mimeType: 'text/csv', buffer: bill(`new-${Date.now()}`) })
   await page.getByRole('button', { name: '解析账单', exact: true }).click()
   await expect(page.getByRole('heading', { name: newName, exact: true })).toBeVisible()
+  await expect(page).not.toHaveURL(oldUrl)
+  await expect(page.locator('input[type=file]')).toBeEnabled()
   const newUrl = page.url()
   await page.goto(oldUrl); await hydrated(page)
   await expect(page.getByRole('heading', { name: '个人账单.csv', exact: true })).toBeVisible()

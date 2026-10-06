@@ -14,7 +14,9 @@ def legacy_engine(path: Path):
     engine = create_database_engine(path)
     with engine.connect() as c:
         c.connection.driver_connection.executescript(
-            (Path(__file__).parents[1] / "db/schema.sql").read_text().split("-- 导入审计模型")[0]
+            (Path(__file__).parents[1] / "db/schema.sql")
+            .read_text()
+            .split("-- 导入审计模型")[0]
         )
     return engine
 
@@ -82,5 +84,36 @@ def test_failed_upgrade_leaves_legacy_unchanged(tmp_path, monkeypatch):
     assert "alembic_version" not in names
     assert "import_batches" not in names
     assert list((tmp_path / "migration-backups").glob("*.sqlite3"))
+    initialize_database(engine)
+    engine.dispose()
+
+
+def test_upgrade_backup_can_restore_legacy_data(tmp_path):
+    """停止连接后恢复升级前备份，账本回到无版本基线且数据完整。"""
+    from app.backup import restore_backup
+
+    path = tmp_path / "restore.sqlite3"
+    engine = legacy_engine(path)
+    with Session(engine) as session, session.begin():
+        session.add(Account(type=AccountType.CREDIT, name="恢复账户"))
+    initialize_database(engine)
+    engine.dispose()
+    directory = tmp_path / "migration-backups"
+    backup = next(directory.glob("*.sqlite3"))
+    restored, previous = restore_backup(path, directory, backup.name, confirmed=True)
+    assert restored == path and previous is not None
+    engine = create_database_engine(path)
+    with engine.connect() as connection:
+        names = {
+            r[0]
+            for r in connection.exec_driver_sql(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )
+        }
+        assert "alembic_version" not in names and "import_batches" not in names
+        assert (
+            connection.exec_driver_sql("SELECT name FROM accounts").scalar()
+            == "恢复账户"
+        )
     initialize_database(engine)
     engine.dispose()
