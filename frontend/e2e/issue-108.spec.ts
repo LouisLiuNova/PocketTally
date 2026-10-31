@@ -247,4 +247,7 @@ test('首次加载与失败：读取完成前不能进入创建型空状态，�
   await expect(page.getByRole('button', { name: '记一笔', exact: true }).first()).toBeEnabled()
   await page.getByRole('button', { name: '记一笔', exact: true }).first().click()
   await expect(page.getByRole('dialog', { name: '交易表单', exact: true }).getByRole('button', { name: '新建账户', exact: true })).toBeVisible()
+  await page.getByRole('dialog', { name: '交易表单', exact: true }).getByRole('button', { name: '关闭', exact: true }).click()
+  await page.getByRole('button', { name: '退出', exact: true }).click()
+  await expect(page).toHaveURL(/\/login/)
 })

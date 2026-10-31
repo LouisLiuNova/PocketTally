@@ -108,3 +108,17 @@ make docs-serve
 依赖仍由 Bun 安装和锁定。
 
 不同信息的事实来源与同步要求见[文档首页](index.md)和[业务规则](business-rules.md)。
+
+## 账单导入验收
+
+普通后端测试使用脱敏 fixture。真实个人账单仅在显式指定本地目录时读取，验收使用临时数据库，不复制原始文件到仓库：
+
+```bash
+cd backend
+POCKET_TALLY_REAL_BILLS_DIR="$HOME/Downloads" uv run pytest tests/test_import_real_samples.py
+uv run pytest benchmarks/test_import_performance.py -s
+```
+
+真实格式测试要求目录内存在支付宝交易明细 CSV 和微信支付账单 XLSX；浏览器验收设置同一环境变量可加入真实 XLSX 路径。完整矩阵执行 `bun run test:e2e:matrix`。具体边界见 [账单导入](bill-import.md)。
+
+本机代理若影响回环服务检查，在该验收进程中清除 HTTP/HTTPS/ALL proxy 变量并设置 `NO_PROXY=127.0.0.1,localhost`，不要修改应用代理契约。

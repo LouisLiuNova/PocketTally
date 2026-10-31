@@ -49,6 +49,7 @@ class ContractModel(BaseModel):
         "updated_at",
         "occurred_at",
         "voided_at",
+        "committed_at",
         when_used="json",
         check_fields=False,
     )

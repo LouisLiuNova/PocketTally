@@ -1,0 +1,440 @@
+{
+  "$defs": {
+    "ImportRowRead": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "rowNumber": {
+          "title": "Rownumber",
+          "type": "integer"
+        },
+        "sourceId": {
+          "title": "Sourceid",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ready",
+            "needs_account",
+            "needs_category",
+            "duplicate",
+            "skipped",
+            "unsupported",
+            "refund_pending",
+            "imported"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reason"
+        },
+        "included": {
+          "title": "Included",
+          "type": "boolean"
+        },
+        "editable": {
+          "title": "Editable",
+          "type": "boolean"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "enum": [
+                "income",
+                "expense"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Type"
+        },
+        "amountMinor": {
+          "title": "Amountminor",
+          "type": "integer"
+        },
+        "occurredAt": {
+          "title": "Occurredat"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "paymentKey": {
+          "title": "Paymentkey",
+          "type": "string"
+        },
+        "accountId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Accountid"
+        },
+        "categoryId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Categoryid"
+        },
+        "transactionId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Transactionid"
+        },
+        "duplicateBatchId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duplicatebatchid"
+        },
+        "original": {
+          "$ref": "#/$defs/SourceFields"
+        },
+        "similarTransactionIds": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Similartransactionids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "rowNumber",
+        "sourceId",
+        "status",
+        "reason",
+        "included",
+        "editable",
+        "type",
+        "amountMinor",
+        "occurredAt",
+        "description",
+        "paymentKey",
+        "accountId",
+        "categoryId",
+        "transactionId",
+        "original"
+      ],
+      "title": "ImportRowRead",
+      "type": "object"
+    },
+    "ImportSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "inputRows": {
+          "title": "Inputrows",
+          "type": "integer"
+        },
+        "counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Counts",
+          "type": "object"
+        },
+        "selectedCount": {
+          "title": "Selectedcount",
+          "type": "integer"
+        },
+        "unresolvedCount": {
+          "title": "Unresolvedcount",
+          "type": "integer"
+        },
+        "incomeMinor": {
+          "title": "Incomeminor",
+          "type": "integer"
+        },
+        "expenseMinor": {
+          "title": "Expenseminor",
+          "type": "integer"
+        },
+        "excludedMinor": {
+          "title": "Excludedminor",
+          "type": "integer"
+        },
+        "source": {
+          "$ref": "#/$defs/SourceSummary"
+        }
+      },
+      "required": [
+        "inputRows",
+        "counts",
+        "selectedCount",
+        "unresolvedCount",
+        "incomeMinor",
+        "expenseMinor",
+        "excludedMinor",
+        "source"
+      ],
+      "title": "ImportSummary",
+      "type": "object"
+    },
+    "SourceFields": {
+      "additionalProperties": false,
+      "properties": {
+        "sourceId": {
+          "title": "Sourceid",
+          "type": "string"
+        },
+        "merchantOrderId": {
+          "title": "Merchantorderid",
+          "type": "string"
+        },
+        "counterparty": {
+          "title": "Counterparty",
+          "type": "string"
+        },
+        "product": {
+          "title": "Product",
+          "type": "string"
+        },
+        "paymentMethod": {
+          "title": "Paymentmethod",
+          "type": "string"
+        },
+        "platformCategory": {
+          "title": "Platformcategory",
+          "type": "string"
+        },
+        "platformStatus": {
+          "title": "Platformstatus",
+          "type": "string"
+        },
+        "direction": {
+          "title": "Direction",
+          "type": "string"
+        },
+        "amount": {
+          "title": "Amount",
+          "type": "string"
+        },
+        "occurredAt": {
+          "title": "Occurredat",
+          "type": "string"
+        },
+        "rowNumbers": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Rownumbers",
+          "type": "array"
+        }
+      },
+      "required": [
+        "sourceId",
+        "merchantOrderId",
+        "counterparty",
+        "product",
+        "paymentMethod",
+        "platformCategory",
+        "platformStatus",
+        "direction",
+        "amount",
+        "occurredAt",
+        "rowNumbers"
+      ],
+      "title": "SourceFields",
+      "type": "object"
+    },
+    "SourceSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "inputRows": {
+          "title": "Inputrows",
+          "type": "integer"
+        },
+        "parseCounts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Parsecounts",
+          "type": "object"
+        },
+        "sourceAmountMinor": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Sourceamountminor",
+          "type": "object"
+        },
+        "startAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Startat"
+        },
+        "endAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Endat"
+        }
+      },
+      "required": [
+        "inputRows",
+        "parseCounts",
+        "sourceAmountMinor",
+        "startAt",
+        "endAt"
+      ],
+      "title": "SourceSummary",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "provider": {
+      "enum": [
+        "alipay",
+        "wechat"
+      ],
+      "title": "Provider",
+      "type": "string"
+    },
+    "filename": {
+      "title": "Filename",
+      "type": "string"
+    },
+    "sha256": {
+      "title": "Sha256",
+      "type": "string"
+    },
+    "parserVersion": {
+      "title": "Parserversion",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "committed"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "version": {
+      "title": "Version",
+      "type": "integer"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "title": "Createdat",
+      "type": "string"
+    },
+    "updatedAt": {
+      "format": "date-time",
+      "title": "Updatedat",
+      "type": "string"
+    },
+    "committedAt": {
+      "title": "Committedat"
+    },
+    "summary": {
+      "$ref": "#/$defs/ImportSummary"
+    },
+    "paymentKeys": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Paymentkeys",
+      "type": "array"
+    },
+    "items": {
+      "items": {
+        "$ref": "#/$defs/ImportRowRead"
+      },
+      "title": "Items",
+      "type": "array"
+    },
+    "total": {
+      "title": "Total",
+      "type": "integer"
+    },
+    "page": {
+      "title": "Page",
+      "type": "integer"
+    },
+    "pageSize": {
+      "title": "Pagesize",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "id",
+    "provider",
+    "filename",
+    "sha256",
+    "parserVersion",
+    "status",
+    "version",
+    "createdAt",
+    "updatedAt",
+    "committedAt",
+    "summary",
+    "paymentKeys",
+    "items",
+    "total",
+    "page",
+    "pageSize"
+  ],
+  "title": "ImportBatchRead",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

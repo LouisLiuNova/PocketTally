@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from app.api.errors import register_exception_handlers
 from app.api.router import api_router
 from app.config import Settings, get_settings
+from app.import_limits import ImportBodyLimitMiddleware
 from app.lifespan import lifespan
 from app.logging import configure_logging
 from app.middleware import register_middleware
@@ -36,6 +37,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.dependency_overrides[get_settings] = lambda: settings
     register_middleware(application)
     register_exception_handlers(application)
+    application.add_middleware(
+        ImportBodyLimitMiddleware, path=f"{settings.api_prefix}/imports"
+    )
+
     application.include_router(api_router, prefix=settings.api_prefix)
     return application
 

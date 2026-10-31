@@ -604,7 +604,7 @@ def prepare() -> list[tuple[str, Operation]]:
     todo.write_text(
         todo.read_text(encoding="utf-8").replace(
             "(docs/business-rules.md)", "(business-rules.md)"
-        ),
+        ).replace("(docs/bill-import.md)", "(bill-import.md)"),
         encoding="utf-8",
     )
     (BUILD_DOCS / "data-models.md").write_text(dbml_markdown(tables, relations), encoding="utf-8")
@@ -769,7 +769,7 @@ def write_navigation() -> None:
     (BUILD_DOCS / "meta.json").write_text(navigation, encoding="utf-8")
     (BUILD_DOCS / "user/meta.json").write_text(
         json.dumps({"title": "用户文档", "root": True, "pages": [
-            "index", "getting-started", "transactions", "insights", "corrections", "faq"
+            "index", "getting-started", "transactions", "imports", "insights", "corrections", "faq"
         ]}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     (BUILD_DOCS / "developer/meta.json").write_text(

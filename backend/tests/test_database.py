@@ -55,7 +55,19 @@ def test_existing_empty_schema_is_not_backfilled(tmp_path: Path) -> None:
     """验证旧版已建表但没有分类的数据库不会被强制补种。"""
 
     engine = create_database_engine(tmp_path / "empty-existing.sqlite3")
-    SQLModel.metadata.create_all(engine)
+    SQLModel.metadata.create_all(
+        engine,
+        tables=[
+            SQLModel.metadata.tables[name]
+            for name in (
+                "accounts",
+                "categories",
+                "tags",
+                "transactions",
+                "transaction_tags",
+            )
+        ],
+    )
     initialize_database(engine)
 
     with Session(engine) as session:
@@ -166,17 +178,13 @@ def test_database_initialization_restores_statistics_index(tmp_path: Path) -> No
     engine = create_database_engine(tmp_path / "existing.sqlite3")
     initialize_database(engine)
     with engine.begin() as connection:
-        connection.exec_driver_sql(
-            "DROP INDEX ix_transactions_type_status_refund_of"
-        )
+        connection.exec_driver_sql("DROP INDEX ix_transactions_type_status_refund_of")
 
     initialize_database(engine)
     with engine.connect() as connection:
         index_names = {
             row[1]
-            for row in connection.exec_driver_sql(
-                "PRAGMA index_list(transactions)"
-            )
+            for row in connection.exec_driver_sql("PRAGMA index_list(transactions)")
         }
         query_plan = " ".join(
             str(row[3])
@@ -263,9 +271,7 @@ async def test_commit_failure_is_raised_before_response(tmp_path: Path) -> None:
     def create_invalid_account(session: SessionDep) -> dict[str, bool]:
         """暂存一个将在提交阶段违反约束的账户。"""
 
-        session.add(
-            Account(type=AccountType.DEBIT, name="无效账户", amount_minor=-1)
-        )
+        session.add(Account(type=AccountType.DEBIT, name="无效账户", amount_minor=-1))
         return {"created": True}
 
     async with (

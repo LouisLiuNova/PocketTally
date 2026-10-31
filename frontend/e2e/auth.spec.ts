@@ -21,5 +21,7 @@ test.describe('Issue #22：单所有者登录边界', () => {
     await page.getByRole('button', { name: '登录', exact: true }).click()
     await expect(page).toHaveURL(/\/$/)
     await expect(page.getByRole('button', { name: '记一笔', exact: true })).toBeEnabled()
+    await page.getByRole('button', { name: '退出', exact: true }).click()
+    await expect(page).toHaveURL(/\/login/)
   })
 })

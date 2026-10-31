@@ -175,3 +175,78 @@ FOR EACH ROW
 BEGIN
     UPDATE transactions SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.transaction_id;
 END;
+-- 导入审计模型
+
+CREATE TABLE import_batches (
+	id VARCHAR NOT NULL,
+	provider VARCHAR NOT NULL,
+	filename VARCHAR NOT NULL,
+	sha256 VARCHAR NOT NULL,
+	parser_version VARCHAR NOT NULL,
+	status VARCHAR NOT NULL,
+	version INTEGER NOT NULL,
+	summary JSON NOT NULL,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	committed_at DATETIME,
+	PRIMARY KEY (id),
+	CONSTRAINT ck_import_batch_provider CHECK (provider IN ('alipay', 'wechat')),
+	CONSTRAINT ck_import_batch_status CHECK (status IN ('draft', 'committed')),
+	CONSTRAINT ck_import_batch_version CHECK (version > 0)
+);
+
+CREATE TABLE import_account_mappings (
+	id VARCHAR NOT NULL,
+	provider VARCHAR NOT NULL,
+	payment_key VARCHAR NOT NULL,
+	account_id VARCHAR NOT NULL,
+	PRIMARY KEY (id),
+	CONSTRAINT uq_import_mapping UNIQUE (provider, payment_key),
+	FOREIGN KEY(account_id) REFERENCES accounts (id) ON DELETE CASCADE
+);
+
+CREATE TABLE import_rows (
+	id VARCHAR NOT NULL,
+	batch_id VARCHAR NOT NULL,
+	row_number INTEGER NOT NULL,
+	source_id VARCHAR NOT NULL,
+	original JSON NOT NULL,
+	state VARCHAR NOT NULL,
+	reason VARCHAR,
+	included BOOLEAN NOT NULL,
+	transaction_type VARCHAR,
+	amount_minor INTEGER NOT NULL,
+	occurred_at DATETIME,
+	description TEXT NOT NULL,
+	payment_key VARCHAR NOT NULL,
+	account_id VARCHAR,
+	category_id VARCHAR,
+	transaction_id VARCHAR,
+	PRIMARY KEY (id),
+	CONSTRAINT uq_import_row_number UNIQUE (batch_id, row_number),
+	CONSTRAINT ck_import_row_amount CHECK (amount_minor >= 0),
+	FOREIGN KEY(batch_id) REFERENCES import_batches (id),
+	FOREIGN KEY(account_id) REFERENCES accounts (id) ON DELETE SET NULL,
+	FOREIGN KEY(category_id) REFERENCES categories (id) ON DELETE SET NULL,
+	FOREIGN KEY(transaction_id) REFERENCES transactions (id)
+);
+
+CREATE TABLE import_sources (
+	id VARCHAR NOT NULL,
+	provider VARCHAR NOT NULL,
+	source_id VARCHAR NOT NULL,
+	batch_id VARCHAR NOT NULL,
+	row_id VARCHAR NOT NULL,
+	transaction_id VARCHAR NOT NULL,
+	PRIMARY KEY (id),
+	CONSTRAINT uq_import_source UNIQUE (provider, source_id),
+	FOREIGN KEY(batch_id) REFERENCES import_batches (id),
+	UNIQUE (row_id),
+	FOREIGN KEY(row_id) REFERENCES import_rows (id),
+	UNIQUE (transaction_id),
+	FOREIGN KEY(transaction_id) REFERENCES transactions (id)
+);
+
+CREATE INDEX ix_import_rows_batch_id ON import_rows (batch_id);
+
+CREATE INDEX ix_import_rows_source_id ON import_rows (source_id);

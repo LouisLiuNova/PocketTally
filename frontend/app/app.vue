@@ -46,7 +46,7 @@ const breadcrumbItems = computed(() => currentRoute.value.path === '/'
       { label: '总览', icon: APP_ROUTES[0].icon, to: '/', 'aria-label': '返回总览' },
       { label: currentRoute.value.breadcrumb, icon: currentRoute.value.icon },
     ])
-const today = new Intl.DateTimeFormat('zh-CN', { dateStyle: 'full', timeZone: 'Asia/Shanghai' }).format(new Date())
+const today = useState('workspace-today', () => new Intl.DateTimeFormat('zh-CN', { dateStyle: 'full', timeZone: 'Asia/Shanghai' }).format(new Date()).replace(/\s+/g, ''))
 const resourceEditorTitle = computed(() => {
   const editor = workspace.resourceEditor.value
   if (!editor) return '资源表单'
